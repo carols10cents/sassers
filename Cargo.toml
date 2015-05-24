@@ -1,0 +1,4 @@
+[package]
+name = "sassers"
+version = "0.1.0"
+authors = ["Carol Nichols <carol.nichols@gmail.com>"]
