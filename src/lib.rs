@@ -1,3 +1,5 @@
+mod token;
+
 pub fn compile(sass: String, style: &str) -> String {
     let sr = SassReader::new(sass);
     println!("{:?}", sr);
@@ -32,6 +34,7 @@ struct SassReader {
     pub pos: u32,
     pub last_pos: u32,
     pub curr: Option<char>,
+    pub peek_tok: token::Token,
     sass: String,
 }
 
@@ -41,9 +44,11 @@ impl SassReader {
             pos: 0,
             last_pos: 0,
             curr: Some('\n'),
+            peek_tok: token::Eof,
             sass: str,
         };
         sr.bump();
+        sr.advance_token();
         sr
     }
 
@@ -60,8 +65,24 @@ impl SassReader {
         }
     }
 
+    pub fn advance_token(&mut self) {
+        if self.is_eof() {
+            self.peek_tok = token::Eof;
+        } else {
+            self.peek_tok = self.next_token_inner();
+        }
+    }
+
     pub fn parse(self) -> String {
         self.sass
+    }
+
+    fn next_token_inner(&mut self) -> token::Token {
+        token::Eof
+    }
+
+    fn is_eof(&self) -> bool {
+        self.curr.is_none()
     }
 }
 
