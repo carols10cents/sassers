@@ -13,9 +13,9 @@ Usage:
     sassers [-vh]
 
 Options:
-    -h, --help                   Show this message.
-    -v, --version                Show the version of sassers.
-    -t <style>, --style <style>  Output style.
+    -h, --help                   Show this message
+    -v, --version                Show the version
+    -t <style>, --style <style>  Output style [default: nested]
     ";
 
     let args = Docopt::new(USAGE)
