@@ -1,7 +1,7 @@
 mod token;
 
 pub fn compile(sass: String, style: &str) -> String {
-    let sr = SassReader::new(sass);
+    let mut sr = SassReader::new(sass);
     println!("{:?}", sr);
     let parsed = sr.parse();
     match style {
@@ -73,12 +73,34 @@ impl SassReader {
         }
     }
 
-    pub fn parse(self) -> String {
-        self.sass
+    pub fn next_token(&mut self) -> token::Token {
+        let ret_val = self.peek_tok.clone();
+        self.advance_token();
+        ret_val
+    }
+
+    pub fn parse(&mut self) -> String {
+        println!("{:?}", self.next_token());
+        println!("{:?}", self.next_token());
+        self.sass.clone()
     }
 
     fn next_token_inner(&mut self) -> token::Token {
-        token::Eof
+        let c = match self.curr {
+            Some(c) => c,
+            None => return token::Eof,
+        };
+
+        if c >= 'a' && c <= 'z' {
+            let start = self.last_pos;
+            while !self.curr.is_none() && self.curr.unwrap() >= 'a' && self.curr.unwrap() <= 'z' {
+                self.bump();
+            }
+            return token::Selector { start_pos: start, end_pos: self.last_pos }
+
+        } else {
+            token::Eof
+        }
     }
 
     fn is_eof(&self) -> bool {
