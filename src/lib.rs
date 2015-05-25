@@ -13,7 +13,7 @@ fn nested(sass: String) -> String {
 }
 
 fn compressed(sass: String) -> String {
-    sass
+    sass.replace(" ", "").replace("\n", "")
 }
 
 fn expanded(sass: String) -> String {
