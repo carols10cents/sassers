@@ -1,3 +1,4 @@
+extern crate sassers;
 extern crate docopt;
 
 use docopt::Docopt;
@@ -31,6 +32,8 @@ Options:
         let mut sass = String::new();
         File::open(&Path::new(&inputfile)).unwrap().read_to_string(&mut sass).unwrap();
 
-        println!("{}", sass);
+        let compiled = sassers::compile(sass, style);
+
+        println!("{}", compiled);
     }
 }
