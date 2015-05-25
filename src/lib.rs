@@ -66,10 +66,17 @@ impl SassReader {
     }
 
     pub fn advance_token(&mut self) {
-        if self.is_eof() {
-            self.peek_tok = token::Eof;
-        } else {
-            self.peek_tok = self.next_token_inner();
+        match self.scan_whitespace() {
+            Some(whitespace) => {
+                self.peek_tok = whitespace;
+            },
+            None => {
+                if self.is_eof() {
+                    self.peek_tok = token::Eof;
+                } else {
+                    self.peek_tok = self.next_token_inner();
+                }
+            },
         }
     }
 
@@ -97,9 +104,20 @@ impl SassReader {
                 self.bump();
             }
             return token::Selector { start_pos: start, end_pos: self.last_pos }
-
         } else {
             token::Eof
+        }
+
+    }
+
+    fn scan_whitespace(&mut self) -> Option<token::Token> {
+        match self.curr.unwrap_or('\0') {
+            c if is_whitespace(Some(c)) => {
+                let start = self.last_pos;
+                while is_whitespace(self.curr) { self.bump(); }
+                Some(token::Whitespace { start_pos: start, end_pos: self.last_pos })
+            },
+            _ => None
         }
     }
 
@@ -110,4 +128,11 @@ impl SassReader {
 
 pub fn char_at(s: &str, byte: usize) -> char {
     s[byte..].chars().next().unwrap()
+}
+
+pub fn is_whitespace(c: Option<char>) -> bool {
+    match c.unwrap_or('\x00') { // None can be null for now... it's not whitespace
+        ' ' | '\n' | '\t' | '\r' => true,
+        _ => false
+    }
 }
