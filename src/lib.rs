@@ -89,6 +89,16 @@ impl SassReader {
     pub fn parse(&mut self) -> String {
         println!("{:?}", self.next_token());
         println!("{:?}", self.next_token());
+        println!("{:?}", self.next_token());
+        println!("{:?}", self.next_token());
+        println!("{:?}", self.next_token());
+        println!("{:?}", self.next_token());
+        println!("{:?}", self.next_token());
+        println!("{:?}", self.next_token());
+        println!("{:?}", self.next_token());
+        println!("{:?}", self.next_token());
+        println!("{:?}", self.next_token());
+        println!("{:?}", self.next_token());
         self.sass.clone()
     }
 
@@ -104,10 +114,16 @@ impl SassReader {
                 self.bump();
             }
             return token::Selector { start_pos: start, end_pos: self.last_pos }
-        } else {
-            token::Eof
         }
 
+        match c {
+            ';' => { self.bump(); return token::Semi; },
+            ':' => { self.bump(); return token::Colon; },
+            ',' => { self.bump(); return token::Comma; },
+            '{' => { self.bump(); return token::OpenDelim(token::Brace); },
+            '}' => { self.bump(); return token::CloseDelim(token::Brace); },
+            _   => { return token::Unknown { pos: self.last_pos } },
+        }
     }
 
     fn scan_whitespace(&mut self) -> Option<token::Token> {
