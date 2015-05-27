@@ -29,6 +29,20 @@ fn compact(sass: String) -> String {
     sass
 }
 
+struct SassRuleSet {
+    pub rules: Vec<SassRule>,
+}
+
+struct SassRule {
+    pub selectors: Vec<token::Token>,
+    pub propsNVals: Vec<PropertyValueSet>,
+}
+
+struct PropertyValueSet {
+    pub property: token::Token,
+    pub value: token::Token,
+}
+
 #[derive(Debug)]
 struct SassReader {
     pub pos: u32,
@@ -100,6 +114,34 @@ impl SassReader {
         println!("{:?}", self.next_token());
         println!("{:?}", self.next_token());
         self.sass.clone()
+    }
+
+    fn parse_rules(&mut self) -> Result<SassRuleSet, &'static str> {
+        let mut rules = vec![];
+        while let Some(rule) = try!(self.parse_rule()) {
+            rules.push(rule);
+        }
+        Ok(SassRuleSet { rules: rules })
+    }
+
+    fn parse_rule(&mut self) -> Result<Option<SassRule>, &'static str> {
+        let mut selectors = vec![];
+        while let Some(selector) = try!(self.parse_selector()) {
+            selectors.push(selector);
+        }
+        let mut propsNVals = vec![];
+        while let Some(property_value_set) = try!(self.parse_property_value_set()) {
+            propsNVals.push(property_value_set);
+        }
+        Ok(Some(SassRule { selectors: selectors, propsNVals: propsNVals }))
+    }
+
+    fn parse_selector(&mut self) -> Result<Option<token::Token>, &'static str> {
+        Err("not implemented")
+    }
+
+    fn parse_property_value_set(&mut self) -> Result<Option<PropertyValueSet>, &'static str> {
+        Err("not implemented")
     }
 
     fn next_token_inner(&mut self) -> token::Token {
