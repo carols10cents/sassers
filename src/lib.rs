@@ -155,16 +155,16 @@ impl SassTokenizer {
             while !self.curr.is_none() && self.curr.unwrap() >= 'a' && self.curr.unwrap() <= 'z' {
                 self.bump();
             }
-            return token::Selector { start_pos: start, end_pos: self.last_pos }
+            return token::Text(token::Range { start_pos: start, end_pos: self.last_pos })
         }
 
         match c {
-            ';' => { self.bump(); return token::Semi; },
-            ':' => { self.bump(); return token::Colon; },
-            ',' => { self.bump(); return token::Comma; },
-            '{' => { self.bump(); return token::OpenDelim(token::Brace); },
-            '}' => { self.bump(); return token::CloseDelim(token::Brace); },
-            _   => { return token::Unknown { pos: self.last_pos } },
+            ';' => { self.bump(); return token::Semi(token::Range { start_pos: self.last_pos, end_pos: self.last_pos}); },
+            ':' => { self.bump(); return token::Colon(token::Range { start_pos: self.last_pos, end_pos: self.last_pos}); },
+            ',' => { self.bump(); return token::Comma(token::Range { start_pos: self.last_pos, end_pos: self.last_pos}); },
+            '{' => { self.bump(); return token::OpenDelim(token::Brace, token::Range { start_pos: self.last_pos, end_pos: self.last_pos}); },
+            '}' => { self.bump(); return token::CloseDelim(token::Brace, token::Range { start_pos: self.last_pos, end_pos: self.last_pos}); },
+            _   => { return token::Unknown(token::Range { start_pos: self.last_pos, end_pos: self.last_pos}) },
         }
     }
 
@@ -173,7 +173,7 @@ impl SassTokenizer {
             c if is_whitespace(Some(c)) => {
                 let start = self.last_pos;
                 while is_whitespace(self.curr) { self.bump(); }
-                Some(token::Whitespace { start_pos: start, end_pos: self.last_pos })
+                Some(token::Whitespace(token::Range { start_pos: start, end_pos: self.last_pos}))
             },
             _ => None
         }

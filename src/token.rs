@@ -2,18 +2,22 @@ pub use self::Token::*;
 pub use self::DelimToken::*;
 
 #[derive(Debug, Clone)]
+pub struct Range {
+    pub start_pos: u32,
+    pub end_pos: u32,
+}
+
+#[derive(Debug, Clone)]
 pub enum Token {
-    Selector { start_pos: u32, end_pos: u32 },
-    Property { start_pos: u32, end_pos: u32 },
-    Value { start_pos: u32, end_pos: u32 },
-    Whitespace { start_pos: u32, end_pos: u32 },
-    Semi,
-    Colon,
-    Comma,
-    OpenDelim(DelimToken),
-    CloseDelim(DelimToken),
+    Text(Range),
+    Whitespace(Range),
+    Semi(Range),
+    Colon(Range),
+    Comma(Range),
+    OpenDelim(DelimToken, Range),
+    CloseDelim(DelimToken, Range),
+    Unknown(Range),
     Eof,
-    Unknown { pos: u32 },
 }
 
 #[derive(Debug, Clone)]
