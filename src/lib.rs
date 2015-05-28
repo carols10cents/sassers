@@ -1,9 +1,8 @@
 mod token;
 
 pub fn compile(sass: String, style: &str) -> String {
-    let mut sr = SassTokenizer::new(sass);
-    println!("{:?}", sr);
-    let parsed = sr.parse();
+    let mut sp = SassParser::new(sass); // SassTokenizer::new(sass);
+    let parsed = sp.parse();
     match style {
         "nested"     => nested(parsed),
         "compressed" => compressed(parsed),
@@ -44,58 +43,40 @@ struct PropertyValueSet {
 }
 
 #[derive(Debug)]
-struct SassTokenizer {
-    pub pos: u32,
-    pub last_pos: u32,
-    pub curr: Option<char>,
-    pub peek_tok: token::Range,
-    sass: String,
+struct SassParser {
+    pub curr: Option<token::Range>,
+    pub peek_range: token::Range,
+    pub tok: SassTokenizer,
 }
 
-impl SassTokenizer {
-    pub fn new(str: String) -> SassTokenizer {
-        let mut sr = SassTokenizer {
-            pos: 0,
-            last_pos: 0,
-            curr: Some('\n'),
-            peek_tok: token::Range { start_pos: 0, end_pos: 0, token: token::Eof },
-            sass: str,
+impl SassParser {
+    pub fn new(str: String) -> SassParser {
+        let mut sp = SassParser {
+            tok: SassTokenizer::new(str),
+            curr: None,
+            peek_range: token::Range { start_pos: 0, end_pos: 0, token: token::Eof },
         };
-        sr.bump();
-        sr.advance_token();
-        sr
-    }
-
-    pub fn bump(&mut self) {
-        self.last_pos = self.pos;
-        let current_pos = self.pos as usize;
-        if current_pos < self.sass.len() {
-            let ch = char_at(&self.sass, current_pos);
-
-            self.pos = self.pos + (ch.len_utf8() as u32);
-            self.curr = Some(ch);
-        } else {
-            self.curr = None;
-        }
+        sp.advance_token();
+        sp
     }
 
     pub fn advance_token(&mut self) {
-        match self.scan_whitespace() {
+        match self.tok.scan_whitespace() {
             Some(whitespace) => {
-                self.peek_tok = whitespace;
+                self.peek_range = whitespace;
             },
             None => {
-                if self.is_eof() {
-                    self.peek_tok = token::Range { start_pos: self.pos + 1, end_pos: self.pos + 1, token: token::Eof };
+                if self.tok.is_eof() {
+                    self.peek_range = token::Range { start_pos: self.tok.pos + 1, end_pos: self.tok.pos + 1, token: token::Eof };
                 } else {
-                    self.peek_tok = self.next_token_inner();
+                    self.peek_range = self.tok.next_token_inner();
                 }
             },
         }
     }
 
     pub fn next_token(&mut self) -> token::Range {
-        let ret_val = self.peek_tok.clone();
+        let ret_val = self.peek_range.clone();
         self.advance_token();
         ret_val
     }
@@ -113,8 +94,9 @@ impl SassTokenizer {
         println!("{:?}", self.next_token());
         println!("{:?}", self.next_token());
         println!("{:?}", self.next_token());
-        self.sass.clone()
+        self.tok.sass.clone()
     }
+
 
     fn parse_rules(&mut self) -> Result<SassRuleSet, &'static str> {
         let mut rules = vec![];
@@ -142,6 +124,40 @@ impl SassTokenizer {
 
     fn parse_property_value_set(&mut self) -> Result<Option<PropertyValueSet>, &'static str> {
         Err("not implemented")
+    }
+}
+
+#[derive(Debug)]
+struct SassTokenizer {
+    pub pos: u32,
+    pub last_pos: u32,
+    pub curr: Option<char>,
+    sass: String,
+}
+
+impl SassTokenizer {
+    pub fn new(str: String) -> SassTokenizer {
+        let mut sr = SassTokenizer {
+            pos: 0,
+            last_pos: 0,
+            curr: Some('\n'),
+            sass: str,
+        };
+        sr.bump();
+        sr
+    }
+
+    pub fn bump(&mut self) {
+        self.last_pos = self.pos;
+        let current_pos = self.pos as usize;
+        if current_pos < self.sass.len() {
+            let ch = char_at(&self.sass, current_pos);
+
+            self.pos = self.pos + (ch.len_utf8() as u32);
+            self.curr = Some(ch);
+        } else {
+            self.curr = None;
+        }
     }
 
     fn next_token_inner(&mut self) -> token::Range {
