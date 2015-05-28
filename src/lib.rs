@@ -1,7 +1,7 @@
 mod token;
 
 pub fn compile(sass: String, style: &str) -> String {
-    let mut sr = SassReader::new(sass);
+    let mut sr = SassTokenizer::new(sass);
     println!("{:?}", sr);
     let parsed = sr.parse();
     match style {
@@ -44,7 +44,7 @@ struct PropertyValueSet {
 }
 
 #[derive(Debug)]
-struct SassReader {
+struct SassTokenizer {
     pub pos: u32,
     pub last_pos: u32,
     pub curr: Option<char>,
@@ -52,9 +52,9 @@ struct SassReader {
     sass: String,
 }
 
-impl SassReader {
-    pub fn new(str: String) -> SassReader {
-        let mut sr = SassReader {
+impl SassTokenizer {
+    pub fn new(str: String) -> SassTokenizer {
+        let mut sr = SassTokenizer {
             pos: 0,
             last_pos: 0,
             curr: Some('\n'),
