@@ -34,13 +34,13 @@ struct SassRuleSet {
 }
 
 struct SassRule {
-    pub selectors: Vec<token::Token>,
+    pub selectors: Vec<token::Range>,
     pub propsNVals: Vec<PropertyValueSet>,
 }
 
 struct PropertyValueSet {
-    pub property: token::Token,
-    pub value: token::Token,
+    pub property: token::Range,
+    pub value: token::Range,
 }
 
 #[derive(Debug)]
@@ -48,7 +48,7 @@ struct SassTokenizer {
     pub pos: u32,
     pub last_pos: u32,
     pub curr: Option<char>,
-    pub peek_tok: token::Token,
+    pub peek_tok: token::Range,
     sass: String,
 }
 
@@ -58,7 +58,7 @@ impl SassTokenizer {
             pos: 0,
             last_pos: 0,
             curr: Some('\n'),
-            peek_tok: token::Eof,
+            peek_tok: token::Range { start_pos: 0, end_pos: 0, token: token::Eof },
             sass: str,
         };
         sr.bump();
@@ -86,7 +86,7 @@ impl SassTokenizer {
             },
             None => {
                 if self.is_eof() {
-                    self.peek_tok = token::Eof;
+                    self.peek_tok = token::Range { start_pos: self.pos + 1, end_pos: self.pos + 1, token: token::Eof };
                 } else {
                     self.peek_tok = self.next_token_inner();
                 }
@@ -94,7 +94,7 @@ impl SassTokenizer {
         }
     }
 
-    pub fn next_token(&mut self) -> token::Token {
+    pub fn next_token(&mut self) -> token::Range {
         let ret_val = self.peek_tok.clone();
         self.advance_token();
         ret_val
@@ -136,7 +136,7 @@ impl SassTokenizer {
         Ok(Some(SassRule { selectors: selectors, propsNVals: propsNVals }))
     }
 
-    fn parse_selector(&mut self) -> Result<Option<token::Token>, &'static str> {
+    fn parse_selector(&mut self) -> Result<Option<token::Range>, &'static str> {
         Err("not implemented")
     }
 
@@ -144,10 +144,10 @@ impl SassTokenizer {
         Err("not implemented")
     }
 
-    fn next_token_inner(&mut self) -> token::Token {
+    fn next_token_inner(&mut self) -> token::Range {
         let c = match self.curr {
             Some(c) => c,
-            None => return token::Eof,
+            None => return token::Range { start_pos: self.pos + 1, end_pos: self.pos + 1, token: token::Eof },
         };
 
         if c >= 'a' && c <= 'z' {
@@ -155,25 +155,25 @@ impl SassTokenizer {
             while !self.curr.is_none() && self.curr.unwrap() >= 'a' && self.curr.unwrap() <= 'z' {
                 self.bump();
             }
-            return token::Text(token::Range { start_pos: start, end_pos: self.last_pos })
+            return token::Range { start_pos: start, end_pos: self.last_pos, token: token::Text }
         }
 
         match c {
-            ';' => { self.bump(); return token::Semi(token::Range { start_pos: self.last_pos, end_pos: self.last_pos}); },
-            ':' => { self.bump(); return token::Colon(token::Range { start_pos: self.last_pos, end_pos: self.last_pos}); },
-            ',' => { self.bump(); return token::Comma(token::Range { start_pos: self.last_pos, end_pos: self.last_pos}); },
-            '{' => { self.bump(); return token::OpenDelim(token::Brace, token::Range { start_pos: self.last_pos, end_pos: self.last_pos}); },
-            '}' => { self.bump(); return token::CloseDelim(token::Brace, token::Range { start_pos: self.last_pos, end_pos: self.last_pos}); },
-            _   => { return token::Unknown(token::Range { start_pos: self.last_pos, end_pos: self.last_pos}) },
+            ';' => { self.bump(); return token::Range { start_pos: self.last_pos, end_pos: self.last_pos, token: token::Semi }; },
+            ':' => { self.bump(); return token::Range { start_pos: self.last_pos, end_pos: self.last_pos, token: token::Colon }; },
+            ',' => { self.bump(); return token::Range { start_pos: self.last_pos, end_pos: self.last_pos, token: token::Comma }; },
+            '{' => { self.bump(); return token::Range { start_pos: self.last_pos, end_pos: self.last_pos, token: token::OpenDelim(token::Brace) }; },
+            '}' => { self.bump(); return token::Range { start_pos: self.last_pos, end_pos: self.last_pos, token: token::CloseDelim(token::Brace) }; },
+            _   => { return token::Range { start_pos: self.last_pos, end_pos: self.last_pos, token: token::Unknown} },
         }
     }
 
-    fn scan_whitespace(&mut self) -> Option<token::Token> {
+    fn scan_whitespace(&mut self) -> Option<token::Range> {
         match self.curr.unwrap_or('\0') {
             c if is_whitespace(Some(c)) => {
                 let start = self.last_pos;
                 while is_whitespace(self.curr) { self.bump(); }
-                Some(token::Whitespace(token::Range { start_pos: start, end_pos: self.last_pos}))
+                Some(token::Range { start_pos: start, end_pos: self.last_pos, token: token::Whitespace })
             },
             _ => None
         }

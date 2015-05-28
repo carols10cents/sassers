@@ -5,18 +5,19 @@ pub use self::DelimToken::*;
 pub struct Range {
     pub start_pos: u32,
     pub end_pos: u32,
+    pub token: Token,
 }
 
 #[derive(Debug, Clone)]
 pub enum Token {
-    Text(Range),
-    Whitespace(Range),
-    Semi(Range),
-    Colon(Range),
-    Comma(Range),
-    OpenDelim(DelimToken, Range),
-    CloseDelim(DelimToken, Range),
-    Unknown(Range),
+    Text,
+    Whitespace,
+    Semi,
+    Colon,
+    Comma,
+    OpenDelim(DelimToken),
+    CloseDelim(DelimToken),
+    Unknown,
     Eof,
 }
 
