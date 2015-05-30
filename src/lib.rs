@@ -249,6 +249,19 @@ impl SassTokenizer {
         }
     }
 
+    fn real_token(&mut self) -> token::Range {
+        let mut t = self.next_token_inner();
+        loop {
+            match t.token {
+                token::Whitespace => {
+                    t = self.next_token_inner();
+                },
+                _ => break,
+            }
+        }
+        t
+    }
+
     fn scan_whitespace(&mut self) -> Option<token::Range> {
         match self.curr.unwrap_or('\0') {
             c if is_whitespace(Some(c)) => {
