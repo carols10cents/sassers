@@ -28,15 +28,18 @@ fn compact(sass: String) -> String {
     sass
 }
 
+#[derive(Debug)]
 struct SassRuleSet {
     pub rules: Vec<SassRule>,
 }
 
+#[derive(Debug)]
 struct SassRule {
     pub selectors: Vec<token::Range>,
     pub propsNVals: Vec<PropertyValueSet>,
 }
 
+#[derive(Debug)]
 struct PropertyValueSet {
     pub property: token::Range,
     pub value: token::Range,
