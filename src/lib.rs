@@ -36,7 +36,7 @@ struct SassRuleSet {
 #[derive(Debug)]
 struct SassRule {
     pub selectors: Vec<token::Range>,
-    pub propsNVals: Vec<PropertyValueSet>,
+    pub props_and_values: Vec<PropertyValueSet>,
 }
 
 #[derive(Debug)]
@@ -114,11 +114,11 @@ impl SassParser {
         while let Some(selector) = try!(self.parse_selector()) {
             selectors.push(selector);
         }
-        let mut propsNVals = vec![];
+        let mut props_and_values = vec![];
         while let Some(property_value_set) = try!(self.parse_property_value_set()) {
-            propsNVals.push(property_value_set);
+            props_and_values.push(property_value_set);
         }
-        Ok(Some(SassRule { selectors: selectors, propsNVals: propsNVals }))
+        Ok(Some(SassRule { selectors: selectors, props_and_values: props_and_values }))
     }
 
     fn parse_selector(&mut self) -> Result<Option<token::Range>, &'static str> {
