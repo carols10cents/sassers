@@ -60,7 +60,17 @@ impl SassParser {
             peek_range: token::Range { start_pos: 0, end_pos: 0, token: token::Eof },
         };
         sp.advance_token();
+        sp.bump();
         sp
+    }
+
+    pub fn bump(&mut self) {
+        if self.peek_range.token == token::Eof {
+            self.curr = None;
+        } else {
+            self.curr = Some(self.peek_range.clone());
+            self.advance_token();
+        }
     }
 
     pub fn advance_token(&mut self) {
@@ -78,28 +88,10 @@ impl SassParser {
         }
     }
 
-    pub fn next_token(&mut self) -> token::Range {
-        let ret_val = self.peek_range.clone();
-        self.advance_token();
-        ret_val
-    }
-
     pub fn parse(&mut self) -> String {
-        println!("{:?}", self.next_token());
-        println!("{:?}", self.next_token());
-        println!("{:?}", self.next_token());
-        println!("{:?}", self.next_token());
-        println!("{:?}", self.next_token());
-        println!("{:?}", self.next_token());
-        println!("{:?}", self.next_token());
-        println!("{:?}", self.next_token());
-        println!("{:?}", self.next_token());
-        println!("{:?}", self.next_token());
-        println!("{:?}", self.next_token());
-        println!("{:?}", self.next_token());
+        println!("{:?}", self.parse_rules());
         self.tok.sass.clone()
     }
-
 
     fn parse_rules(&mut self) -> Result<SassRuleSet, &'static str> {
         let mut rules = vec![];
@@ -110,23 +102,93 @@ impl SassParser {
     }
 
     fn parse_rule(&mut self) -> Result<Option<SassRule>, &'static str> {
+        let c = match self.curr.clone() {
+            Some(c) => c,
+            None => return Ok(None),
+        };
+
         let mut selectors = vec![];
         while let Some(selector) = try!(self.parse_selector()) {
             selectors.push(selector);
         }
+        if selectors.len() == 0 {
+            panic!("Empty selector!")
+        }
+
         let mut props_and_values = vec![];
         while let Some(property_value_set) = try!(self.parse_property_value_set()) {
             props_and_values.push(property_value_set);
         }
+
+        // A rule without properties and values isn't *wrong*, per se...
         Ok(Some(SassRule { selectors: selectors, props_and_values: props_and_values }))
     }
 
     fn parse_selector(&mut self) -> Result<Option<token::Range>, &'static str> {
-        Err("not implemented")
+        let c = match self.curr.clone() {
+            Some(c) => c,
+            None => return Ok(None),
+        };
+
+        if c.token == token::Text {
+            self.bump();
+            return Ok(Some(c))
+        }
+
+        match &c.token {
+            &token::Eof => Ok(None),
+            &token::OpenDelim(token::Brace) => {
+                self.bump(); // for the delim
+                self.bump(); // whitespace
+                Ok(None)
+            },
+            &token::Comma => {
+                self.bump();
+                self.parse_selector()
+            },
+            &token::Whitespace => { // wrong but temporarily so
+                self.bump();
+                self.parse_selector()
+            },
+            _ => Err("Unexpected token where we expected selectors"),
+        }
     }
 
     fn parse_property_value_set(&mut self) -> Result<Option<PropertyValueSet>, &'static str> {
-        Err("not implemented")
+        let p = match self.curr.clone() {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
+        match p.token {
+            token::Text => {
+                self.bump(); // should be colon
+                self.bump(); // optional whitespace required for now
+                self.bump(); // now val
+
+                let v = match self.curr.clone() {
+                    Some(v) => v,
+                    None => panic!("Expected a value here, instead got EOF!"),
+                };
+
+                if v.token == token::Text {
+                    self.bump(); // semicolon
+                    self.bump(); // whitespace
+                    return Ok(Some(PropertyValueSet { property: p, value: v }))
+                } else {
+                    panic!("Expected a value here, instead got who knows what!");
+                }
+            },
+            token::CloseDelim(token::Brace) => {
+                self.bump();
+                Ok(None)
+            },
+            token::Whitespace => {
+                self.bump();
+                self.parse_property_value_set()
+            },
+            _ => Err("Unexpected token where we expected properties and values"),
+        }
     }
 }
 

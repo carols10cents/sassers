@@ -8,7 +8,7 @@ pub struct Range {
     pub token: Token,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Text,
     Whitespace,
@@ -21,7 +21,7 @@ pub enum Token {
     Eof,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DelimToken {
     Brace,
 }
