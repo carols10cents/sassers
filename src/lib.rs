@@ -2,15 +2,15 @@
 #![feature(convert)]
 mod token;
 
-pub fn compile(sass: String, style: &str) -> String {
+pub fn compile(sass: String, style: &str) -> Result<String, &'static str> {
     let mut sp = SassParser::new(sass);
-    let parsed = sp.parse();
+    let parsed = try!(sp.parse());
     match style {
-        "nested"     => parsed.nested(&sp),
-        "compressed" => parsed.compressed(&sp),
-        "expanded"   => parsed.expanded(&sp),
-        "compact"    => parsed.compact(&sp),
-        _            => panic!("Unknown style: {}. Please specify one of nested, compressed, expanded, or compact.", style),
+        "nested"     => Ok(parsed.nested(&sp)),
+        "compressed" => Ok(parsed.compressed(&sp)),
+        "expanded"   => Ok(parsed.expanded(&sp)),
+        "compact"    => Ok(parsed.compact(&sp)),
+        _            => Err("Unknown style:. Please specify one of nested, compressed, expanded, or compact."),
     }
 }
 
@@ -168,14 +168,7 @@ impl SassParser {
         self.token = self.tokenizer.real_token();
     }
 
-    pub fn parse(&mut self) -> SassRuleSet {
-        match self.parse_rules() {
-            Ok(sass_rule_set) => sass_rule_set,
-            Err(msg) => panic!(msg),
-        }
-    }
-
-    fn parse_rules(&mut self) -> Result<SassRuleSet, &'static str> {
+    pub fn parse(&mut self) -> Result<SassRuleSet, &'static str> {
         let mut rules = vec![];
         while let Some(rule) = try!(self.parse_rule()) {
             rules.push(rule);
@@ -193,7 +186,7 @@ impl SassParser {
             selectors.push(selector);
         }
         if selectors.len() == 0 {
-            panic!("Empty selector!")
+            return Err("Empty selector!")
         }
 
         let mut props_and_values = vec![];
@@ -252,7 +245,7 @@ impl SassParser {
                     self.bump(); // whitespace
                     return Ok(Some(PropertyValueSet { property: p, value: v }))
                 } else {
-                    panic!("Expected a value here, instead got who knows what!");
+                    return Err("Expected a value here, instead got who knows what!")
                 }
             },
             token::CloseDelim(token::Brace) => {
