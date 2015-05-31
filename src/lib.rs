@@ -1,31 +1,30 @@
+#![feature(collections)]
+#![feature(convert)]
 mod token;
 
 pub fn compile(sass: String, style: &str) -> String {
-    let mut sp = SassParser::new(sass); // SassTokenizer::new(sass);
+    let mut sp = SassParser::new(sass);
     let parsed = sp.parse();
     match style {
-        "nested"     => nested(parsed),
-        "compressed" => compressed(parsed),
-        "expanded"   => expanded(parsed),
-        "compact"    => compact(parsed),
+        "nested"     => parsed.nested(&sp),
+        "compressed" => compressed(parsed, sp),
+        "expanded"   => expanded(parsed, sp),
+        "compact"    => compact(parsed, sp),
         _            => panic!("Unknown style: {}. Please specify one of nested, compressed, expanded, or compact.", style),
     }
 }
 
-fn nested(sass: String) -> String {
-    sass
+fn compressed(sass: SassRuleSet, sp: SassParser) -> String {
+    // sass.replace(" ", "").replace("\n", "")
+    format!("{:?}", sass)
 }
 
-fn compressed(sass: String) -> String {
-    sass.replace(" ", "").replace("\n", "")
+fn expanded(sass: SassRuleSet, sp: SassParser) -> String {
+    format!("{:?}", sass)
 }
 
-fn expanded(sass: String) -> String {
-    sass
-}
-
-fn compact(sass: String) -> String {
-    sass
+fn compact(sass: SassRuleSet, sp: SassParser) -> String {
+    format!("{:?}", sass)
 }
 
 #[derive(Debug)]
@@ -33,10 +32,40 @@ struct SassRuleSet {
     pub rules: Vec<SassRule>,
 }
 
+impl SassRuleSet {
+    fn nested(&self, sp: &SassParser) -> String {
+        let mut output =  String::from_str("");
+        for rule in &self.rules {
+            output.push_str((&rule).nested(&sp).as_str());
+        }
+        output
+    }
+}
+
 #[derive(Debug)]
 struct SassRule {
     pub selectors: Vec<token::Range>,
     pub props_and_values: Vec<PropertyValueSet>,
+}
+
+impl SassRule {
+    fn nested(&self, sp: &SassParser) -> String {
+        let mut output =  String::from_str("");
+
+        for selector in &self.selectors {
+            output.push_str(&sp.extract(selector));
+        }
+
+        output.push_str(" {");
+
+        for prop_and_val in &self.props_and_values {
+            output.push_str(format!("\n  {}: {};", &sp.extract(&prop_and_val.property), &sp.extract(&prop_and_val.value)).as_str());
+        }
+
+        output.push_str(" }\n");
+
+        output
+    }
 }
 
 #[derive(Debug)]
@@ -50,17 +79,23 @@ struct SassParser {
     pub token: token::Range,
     pub last_token: token::Range,
     pub tokenizer: SassTokenizer,
+    sass: String,
 }
 
 impl SassParser {
     pub fn new(str: String) -> SassParser {
-        let mut tokenizer = SassTokenizer::new(str);
+        let mut tokenizer = SassTokenizer::new(str.clone());
         let initial_token = tokenizer.real_token();
         SassParser {
             token: initial_token.clone(),
             last_token: initial_token.clone(),
             tokenizer: tokenizer,
+            sass: str,
         }
+    }
+
+    pub fn extract(&self, range: &token::Range) -> &str {
+        self.sass.slice_chars(range.start_pos as usize, range.end_pos as usize)
     }
 
     pub fn bump(&mut self) {
@@ -68,9 +103,11 @@ impl SassParser {
         self.token = self.tokenizer.real_token();
     }
 
-    pub fn parse(&mut self) -> String {
-        println!("{:?}", self.parse_rules());
-        self.tokenizer.sass.clone()
+    pub fn parse(&mut self) -> SassRuleSet {
+        match self.parse_rules() {
+            Ok(sass_rule_set) => sass_rule_set,
+            Err(msg) => panic!(msg),
+        }
     }
 
     fn parse_rules(&mut self) -> Result<SassRuleSet, &'static str> {
