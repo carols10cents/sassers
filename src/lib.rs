@@ -7,24 +7,11 @@ pub fn compile(sass: String, style: &str) -> String {
     let parsed = sp.parse();
     match style {
         "nested"     => parsed.nested(&sp),
-        "compressed" => compressed(parsed, sp),
-        "expanded"   => expanded(parsed, sp),
-        "compact"    => compact(parsed, sp),
+        "compressed" => parsed.compressed(&sp),
+        "expanded"   => parsed.expanded(&sp),
+        "compact"    => parsed.compact(&sp),
         _            => panic!("Unknown style: {}. Please specify one of nested, compressed, expanded, or compact.", style),
     }
-}
-
-fn compressed(sass: SassRuleSet, sp: SassParser) -> String {
-    // sass.replace(" ", "").replace("\n", "")
-    format!("{:?}", sass)
-}
-
-fn expanded(sass: SassRuleSet, sp: SassParser) -> String {
-    format!("{:?}", sass)
-}
-
-fn compact(sass: SassRuleSet, sp: SassParser) -> String {
-    format!("{:?}", sass)
 }
 
 #[derive(Debug)]
@@ -37,6 +24,30 @@ impl SassRuleSet {
         let mut output =  String::from_str("");
         for rule in &self.rules {
             output.push_str((&rule).nested(&sp).as_str());
+        }
+        output
+    }
+
+    fn compressed(&self, sp: &SassParser) -> String {
+        let mut output =  String::from_str("");
+        for rule in &self.rules {
+            output.push_str((&rule).compressed(&sp).as_str());
+        }
+        output
+    }
+
+    fn expanded(&self, sp: &SassParser) -> String {
+        let mut output =  String::from_str("");
+        for rule in &self.rules {
+            output.push_str((&rule).expanded(&sp).as_str());
+        }
+        output
+    }
+
+    fn compact(&self, sp: &SassParser) -> String {
+        let mut output =  String::from_str("");
+        for rule in &self.rules {
+            output.push_str((&rule).compact(&sp).as_str());
         }
         output
     }
@@ -60,6 +71,60 @@ impl SassRule {
 
         for prop_and_val in &self.props_and_values {
             output.push_str(format!("\n  {}: {};", &sp.extract(&prop_and_val.property), &sp.extract(&prop_and_val.value)).as_str());
+        }
+
+        output.push_str(" }\n");
+
+        output
+    }
+
+    fn compressed(&self, sp: &SassParser) -> String {
+        let mut output =  String::from_str("");
+
+        for selector in &self.selectors {
+            output.push_str(&sp.extract(selector));
+        }
+
+        output.push_str("{");
+
+        for prop_and_val in &self.props_and_values {
+            output.push_str(format!("{}:{}", &sp.extract(&prop_and_val.property), &sp.extract(&prop_and_val.value)).as_str());
+        }
+
+        output.push_str("}\n");
+
+        output
+    }
+
+    fn expanded(&self, sp: &SassParser) -> String {
+        let mut output =  String::from_str("");
+
+        for selector in &self.selectors {
+            output.push_str(&sp.extract(selector));
+        }
+
+        output.push_str(" {");
+
+        for prop_and_val in &self.props_and_values {
+            output.push_str(format!("\n  {}: {};", &sp.extract(&prop_and_val.property), &sp.extract(&prop_and_val.value)).as_str());
+        }
+
+        output.push_str("\n}\n");
+
+        output
+    }
+
+    fn compact(&self, sp: &SassParser) -> String {
+        let mut output =  String::from_str("");
+
+        for selector in &self.selectors {
+            output.push_str(&sp.extract(selector));
+        }
+
+        output.push_str(" {");
+
+        for prop_and_val in &self.props_and_values {
+            output.push_str(format!(" {}: {};", &sp.extract(&prop_and_val.property), &sp.extract(&prop_and_val.value)).as_str());
         }
 
         output.push_str(" }\n");
