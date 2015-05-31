@@ -47,50 +47,30 @@ struct PropertyValueSet {
 
 #[derive(Debug)]
 struct SassParser {
-    pub curr: Option<token::Range>,
-    pub peek_range: token::Range,
-    pub tok: SassTokenizer,
+    pub token: token::Range,
+    pub last_token: token::Range,
+    pub tokenizer: SassTokenizer,
 }
 
 impl SassParser {
     pub fn new(str: String) -> SassParser {
-        let mut sp = SassParser {
-            tok: SassTokenizer::new(str),
-            curr: None,
-            peek_range: token::Range { start_pos: 0, end_pos: 0, token: token::Eof },
-        };
-        sp.advance_token();
-        sp.bump();
-        sp
+        let mut tokenizer = SassTokenizer::new(str);
+        let initial_token = tokenizer.real_token();
+        SassParser {
+            token: initial_token.clone(),
+            last_token: initial_token.clone(),
+            tokenizer: tokenizer,
+        }
     }
 
     pub fn bump(&mut self) {
-        if self.peek_range.token == token::Eof {
-            self.curr = None;
-        } else {
-            self.curr = Some(self.peek_range.clone());
-            self.advance_token();
-        }
-    }
-
-    pub fn advance_token(&mut self) {
-        match self.tok.scan_whitespace() {
-            Some(whitespace) => {
-                self.peek_range = whitespace;
-            },
-            None => {
-                if self.tok.is_eof() {
-                    self.peek_range = token::Range { start_pos: self.tok.pos + 1, end_pos: self.tok.pos + 1, token: token::Eof };
-                } else {
-                    self.peek_range = self.tok.next_token_inner();
-                }
-            },
-        }
+        self.last_token = self.token.clone();
+        self.token = self.tokenizer.real_token();
     }
 
     pub fn parse(&mut self) -> String {
         println!("{:?}", self.parse_rules());
-        self.tok.sass.clone()
+        self.tokenizer.sass.clone()
     }
 
     fn parse_rules(&mut self) -> Result<SassRuleSet, &'static str> {
@@ -102,10 +82,9 @@ impl SassParser {
     }
 
     fn parse_rule(&mut self) -> Result<Option<SassRule>, &'static str> {
-        let c = match self.curr.clone() {
-            Some(c) => c,
-            None => return Ok(None),
-        };
+        if self.token.token == token::Eof {
+            return Ok(None)
+        }
 
         let mut selectors = vec![];
         while let Some(selector) = try!(self.parse_selector()) {
@@ -125,21 +104,19 @@ impl SassParser {
     }
 
     fn parse_selector(&mut self) -> Result<Option<token::Range>, &'static str> {
-        let c = match self.curr.clone() {
-            Some(c) => c,
-            None => return Ok(None),
-        };
-
-        if c.token == token::Text {
-            self.bump();
-            return Ok(Some(c))
+        if self.token.token == token::Eof {
+            return Ok(None)
         }
 
-        match &c.token {
+        if self.token.token == token::Text {
+            self.bump();
+            return Ok(Some(self.last_token.clone()))
+        }
+
+        match &self.token.token {
             &token::Eof => Ok(None),
             &token::OpenDelim(token::Brace) => {
-                self.bump(); // for the delim
-                self.bump(); // whitespace
+                self.bump();
                 Ok(None)
             },
             &token::Comma => {
@@ -155,21 +132,23 @@ impl SassParser {
     }
 
     fn parse_property_value_set(&mut self) -> Result<Option<PropertyValueSet>, &'static str> {
-        let p = match self.curr.clone() {
-            Some(p) => p,
-            None => return Ok(None),
-        };
+        if self.token.token == token::Eof {
+            return Ok(None)
+        }
+
+        if self.token.token == token::CloseDelim(token::Brace) {
+            self.bump();
+            return Ok(None)
+        }
+
+        let p = self.token.clone();
 
         match p.token {
             token::Text => {
                 self.bump(); // should be colon
                 self.bump(); // optional whitespace required for now
-                self.bump(); // now val
 
-                let v = match self.curr.clone() {
-                    Some(v) => v,
-                    None => panic!("Expected a value here, instead got EOF!"),
-                };
+                let v = self.token.clone();
 
                 if v.token == token::Text {
                     self.bump(); // semicolon
@@ -197,6 +176,7 @@ struct SassTokenizer {
     pub pos: u32,
     pub last_pos: u32,
     pub curr: Option<char>,
+    pub peek_range: token::Range,
     sass: String,
 }
 
@@ -206,9 +186,11 @@ impl SassTokenizer {
             pos: 0,
             last_pos: 0,
             curr: Some('\n'),
+            peek_range: token::Range { start_pos: 0, end_pos: 0, token: token::Eof },
             sass: str,
         };
         sr.bump();
+        sr.advance_token();
         sr
     }
 
@@ -223,6 +205,27 @@ impl SassTokenizer {
         } else {
             self.curr = None;
         }
+    }
+
+    fn advance_token(&mut self) {
+        match self.scan_whitespace() {
+            Some(whitespace) => {
+                self.peek_range = whitespace;
+            },
+            None => {
+                if self.is_eof() {
+                    self.peek_range = token::Range { start_pos: self.pos + 1, end_pos: self.pos + 1, token: token::Eof };
+                } else {
+                    self.peek_range = self.next_token_inner();
+                }
+            },
+        }
+    }
+
+    fn next_token(&mut self) -> token::Range {
+        let retval = self.peek_range.clone();
+        self.advance_token();
+        retval
     }
 
     fn next_token_inner(&mut self) -> token::Range {
@@ -250,11 +253,11 @@ impl SassTokenizer {
     }
 
     fn real_token(&mut self) -> token::Range {
-        let mut t = self.next_token_inner();
+        let mut t = self.next_token();
         loop {
             match t.token {
                 token::Whitespace => {
-                    t = self.next_token_inner();
+                    t = self.next_token();
                 },
                 _ => break,
             }
