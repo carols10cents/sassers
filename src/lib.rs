@@ -190,8 +190,8 @@ impl SassParser {
         }
 
         let mut props_and_values = vec![];
-        while let Some(property_value_set) = try!(self.parse_property_value_set()) {
-            props_and_values.push(property_value_set);
+        while let Some(property_value_set_or_subrule) = try!(self.parse_property_value_set_or_subrule()) {
+            props_and_values.push(property_value_set_or_subrule);
         }
 
         // A rule without properties and values isn't *wrong*, per se...
@@ -221,7 +221,7 @@ impl SassParser {
         }
     }
 
-    fn parse_property_value_set(&mut self) -> Result<Option<PropertyValueSet>, &'static str> {
+    fn parse_property_value_set_or_subrule(&mut self) -> Result<Option<PropertyValueSet>, &'static str> {
         if self.token.token == token::Eof {
             return Ok(None)
         }
