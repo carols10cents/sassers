@@ -114,16 +114,11 @@ impl SassParser {
         }
 
         match &self.token.token {
-            &token::Eof => Ok(None),
             &token::OpenDelim(token::Brace) => {
                 self.bump();
                 Ok(None)
             },
             &token::Comma => {
-                self.bump();
-                self.parse_selector()
-            },
-            &token::Whitespace => { // wrong but temporarily so
                 self.bump();
                 self.parse_selector()
             },
@@ -161,10 +156,6 @@ impl SassParser {
             token::CloseDelim(token::Brace) => {
                 self.bump();
                 Ok(None)
-            },
-            token::Whitespace => {
-                self.bump();
-                self.parse_property_value_set()
             },
             _ => Err("Unexpected token where we expected properties and values"),
         }
