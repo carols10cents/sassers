@@ -57,6 +57,7 @@ impl SassRuleSet {
 struct SassRule {
     pub selectors: Vec<token::Range>,
     pub props_and_values: Vec<PropertyValueSet>,
+    pub subrule_set: SassRuleSet,
 }
 
 impl SassRule {
@@ -190,12 +191,13 @@ impl SassParser {
         }
 
         let mut props_and_values = vec![];
+        let mut subrules = vec![];
         while let Some(property_value_set_or_subrule) = try!(self.parse_property_value_set_or_subrule()) {
             props_and_values.push(property_value_set_or_subrule);
         }
 
         // A rule without properties and values isn't *wrong*, per se...
-        Ok(Some(SassRule { selectors: selectors, props_and_values: props_and_values }))
+        Ok(Some(SassRule { selectors: selectors, props_and_values: props_and_values, subrule_set: SassRuleSet { rules: subrules }}))
     }
 
     fn parse_selector(&mut self) -> Result<Option<token::Range>, &'static str> {
