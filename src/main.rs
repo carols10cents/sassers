@@ -32,7 +32,7 @@ Options:
         let mut sass = String::new();
         File::open(&Path::new(&inputfile)).unwrap().read_to_string(&mut sass).unwrap();
 
-        match sassers::compile(sass, style) {
+        match sassers::compile(&sass, style) {
             Ok(compiled) => println!("{}", compiled),
             Err(msg) => println!("Compilation failed: {}", msg),
         }

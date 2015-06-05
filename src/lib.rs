@@ -2,8 +2,8 @@
 #![feature(convert)]
 mod token;
 
-pub fn compile(sass: String, style: &str) -> Result<String, &'static str> {
-    let mut sp = SassParser::new(sass);
+pub fn compile(sass: &str, style: &str) -> Result<String, &'static str> {
+    let mut sp = SassParser::new(&sass);
     let parsed = try!(sp.parse());
     match style {
         "nested"     => Ok(parsed.nested(&sp)),
@@ -141,22 +141,22 @@ struct PropertyValueSet {
 }
 
 #[derive(Debug)]
-struct SassParser {
+struct SassParser<'a> {
     pub token: token::Range,
     pub last_token: token::Range,
-    pub tokenizer: SassTokenizer,
-    sass: String,
+    pub tokenizer: SassTokenizer<'a>,
+    sass: &'a str,
 }
 
-impl SassParser {
-    pub fn new(str: String) -> SassParser {
-        let mut tokenizer = SassTokenizer::new(str.clone());
+impl<'a> SassParser<'a> {
+    pub fn new(sass: &'a str) -> SassParser<'a> {
+        let mut tokenizer = SassTokenizer::new(&sass);
         let initial_token = tokenizer.real_token();
         SassParser {
             token: initial_token.clone(),
             last_token: initial_token.clone(),
             tokenizer: tokenizer,
-            sass: str,
+            sass: &sass,
         }
     }
 
@@ -260,22 +260,22 @@ impl SassParser {
 }
 
 #[derive(Debug)]
-struct SassTokenizer {
+struct SassTokenizer<'a> {
     pub pos: u32,
     pub last_pos: u32,
     pub curr: Option<char>,
     pub peek_range: token::Range,
-    sass: String,
+    sass: &'a str,
 }
 
-impl SassTokenizer {
-    pub fn new(str: String) -> SassTokenizer {
+impl<'a> SassTokenizer<'a> {
+    pub fn new(sass: &'a str) -> SassTokenizer<'a> {
         let mut sr = SassTokenizer {
             pos: 0,
             last_pos: 0,
             curr: Some('\n'),
             peek_range: token::Range { start_pos: 0, end_pos: 0, token: token::Eof },
-            sass: str,
+            sass: &sass,
         };
         sr.bump();
         sr.advance_token();
