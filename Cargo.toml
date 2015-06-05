@@ -1,7 +1,11 @@
 [package]
 name = "sassers"
-version = "0.1.0"
+description = "A Sass compiler in Rust"
+version = "0.1.0-nope"
 authors = ["Carol Nichols <carol.nichols@gmail.com>"]
+repository = "https://github.com/carols10cents/sassers"
+readme = "README.md"
+license = "MIT"
 
 [dependencies]
 docopt = "0.6.64"
