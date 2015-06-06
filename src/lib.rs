@@ -21,6 +21,7 @@ pub fn compile(sass: &str, style: &str) -> Result<(), &'static str> {
 enum State {
     StartRule,
     InSelectors,
+    InProperties,
 }
 
 #[derive(Debug)]
@@ -81,7 +82,6 @@ impl<'a> SassTokenizer<'a> {
         self.state = State::InSelectors;
         self.stack.push(Rule::SassRule);
 
-
         Some(Event::Start(Rule::SassRule))
     }
 
@@ -99,18 +99,19 @@ impl<'a> SassTokenizer<'a> {
         while i < limit {
 
             match bytes[i..limit].iter().position(|&c| c == b',' || c == b'{') {
-                Some(pos) => i += pos,
+                Some(pos) => { i += pos; },
                 None => { i = limit; break; }
             }
 
             let c = bytes[i];
 
-
             if c == b',' || c == b'{' {
                 let n = scan_trailing_whitespace(&self.sass[beginning..i]);
                 let end = i - n;
                 if end > beginning {
-                    self.offset = end;
+                    if c == b'{' {
+                        self.state = State::InProperties;
+                    }
                     return Event::Selector(Borrowed(&self.sass[beginning..end]));
                 }
 
@@ -148,6 +149,7 @@ impl<'a> Iterator for SassTokenizer<'a> {
                     }
                 },
                 State::InSelectors => return Some(self.next_selector()),
+                State::InProperties => return None,
                 // _ => println!("idk what state i'm in"),
             }
         }
