@@ -78,9 +78,6 @@ impl<'a> SassTokenizer<'a> {
     }
 
     pub fn start_rule(&mut self) -> Option<Event<'a>> {
-        println!("{:?}", self.sass.as_bytes()[self.offset]);
-        self.offset += 1;
-
         self.state = State::InSelectors;
         self.stack.push(Rule::SassRule);
 
