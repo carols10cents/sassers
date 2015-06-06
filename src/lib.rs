@@ -34,6 +34,7 @@ enum Event<'a> {
     Start(Rule),
     End(Rule),
     Selector(Cow<'a, str>),
+    Property(Cow<'a, str>, Cow<'a, str>),
 }
 
 #[derive(Debug)]
@@ -91,16 +92,19 @@ impl<'a> SassTokenizer<'a> {
         Event::End(rule)
     }
 
+    pub fn next_property(&mut self) -> Event<'a> {
+    }
+
     pub fn next_selector(&mut self) -> Event<'a> {
         let bytes = self.sass.as_bytes();
         let beginning = self.offset;
         let mut i = beginning;
         let limit = self.sass.len();
-        while i < limit {
 
+        while i < limit {
             match bytes[i..limit].iter().position(|&c| c == b',' || c == b'{') {
                 Some(pos) => { i += pos; },
-                None => { i = limit; break; }
+                None => { i = limit; break; },
             }
 
             let c = bytes[i];
@@ -114,7 +118,6 @@ impl<'a> SassTokenizer<'a> {
                     }
                     return Event::Selector(Borrowed(&self.sass[beginning..end]));
                 }
-
             }
 
             self.offset = i;
@@ -122,7 +125,6 @@ impl<'a> SassTokenizer<'a> {
                 return Event::Selector(Borrowed(&self.sass[beginning..i]))
             }
             i += 1;
-
         }
 
         if i > beginning {
@@ -131,7 +133,6 @@ impl<'a> SassTokenizer<'a> {
         } else {
             self.end()
         }
-
     }
 }
 
@@ -149,7 +150,7 @@ impl<'a> Iterator for SassTokenizer<'a> {
                     }
                 },
                 State::InSelectors => return Some(self.next_selector()),
-                State::InProperties => return None,
+                State::InProperties => return Some(self.next_property()),
                 // _ => println!("idk what state i'm in"),
             }
         }
