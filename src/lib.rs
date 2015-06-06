@@ -14,6 +14,11 @@ pub fn compile(sass: &str, style: &str) -> Result<(), &'static str> {
     // }
 }
 
+#[derive(PartialEq, Debug)]
+enum State {
+    StartRule,
+}
+
 #[derive(Debug)]
 enum Rule {
     SassRule,
@@ -52,6 +57,7 @@ struct SassTokenizer<'a> {
     sass: &'a str,
     offset: usize,
     stack: Vec<(Rule, usize, usize)>,
+    state: State,
 }
 
 impl<'a> SassTokenizer<'a> {
@@ -60,7 +66,14 @@ impl<'a> SassTokenizer<'a> {
             sass: &sass,
             offset: 0,
             stack: Vec::new(),
+            state: State::StartRule,
         }
+    }
+
+    pub fn start_rule(&mut self) -> Option<Event> {
+        println!("{:?}", self.sass.as_bytes()[self.offset]);
+        self.offset += 1;
+        Some(Event::Start(Rule::SassRule))
     }
 }
 
@@ -70,9 +83,15 @@ impl<'a> Iterator for SassTokenizer<'a> {
     fn next(&mut self) -> Option<Event> {
         println!("totes got here");
         if self.offset < self.sass.len() {
-            println!("{:?}", self.sass.as_bytes()[self.offset]);
-            self.offset += 1;
-            return Some(Event::Start(Rule::SassRule))
+            match self.state {
+                State::StartRule => {
+                    let ret = self.start_rule();
+                    if ret.is_some() {
+                        return ret
+                    }
+                },
+                // _ => println!("idk what state i'm in"),
+            }
         }
         None
     }
