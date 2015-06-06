@@ -14,10 +14,12 @@ pub fn compile(sass: &str, style: &str) -> Result<(), &'static str> {
     // }
 }
 
+#[derive(Debug)]
 enum Rule {
     SassRule,
 }
 
+#[derive(Debug)]
 enum Event {
     Start(Rule),
     End(Rule),
@@ -47,21 +49,17 @@ impl<'a> SassParser<'a> {
 
 #[derive(Debug)]
 struct SassTokenizer<'a> {
-    pub pos: u32,
-    pub last_pos: u32,
-    pub curr: Option<char>,
-    pub peek_range: token::Range,
     sass: &'a str,
+    offset: usize,
+    stack: Vec<(Rule, usize, usize)>,
 }
 
 impl<'a> SassTokenizer<'a> {
     pub fn new(sass: &'a str) -> SassTokenizer<'a> {
         SassTokenizer {
-            pos: 0,
-            last_pos: 0,
-            curr: Some('\n'),
-            peek_range: token::Range { start_pos: 0, end_pos: 0, token: token::Eof },
             sass: &sass,
+            offset: 0,
+            stack: Vec::new(),
         }
     }
 }
@@ -71,6 +69,11 @@ impl<'a> Iterator for SassTokenizer<'a> {
 
     fn next(&mut self) -> Option<Event> {
         println!("totes got here");
+        if self.offset < self.sass.len() {
+            println!("{:?}", self.sass.as_bytes()[self.offset]);
+            self.offset += 1;
+            return Some(Event::Start(Rule::SassRule))
+        }
         None
     }
 }
