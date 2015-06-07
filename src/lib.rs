@@ -120,6 +120,12 @@ impl<'a> SassTokenizer<'a> {
     }
 
     pub fn start_rule(&mut self) -> Option<Event<'a>> {
+        self.skip_leading_whitespace();
+
+        if self.offset == self.sass.len() {
+            return None
+        }
+
         self.state = State::InSelectors;
         self.stack.push(Rule::SassRule);
 
