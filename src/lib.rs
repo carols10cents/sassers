@@ -4,9 +4,12 @@ use std::borrow::Cow::{Borrowed};
 mod token;
 
 pub fn compile(sass: &str, style: &str) -> Result<(), &'static str> {
-    let mut sp = SassParser::new(&sass);
-    let parsed = try!(sp.parse());
-    println!("{:?}", parsed);
+    let mut st = SassTokenizer::new(&sass);
+
+    while let Some(foo) = st.next() {
+        println!("{:?}", foo);
+    }
+
     Ok(())
     // match style {
     //     "nested"     => Ok(parsed.nested(&sp)),
@@ -35,30 +38,6 @@ enum Event<'a> {
     End(Rule),
     Selector(Cow<'a, str>),
     Property(Cow<'a, str>, Cow<'a, str>),
-}
-
-#[derive(Debug)]
-struct SassParser<'a> {
-    pub tokenizer: SassTokenizer<'a>,
-    sass: &'a str,
-}
-
-impl<'a> SassParser<'a> {
-    pub fn new(sass: &'a str) -> SassParser<'a> {
-        let mut tokenizer = SassTokenizer::new(&sass);
-        SassParser {
-            tokenizer: tokenizer,
-            sass: &sass,
-        }
-    }
-
-    pub fn parse(&mut self) -> Result<(), &'static str> {
-        while let Some(foo) = self.tokenizer.next() {
-            println!("{:?}", foo);
-        }
-
-        Ok(())
-    }
 }
 
 #[derive(Debug)]
