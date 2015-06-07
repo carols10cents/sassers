@@ -7,15 +7,12 @@ use std::borrow::Cow::{Borrowed};
 pub fn compile(sass: &str, style: &str) -> Result<String, &'static str> {
     let mut st = SassTokenizer::new(&sass);
 
-    // while let Some(foo) = st.next() {
-    //     println!("{:?}", foo);
-    // }
-
     match style {
         "nested"     => Ok(nested_output(&mut st)),
         "compressed" => Ok(compressed_output(&mut st)),
         "expanded"   => Ok(expanded_output(&mut st)),
         "compact"    => Ok(compact_output(&mut st)),
+        "debug"      => Ok(debug_output(&mut st)),
         _            => Err("Unknown style:. Please specify one of nested, compressed, expanded, or compact."),
     }
 }
@@ -72,6 +69,14 @@ pub fn compact_output(tokenizer: &mut SassTokenizer) -> String {
             Event::End(_) => format!(" }}"),
         };
         output.push_str(print_token.as_str());
+    }
+    output
+}
+
+pub fn debug_output(tokenizer: &mut SassTokenizer) -> String {
+    let mut output =  String::from_str("");
+    while let Some(token) = tokenizer.next() {
+        output.push_str(format!("{:?}\n", token).as_str());
     }
     output
 }
