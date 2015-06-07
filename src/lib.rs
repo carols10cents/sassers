@@ -92,7 +92,68 @@ impl<'a> SassTokenizer<'a> {
         Event::End(rule)
     }
 
+    fn scan_while<F>(&mut self, data: &str, f: F) -> usize
+            where F: Fn(u8) -> bool {
+        match data.as_bytes().iter().position(|&c| !f(c)) {
+            Some(i) => i,
+            None => data.len()
+        }
+    }
+
+    fn skip_leading_whitespace(&mut self) {
+        let i = self.offset;
+        self.offset += self.scan_while(&self.sass[i..self.sass.len()], is_ascii_whitespace);
+    }
+
     pub fn next_property(&mut self) -> Event<'a> {
+        self.skip_leading_whitespace();
+
+        let bytes = self.sass.as_bytes();
+        let name_beginning = self.offset;
+        let mut i = name_beginning;
+        let limit = self.sass.len();
+
+        let c = bytes[i];
+        if c == b'}' {
+            self.offset += 1;
+            return self.end()
+        }
+
+        while i < limit {
+            match bytes[i..limit].iter().position(|&c| c == b':') {
+                Some(pos) => { i += pos; },
+                None => { i = limit; break; },
+            }
+
+            let name_end = i;
+
+            i += 1;
+            self.offset = i;
+            self.skip_leading_whitespace();
+
+            let value_beginning = self.offset;
+            i = value_beginning;
+
+            while i < limit {
+                match bytes[i..limit].iter().position(|&c| c == b';') {
+                    Some(pos) => { i += pos; },
+                    None => { i = limit; break; },
+                }
+
+                let value_end = i;
+                self.offset = i + 1;
+
+                self.skip_leading_whitespace();
+
+                return Event::Property(
+                    Borrowed(&self.sass[name_beginning..name_end]),
+                    Borrowed(&self.sass[value_beginning..value_end])
+                )
+
+            }
+        }
+        self.offset = self.sass.len();
+        Event::Property(Borrowed(""), Borrowed(""))
     }
 
     pub fn next_selector(&mut self) -> Event<'a> {
@@ -116,6 +177,7 @@ impl<'a> SassTokenizer<'a> {
                     if c == b'{' {
                         self.state = State::InProperties;
                     }
+                    self.offset = i + 1;
                     return Event::Selector(Borrowed(&self.sass[beginning..end]));
                 }
             }
@@ -140,7 +202,6 @@ impl<'a> Iterator for SassTokenizer<'a> {
     type Item = Event<'a>;
 
     fn next(&mut self) -> Option<Event<'a>> {
-        println!("totes got here");
         if self.offset < self.sass.len() {
             match self.state {
                 State::StartRule => {
@@ -151,7 +212,6 @@ impl<'a> Iterator for SassTokenizer<'a> {
                 },
                 State::InSelectors => return Some(self.next_selector()),
                 State::InProperties => return Some(self.next_property()),
-                // _ => println!("idk what state i'm in"),
             }
         }
         None
@@ -162,11 +222,8 @@ pub fn char_at(s: &str, byte: usize) -> char {
     s[byte..].chars().next().unwrap()
 }
 
-pub fn is_whitespace(c: Option<char>) -> bool {
-    match c.unwrap_or('\x00') { // None can be null for now... it's not whitespace
-        ' ' | '\n' | '\t' | '\r' => true,
-        _ => false
-    }
+pub fn is_ascii_whitespace(c: u8) -> bool {
+    c == b'\n' || c == b'\r' || is_ascii_whitespace_no_nl(c)
 }
 
 pub fn is_ascii_whitespace_no_nl(c: u8) -> bool {
