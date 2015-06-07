@@ -1,8 +1,6 @@
 use std::borrow::Cow;
 use std::borrow::Cow::{Borrowed};
 
-mod token;
-
 pub fn compile(sass: &str, style: &str) -> Result<(), &'static str> {
     let mut st = SassTokenizer::new(&sass);
 
