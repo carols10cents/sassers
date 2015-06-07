@@ -1,37 +1,53 @@
+#![feature(collections)]
+#![feature(convert)]
+
 use std::borrow::Cow;
 use std::borrow::Cow::{Borrowed};
 
-pub fn compile(sass: &str, style: &str) -> Result<(), &'static str> {
+pub fn compile(sass: &str, style: &str) -> Result<String, &'static str> {
     let mut st = SassTokenizer::new(&sass);
 
-    while let Some(foo) = st.next() {
-        println!("{:?}", foo);
-    }
+    // while let Some(foo) = st.next() {
+    //     println!("{:?}", foo);
+    // }
 
-    Ok(())
-    // match style {
-    //     "nested"     => Ok(parsed.nested(&sp)),
+    match style {
+        "nested"     => Ok(nested_output(&mut st)),
     //     "compressed" => Ok(parsed.compressed(&sp)),
     //     "expanded"   => Ok(parsed.expanded(&sp)),
     //     "compact"    => Ok(parsed.compact(&sp)),
-    //     _            => Err("Unknown style:. Please specify one of nested, compressed, expanded, or compact."),
-    // }
+        _            => Err("Unknown style:. Please specify one of nested, compressed, expanded, or compact."),
+    }
+}
+
+pub fn nested_output(tokenizer: &mut SassTokenizer) -> String {
+    let mut output =  String::from_str("");
+    while let Some(token) = tokenizer.next() {
+        let print_token = match token {
+            Event::Start(Rule) => continue,
+            Event::Selector(name) => format!("{} {{", name),
+            Event::Property(name, value) => format!("\n  {}: {};", name, value),
+            Event::End(Rule) => format!(" }}\n"),
+        };
+        output.push_str(print_token.as_str());
+    }
+    output
 }
 
 #[derive(PartialEq, Debug)]
-enum State {
+pub enum State {
     StartRule,
     InSelectors,
     InProperties,
 }
 
 #[derive(Debug)]
-enum Rule {
+pub enum Rule {
     SassRule,
 }
 
 #[derive(Debug)]
-enum Event<'a> {
+pub enum Event<'a> {
     Start(Rule),
     End(Rule),
     Selector(Cow<'a, str>),
@@ -39,7 +55,7 @@ enum Event<'a> {
 }
 
 #[derive(Debug)]
-struct SassTokenizer<'a> {
+pub struct SassTokenizer<'a> {
     sass: &'a str,
     offset: usize,
     stack: Vec<Rule>,

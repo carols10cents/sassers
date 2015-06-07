@@ -33,7 +33,7 @@ Options:
         File::open(&Path::new(&inputfile)).unwrap().read_to_string(&mut sass).unwrap();
 
         match sassers::compile(&sass, style) {
-            Ok(compiled) => println!("done"),
+            Ok(compiled) => println!("{}", compiled),
             Err(msg) => println!("Compilation failed: {}", msg),
         }
     }
