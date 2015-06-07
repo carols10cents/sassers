@@ -30,11 +30,18 @@ Options:
         let inputfile = args.get_str("<inputfile>");
 
         let mut sass = String::new();
-        File::open(&Path::new(&inputfile)).unwrap().read_to_string(&mut sass).unwrap();
-
-        match sassers::compile(&sass, style) {
-            Ok(compiled) => println!("{}", compiled),
-            Err(msg) => println!("Compilation failed: {}", msg),
+        let mut file = match File::open(&Path::new(&inputfile)) {
+            Ok(f) => f,
+            Err(msg) => panic!("File not found! {}", msg),
+        };
+        match file.read_to_string(&mut sass) {
+            Ok(_) => {
+                match sassers::compile(&sass, style) {
+                    Ok(compiled) => println!("{}", compiled),
+                    Err(msg) => println!("Compilation failed: {}", msg),
+                }
+            },
+            Err(msg) => panic!("Could not read file! {}", msg),
         }
     }
 }
