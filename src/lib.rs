@@ -14,7 +14,7 @@ pub fn compile(sass: &str, style: &str) -> Result<String, &'static str> {
     match style {
         "nested"     => Ok(nested_output(&mut st)),
         "compressed" => Ok(compressed_output(&mut st)),
-    //     "expanded"   => Ok(parsed.expanded(&sp)),
+        "expanded"   => Ok(expanded_output(&mut st)),
     //     "compact"    => Ok(parsed.compact(&sp)),
         _            => Err("Unknown style:. Please specify one of nested, compressed, expanded, or compact."),
     }
@@ -42,6 +42,20 @@ pub fn compressed_output(tokenizer: &mut SassTokenizer) -> String {
             Event::Selector(name) => format!("{}{{", name),
             Event::Property(name, value) => format!("{}:{}", name, value),
             Event::End(_) => format!("}}"),
+        };
+        output.push_str(print_token.as_str());
+    }
+    output
+}
+
+pub fn expanded_output(tokenizer: &mut SassTokenizer) -> String {
+    let mut output =  String::from_str("");
+    while let Some(token) = tokenizer.next() {
+        let print_token = match token {
+            Event::Start(_) => continue,
+            Event::Selector(name) => format!("{} {{", name),
+            Event::Property(name, value) => format!("\n  {}: {};", name, value),
+            Event::End(_) => format!("\n}}"),
         };
         output.push_str(print_token.as_str());
     }
