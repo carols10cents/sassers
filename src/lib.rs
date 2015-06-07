@@ -126,6 +126,12 @@ impl<'a> SassTokenizer<'a> {
             return None
         }
 
+        let c = self.sass.as_bytes()[self.offset];
+        if c == b'}' {
+            self.offset += 1;
+            return Some(self.end())
+        }
+
         self.state = State::InSelectors;
         self.stack.push(Rule::SassRule);
 
@@ -166,9 +172,18 @@ impl<'a> SassTokenizer<'a> {
         }
 
         while i < limit {
-            match bytes[i..limit].iter().position(|&c| c == b':') {
+            match bytes[i..limit].iter().position(|&c| c == b':' || c == b'{') {
                 Some(pos) => { i += pos; },
                 None => { break; },
+            }
+
+            // Inefficient since we already skipped the whitespace and we'll have to
+            // do it again but oh well
+            let c = bytes[i];
+            if c == b'{' {
+                self.state = State::InSelectors;
+                self.stack.push(Rule::SassRule);
+                return Event::Start(Rule::SassRule)
             }
 
             let name_end = i;
