@@ -1,7 +1,7 @@
 [package]
 name = "sassers"
 description = "A Sass compiler in Rust"
-version = "0.2.0-notevenclose"
+version = "0.3.0-badidea"
 authors = ["Carol Nichols <carol.nichols@gmail.com>"]
 repository = "https://github.com/carols10cents/sassers"
 readme = "README.md"
