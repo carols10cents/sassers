@@ -18,57 +18,120 @@ pub fn compile(sass: &str, style: &str) -> Result<String, &'static str> {
 }
 
 pub fn nested_output(tokenizer: &mut SassTokenizer) -> String {
-    let mut output =  String::from_str("");
+    let mut output = String::from_str("");
+    let mut last = Event::End(Rule::SassRule);
     while let Some(token) = tokenizer.next() {
-        let print_token = match token {
+        let print_token = match token.clone() {
             Event::Start(_) => continue,
-            Event::Selector(name) => format!("{} {{", name),
-            Event::Property(name, value) => format!("\n  {}: {};", name, value),
-            Event::End(_) => format!(" }}\n"),
+            Event::Selector(name) => format!("{} ", name),
+            Event::Property(name, value) => {
+                match last {
+                    Event::Selector(_) => format!("{{\n  {}: {};", name, value),
+                    _ => format!("\n  {}: {};", name, value),
+                }
+            },
+            Event::End(_) => {
+                match last {
+                    Event::End(_) => continue,
+                    _ => format!(" }}\n"),
+                }
+            },
         };
         output.push_str(print_token.as_str());
+        last = token;
     }
     output
 }
 
 pub fn compressed_output(tokenizer: &mut SassTokenizer) -> String {
     let mut output =  String::from_str("");
+    let mut last = Event::End(Rule::SassRule);
     while let Some(token) = tokenizer.next() {
-        let print_token = match token {
+        let print_token = match token.clone() {
             Event::Start(_) => continue,
-            Event::Selector(name) => format!("{}{{", name),
-            Event::Property(name, value) => format!("{}:{}", name, value),
-            Event::End(_) => format!("}}"),
+            Event::Selector(name) => {
+                match last {
+                    Event::Selector(_) => format!(" {}", name),
+                    _ => format!("{}", name),
+                }
+            },
+            Event::Property(name, value) => {
+                match last {
+                    Event::Selector(_) => format!("{{{}:{}", name, value),
+                    _ => format!("{}:{}", name, value),
+                }
+            },
+            Event::End(_) => {
+                match last {
+                    Event::End(_) => continue,
+                    _ => format!("}}"),
+                }
+            },
         };
         output.push_str(print_token.as_str());
+        last = token;
     }
     output
 }
 
 pub fn expanded_output(tokenizer: &mut SassTokenizer) -> String {
     let mut output =  String::from_str("");
+    let mut last = Event::End(Rule::SassRule);
     while let Some(token) = tokenizer.next() {
-        let print_token = match token {
+        let print_token = match token.clone() {
             Event::Start(_) => continue,
-            Event::Selector(name) => format!("{} {{", name),
-            Event::Property(name, value) => format!("\n  {}: {};", name, value),
-            Event::End(_) => format!("\n}}"),
+            Event::Selector(name) => {
+                match last {
+                    Event::Selector(_) => format!(" {}", name),
+                    _ => format!("{}", name),
+                }
+            },
+            Event::Property(name, value) => {
+                match last {
+                    Event::Selector(_) => format!(" {{\n  {}: {};", name, value),
+                    _ => format!("\n  {}: {};", name, value),
+                }
+            },
+            Event::End(_) => {
+                match last {
+                    Event::End(_) => continue,
+                    _ => format!("\n}}"),
+                }
+            },
         };
         output.push_str(print_token.as_str());
+        last = token;
     }
     output
 }
 
 pub fn compact_output(tokenizer: &mut SassTokenizer) -> String {
     let mut output =  String::from_str("");
+    let mut last = Event::End(Rule::SassRule);
     while let Some(token) = tokenizer.next() {
-        let print_token = match token {
+        let print_token = match token.clone() {
             Event::Start(_) => continue,
-            Event::Selector(name) => format!("{} {{", name),
-            Event::Property(name, value) => format!(" {}: {};", name, value),
-            Event::End(_) => format!(" }}"),
+            Event::Selector(name) => {
+                match last {
+                    Event::Selector(_) => format!(" {}", name),
+                    _ => format!("{}", name),
+                }
+            },
+            Event::Property(name, value) => {
+                match last {
+                    Event::Selector(_) => format!(" {{ {}: {};", name, value),
+                    _ => format!(" {}: {};", name, value),
+                }
+            },
+            Event::End(_) => {
+                match last {
+                    Event::End(_) => continue,
+                    _ => format!(" }}"),
+                }
+            },
         };
         output.push_str(print_token.as_str());
+        last = token;
     }
     output
 }
@@ -88,12 +151,12 @@ pub enum State {
     InProperties,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum Rule {
     SassRule,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum Event<'a> {
     Start(Rule),
     End(Rule),
