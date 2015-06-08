@@ -202,7 +202,13 @@ impl<'a> SassTokenizer<'a> {
     }
 
     fn end(&mut self) -> Event<'a> {
-        let rule = self.stack.pop().unwrap();
+        let rule = match self.stack.pop() {
+            Some(r) => r,
+            None => {
+                println!("Unexpected empty stack!");
+                return Event::End(Rule::SassRule)
+            },
+        };
         self.state = State::StartRule;
         Event::End(rule)
     }
