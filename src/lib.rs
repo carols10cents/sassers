@@ -3,6 +3,7 @@
 
 use std::borrow::Cow;
 use std::borrow::Cow::{Borrowed};
+use std::collections::HashMap;
 
 pub fn compile(sass: &str, style: &str) -> Result<String, &'static str> {
     let mut st = SassTokenizer::new(&sass);
@@ -20,15 +21,24 @@ pub fn compile(sass: &str, style: &str) -> Result<String, &'static str> {
 pub fn nested_output(tokenizer: &mut SassTokenizer) -> String {
     let mut output = String::from_str("");
     let mut last = Event::End(Rule::SassRule);
+    let mut variables = HashMap::new();
+
     while let Some(token) = tokenizer.next() {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
-            Event::Variable(_, _) => continue, // REPLACE WITH HASHMAP
+            Event::Variable(name, value) => {
+                variables.insert((*name).to_string(), (*value).to_string());
+                continue
+            },
             Event::Selector(name) => format!("{} ", name),
             Event::Property(name, value) => {
+                let real_value = match variables.get(&*value) {
+                    Some(v) => v.as_str(),
+                    None => &*value,
+                };
                 match last {
-                    Event::Selector(_) => format!("{{\n  {}: {};", name, value),
-                    _ => format!("\n  {}: {};", name, value),
+                    Event::Selector(_) => format!("{{\n  {}: {};", name, real_value),
+                    _ => format!("\n  {}: {};", name, real_value),
                 }
             },
             Event::End(_) => {
@@ -47,10 +57,15 @@ pub fn nested_output(tokenizer: &mut SassTokenizer) -> String {
 pub fn compressed_output(tokenizer: &mut SassTokenizer) -> String {
     let mut output =  String::from_str("");
     let mut last = Event::End(Rule::SassRule);
+    let mut variables = HashMap::new();
+
     while let Some(token) = tokenizer.next() {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
-            Event::Variable(_, _) => continue, // REPLACE WITH HASHMAP
+            Event::Variable(name, value) => {
+                variables.insert((*name).to_string(), (*value).to_string());
+                continue
+            },
             Event::Selector(name) => {
                 match last {
                     Event::Selector(_) => format!(" {}", name),
@@ -58,9 +73,13 @@ pub fn compressed_output(tokenizer: &mut SassTokenizer) -> String {
                 }
             },
             Event::Property(name, value) => {
+                let real_value = match variables.get(&*value) {
+                    Some(v) => v.as_str(),
+                    None => &*value,
+                };
                 match last {
-                    Event::Selector(_) => format!("{{{}:{}", name, value),
-                    _ => format!("{}:{}", name, value),
+                    Event::Selector(_) => format!("{{{}:{}", name, real_value),
+                    _ => format!("{}:{}", name, real_value),
                 }
             },
             Event::End(_) => {
@@ -79,10 +98,15 @@ pub fn compressed_output(tokenizer: &mut SassTokenizer) -> String {
 pub fn expanded_output(tokenizer: &mut SassTokenizer) -> String {
     let mut output =  String::from_str("");
     let mut last = Event::End(Rule::SassRule);
+    let mut variables = HashMap::new();
+
     while let Some(token) = tokenizer.next() {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
-            Event::Variable(_, _) => continue, // REPLACE WITH HASHMAP
+            Event::Variable(name, value) => {
+                variables.insert((*name).to_string(), (*value).to_string());
+                continue
+            },
             Event::Selector(name) => {
                 match last {
                     Event::Selector(_) => format!(" {}", name),
@@ -90,9 +114,13 @@ pub fn expanded_output(tokenizer: &mut SassTokenizer) -> String {
                 }
             },
             Event::Property(name, value) => {
+                let real_value = match variables.get(&*value) {
+                    Some(v) => v.as_str(),
+                    None => &*value,
+                };
                 match last {
-                    Event::Selector(_) => format!(" {{\n  {}: {};", name, value),
-                    _ => format!("\n  {}: {};", name, value),
+                    Event::Selector(_) => format!(" {{\n  {}: {};", name, real_value),
+                    _ => format!("\n  {}: {};", name, real_value),
                 }
             },
             Event::End(_) => {
@@ -111,10 +139,15 @@ pub fn expanded_output(tokenizer: &mut SassTokenizer) -> String {
 pub fn compact_output(tokenizer: &mut SassTokenizer) -> String {
     let mut output =  String::from_str("");
     let mut last = Event::End(Rule::SassRule);
+    let mut variables = HashMap::new();
+
     while let Some(token) = tokenizer.next() {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
-            Event::Variable(_, _) => continue, // REPLACE WITH HASHMAP
+            Event::Variable(name, value) => {
+                variables.insert((*name).to_string(), (*value).to_string());
+                continue
+            },
             Event::Selector(name) => {
                 match last {
                     Event::Selector(_) => format!(" {}", name),
@@ -122,9 +155,13 @@ pub fn compact_output(tokenizer: &mut SassTokenizer) -> String {
                 }
             },
             Event::Property(name, value) => {
+                let real_value = match variables.get(&*value) {
+                    Some(v) => v.as_str(),
+                    None => &*value,
+                };
                 match last {
-                    Event::Selector(_) => format!(" {{ {}: {};", name, value),
-                    _ => format!(" {}: {};", name, value),
+                    Event::Selector(_) => format!(" {{ {}: {};", name, real_value),
+                    _ => format!(" {}: {};", name, real_value),
                 }
             },
             Event::End(_) => {
