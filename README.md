@@ -10,6 +10,8 @@ A Sass compiler written natively in Rust.
 
 Last run I did was 182 passing and 4317 failing out of 4499 tests. So yeah, REALLY NOT DONE YET.
 
+Sassers follows [Sentimental Versioning](http://sentimentalversioning.org/).
+
 ## License
 
 MIT. See LICENSE.
