@@ -23,6 +23,7 @@ pub fn nested_output(tokenizer: &mut SassTokenizer) -> String {
     while let Some(token) = tokenizer.next() {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
+            Event::Variable(_, _) => continue, // REPLACE WITH HASHMAP
             Event::Selector(name) => format!("{} ", name),
             Event::Property(name, value) => {
                 match last {
@@ -49,6 +50,7 @@ pub fn compressed_output(tokenizer: &mut SassTokenizer) -> String {
     while let Some(token) = tokenizer.next() {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
+            Event::Variable(_, _) => continue, // REPLACE WITH HASHMAP
             Event::Selector(name) => {
                 match last {
                     Event::Selector(_) => format!(" {}", name),
@@ -80,6 +82,7 @@ pub fn expanded_output(tokenizer: &mut SassTokenizer) -> String {
     while let Some(token) = tokenizer.next() {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
+            Event::Variable(_, _) => continue, // REPLACE WITH HASHMAP
             Event::Selector(name) => {
                 match last {
                     Event::Selector(_) => format!(" {}", name),
@@ -111,6 +114,7 @@ pub fn compact_output(tokenizer: &mut SassTokenizer) -> String {
     while let Some(token) = tokenizer.next() {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
+            Event::Variable(_, _) => continue, // REPLACE WITH HASHMAP
             Event::Selector(name) => {
                 match last {
                     Event::Selector(_) => format!(" {}", name),
@@ -162,6 +166,7 @@ pub enum Event<'a> {
     End(Rule),
     Selector(Cow<'a, str>),
     Property(Cow<'a, str>, Cow<'a, str>),
+    Variable(Cow<'a, str>, Cow<'a, str>),
 }
 
 #[derive(Debug)]
@@ -194,6 +199,9 @@ impl<'a> SassTokenizer<'a> {
             self.offset += 1;
             return Some(self.end())
         }
+        if c == b'$' {
+            return Some(self.next_variable())
+        }
 
         self.state = State::InSelectors;
         self.stack.push(Rule::SassRule);
@@ -224,6 +232,49 @@ impl<'a> SassTokenizer<'a> {
     fn skip_leading_whitespace(&mut self) {
         let i = self.offset;
         self.offset += self.scan_while(&self.sass[i..self.sass.len()], is_ascii_whitespace);
+    }
+
+    pub fn next_variable(&mut self) -> Event<'a> {
+        // TODO: can parts of this be deduplicated with properties?
+        let bytes = self.sass.as_bytes();
+        let name_beginning = self.offset;
+        let mut i = name_beginning;
+        let limit = self.sass.len();
+
+        while i < limit {
+            match bytes[i..limit].iter().position(|&c| c == b':' ) {
+                Some(pos) => { i += pos; },
+                None => { break; },
+            }
+
+            let name_end = i;
+
+            i += 1;
+            self.offset = i;
+            self.skip_leading_whitespace();
+
+            let value_beginning = self.offset;
+            i = value_beginning;
+
+            while i < limit {
+                match bytes[i..limit].iter().position(|&c| c == b';') {
+                    Some(pos) => { i += pos; },
+                    None => { i = limit; break; },
+                }
+
+                let value_end = i;
+                self.offset = i + 1;
+
+                self.skip_leading_whitespace();
+
+                return Event::Variable(
+                    Borrowed(&self.sass[name_beginning..name_end]),
+                    Borrowed(&self.sass[value_beginning..value_end])
+                )
+            }
+        }
+        self.offset = self.sass.len();
+        Event::Property(Borrowed(""), Borrowed(""))
     }
 
     pub fn next_property(&mut self) -> Event<'a> {
