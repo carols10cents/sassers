@@ -111,6 +111,7 @@ pub fn expanded_output(tokenizer: &mut SassTokenizer) -> String {
             Event::Selector(name) => {
                 match last {
                     Event::Selector(_) => format!(" {}", name),
+                    Event::End(_) => format!("\n{}", name),
                     _ => format!("{}", name),
                 }
             },
@@ -152,6 +153,7 @@ pub fn compact_output(tokenizer: &mut SassTokenizer) -> String {
             Event::Selector(name) => {
                 match last {
                     Event::Selector(_) => format!(" {}", name),
+                    Event::End(_) => format!("\n{}", name),
                     _ => format!("{}", name),
                 }
             },
