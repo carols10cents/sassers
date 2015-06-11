@@ -79,6 +79,7 @@ pub fn compressed_output(tokenizer: &mut SassTokenizer) -> String {
                 };
                 match last {
                     Event::Selector(_) => format!("{{{}:{}", name, real_value),
+                    Event::Property(_, _) => format!(";{}:{}", name, real_value),
                     _ => format!("{}:{}", name, real_value),
                 }
             },
