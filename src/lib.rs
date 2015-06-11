@@ -18,6 +18,13 @@ pub fn compile(sass: &str, style: &str) -> Result<String, &'static str> {
     }
 }
 
+pub fn substitute_variables<'a>(value: &'a str, substitutions: &'a HashMap<String, String>) -> &'a str {
+    match substitutions.get(value) {
+        Some(v) => v,
+        None => value,
+    }
+}
+
 pub fn nested_output(tokenizer: &mut SassTokenizer) -> String {
     let mut output = String::from_str("");
     let mut last = Event::End(Rule::SassRule);
@@ -32,10 +39,7 @@ pub fn nested_output(tokenizer: &mut SassTokenizer) -> String {
             },
             Event::Selector(name) => format!("{} ", name),
             Event::Property(name, value) => {
-                let real_value = match variables.get(&*value) {
-                    Some(v) => v.as_str(),
-                    None => &*value,
-                };
+                let real_value = substitute_variables(&value, &variables);
                 match last {
                     Event::Selector(_) => format!("{{\n  {}: {};", name, real_value),
                     _ => format!("\n  {}: {};", name, real_value),
@@ -73,10 +77,7 @@ pub fn compressed_output(tokenizer: &mut SassTokenizer) -> String {
                 }
             },
             Event::Property(name, value) => {
-                let real_value = match variables.get(&*value) {
-                    Some(v) => v.as_str(),
-                    None => &*value,
-                };
+                let real_value = substitute_variables(&value, &variables);
                 match last {
                     Event::Selector(_) => format!("{{{}:{}", name, real_value),
                     Event::Property(_, _) => format!(";{}:{}", name, real_value),
@@ -116,10 +117,7 @@ pub fn expanded_output(tokenizer: &mut SassTokenizer) -> String {
                 }
             },
             Event::Property(name, value) => {
-                let real_value = match variables.get(&*value) {
-                    Some(v) => v.as_str(),
-                    None => &*value,
-                };
+                let real_value = substitute_variables(&value, &variables);
                 match last {
                     Event::Selector(_) => format!(" {{\n  {}: {};", name, real_value),
                     _ => format!("\n  {}: {};", name, real_value),
@@ -158,10 +156,7 @@ pub fn compact_output(tokenizer: &mut SassTokenizer) -> String {
                 }
             },
             Event::Property(name, value) => {
-                let real_value = match variables.get(&*value) {
-                    Some(v) => v.as_str(),
-                    None => &*value,
-                };
+                let real_value = substitute_variables(&value, &variables);
                 match last {
                     Event::Selector(_) => format!(" {{ {}: {};", name, real_value),
                     _ => format!(" {}: {};", name, real_value),
