@@ -18,11 +18,13 @@ pub fn compile(sass: &str, style: &str) -> Result<String, &'static str> {
     }
 }
 
-pub fn substitute_variables<'a>(value: &'a str, substitutions: &'a HashMap<String, String>) -> &'a str {
-    match substitutions.get(value) {
-        Some(v) => v,
-        None => value,
-    }
+pub fn substitute_variables<'a>(value: &'a str, substitutions: &'a HashMap<String, String>) -> String {
+    value.split(' ').map(|value_part|
+        match substitutions.get(value_part) {
+            Some(v) => &v[..],
+            None => value_part,
+        }
+    ).collect::<Vec<_>>().connect(" ")
 }
 
 pub fn nested_output(tokenizer: &mut SassTokenizer) -> String {
