@@ -166,9 +166,18 @@ pub fn compact(tokenizer: &mut Tokenizer) -> String {
 }
 
 pub fn debug(tokenizer: &mut Tokenizer) -> String {
-    let mut output =  String::from_str("");
+    let mut output = String::from_str("");
+    let mut current = String::from_str("");
+
     while let Some(token) = tokenizer.next() {
-        output.push_str(format!("{:?}\n", token).as_str());
+        current.push_str(&format!("{:?}\n", token)[..]);
+        match token {
+            Event::End(_) => {
+                output.push_str(&current[..]);
+                current = String::from_str("");
+            },
+            _ => {},
+        }
     }
     output
 }
