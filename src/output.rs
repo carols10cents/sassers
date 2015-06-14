@@ -86,12 +86,13 @@ pub fn compressed(tokenizer: &mut Tokenizer) -> String {
 }
 
 pub fn expanded(tokenizer: &mut Tokenizer) -> String {
-    let mut output =  String::from_str("");
     let mut last = Event::End(Rule::SassRule);
     let mut variables = HashMap::new();
+    let mut output = String::from_str("");
+    let mut current = String::from_str("");
 
     while let Some(token) = tokenizer.next() {
-        let print_token = match token.clone() {
+        match token.clone() {
             Event::Start(_) => continue,
             Event::Variable(name, value) => {
                 let val = substitute_variables(&value, &variables);
@@ -100,26 +101,28 @@ pub fn expanded(tokenizer: &mut Tokenizer) -> String {
             },
             Event::Selector(name) => {
                 match last {
-                    Event::Selector(_) => format!(" {}", name),
-                    Event::End(_) => format!("\n{}", name),
-                    _ => format!("{}", name),
+                    Event::Selector(_) => current.push_str(&format!(" {}", name)[..]),
+                    Event::End(_) => current.push_str(&format!("\n{}", name)[..]),
+                    _ => current.push_str(&format!("{}", name)[..]),
                 }
             },
             Event::Property(name, value) => {
                 let real_value = substitute_variables(&value, &variables);
                 match last {
-                    Event::Selector(_) => format!(" {{\n  {}: {};", name, real_value),
-                    _ => format!("\n  {}: {};", name, real_value),
+                    Event::Selector(_) => current.push_str(&format!(" {{\n  {}: {};", name, real_value)[..]),
+                    _ => current.push_str(&format!("\n  {}: {};", name, real_value)[..]),
                 }
             },
             Event::End(_) => {
                 match last {
                     Event::End(_) => continue,
-                    _ => format!("\n}}"),
-                }
+                    _ => current.push_str(&format!("\n}}")[..]),
+                };
+                output.push_str(&current[..]);
+                current = String::from_str("");
             },
         };
-        output.push_str(print_token.as_str());
+
         last = token;
     }
     output
