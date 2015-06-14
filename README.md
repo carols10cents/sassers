@@ -8,7 +8,7 @@ A Sass compiler written natively in Rust.
 * Clone [sass-spec](https://github.com/sass/sass-spec/) and get ruby and all that good stuff
 * In sass-spec, run `./sass-spec.rb -c '/path/to/your/sassers/executable'
 
-Last run I did was 212 passing and 4287 failing out of 4499 tests. So yeah, REALLY NOT DONE YET.
+Last run I did was 252 passing and 4247 failing out of 4499 tests. So yeah, REALLY NOT DONE YET.
 
 Sassers follows [Sentimental Versioning](http://sentimentalversioning.org/).
 

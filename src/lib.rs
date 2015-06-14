@@ -30,13 +30,14 @@ pub fn substitute_variables<'a>(value: &'a str, substitutions: &'a HashMap<Strin
 pub fn nested_output(tokenizer: &mut SassTokenizer) -> String {
     let mut output = String::from_str("");
     let mut last = Event::End(Rule::SassRule);
-    let mut variables = HashMap::new();
+    let mut variables: HashMap<String, String> = HashMap::new();
 
     while let Some(token) = tokenizer.next() {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
             Event::Variable(name, value) => {
-                variables.insert((*name).to_string(), (*value).to_string());
+                let val = substitute_variables(&value, &variables);
+                variables.insert((*name).to_string(), val);
                 continue
             },
             Event::Selector(name) => format!("{} ", name),
@@ -69,7 +70,8 @@ pub fn compressed_output(tokenizer: &mut SassTokenizer) -> String {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
             Event::Variable(name, value) => {
-                variables.insert((*name).to_string(), (*value).to_string());
+                let val = substitute_variables(&value, &variables);
+                variables.insert((*name).to_string(), val);
                 continue
             },
             Event::Selector(name) => {
@@ -108,7 +110,8 @@ pub fn expanded_output(tokenizer: &mut SassTokenizer) -> String {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
             Event::Variable(name, value) => {
-                variables.insert((*name).to_string(), (*value).to_string());
+                let val = substitute_variables(&value, &variables);
+                variables.insert((*name).to_string(), val);
                 continue
             },
             Event::Selector(name) => {
@@ -147,7 +150,8 @@ pub fn compact_output(tokenizer: &mut SassTokenizer) -> String {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
             Event::Variable(name, value) => {
-                variables.insert((*name).to_string(), (*value).to_string());
+                let val = substitute_variables(&value, &variables);
+                variables.insert((*name).to_string(), val);
                 continue
             },
             Event::Selector(name) => {
