@@ -86,46 +86,75 @@ pub fn compressed(tokenizer: &mut Tokenizer) -> String {
 }
 
 pub fn expanded(tokenizer: &mut Tokenizer) -> String {
+    let mut parents = Vec::new();
+    expanded_inner(tokenizer, &mut parents)
+}
+
+fn expanded_inner(tokenizer: &mut Tokenizer, parents: &mut Vec<String>) -> String {
     let mut last = Event::End(Rule::SassRule);
     let mut variables = HashMap::new();
-    let mut output = String::from_str("");
     let mut current = String::from_str("");
+    let mut properties = String::from_str("");
+    let mut children = String::from_str("");
 
     while let Some(token) = tokenizer.next() {
         match token.clone() {
-            Event::Start(_) => continue,
+            Event::Start(_) => {
+                match children.len() {
+                    0 => children = expanded_inner(tokenizer, parents),
+                    _ => {
+                        children.push_str("\n\n");
+                        children.push_str(&expanded_inner(tokenizer, parents)[..]);
+                    },
+                };
+            },
             Event::Variable(name, value) => {
                 let val = substitute_variables(&value, &variables);
                 variables.insert((*name).to_string(), val);
                 continue
             },
             Event::Selector(name) => {
+                parents.push((*name).to_string());
                 match last {
                     Event::Selector(_) => current.push_str(&format!(" {}", name)[..]),
-                    Event::End(_) => current.push_str(&format!("\n{}", name)[..]),
+                    Event::End(_) => current.push_str(&format!("{}", name)[..]),
                     _ => current.push_str(&format!("{}", name)[..]),
                 }
             },
             Event::Property(name, value) => {
                 let real_value = substitute_variables(&value, &variables);
                 match last {
-                    Event::Selector(_) => current.push_str(&format!(" {{\n  {}: {};", name, real_value)[..]),
-                    _ => current.push_str(&format!("\n  {}: {};", name, real_value)[..]),
+                    Event::Selector(_) => properties.push_str(&format!(" {{\n  {}: {};", name, real_value)[..]),
+                    _ => properties.push_str(&format!("\n  {}: {};", name, real_value)[..]),
                 }
             },
             Event::End(_) => {
-                match last {
-                    Event::End(_) => continue,
-                    _ => current.push_str(&format!("\n}}")[..]),
-                };
-                output.push_str(&current[..]);
-                current = String::from_str("");
+                match (properties.len(), children.len()) {
+                    (0, 0) => current.push_str("\n}"),
+                    (_, 0) => {
+                        current.push_str(&properties[..]);
+                        current.push_str("\n}");
+                    },
+                    (0, _) => {
+                        current.push_str(" ");
+                        current.push_str(&children[..]);
+                    },
+                    (_, _) => {
+                        current.push_str(&properties[..]);
+                        current.push_str("\n}\n");
+                        current.push_str(&parents.connect(" "));
+                        current.push_str(" ");
+                        current.push_str(&children[..]);
+                    },
+                }
+                parents.pop();
+                return current
             },
         };
 
         last = token;
     }
-    output
+    children
 }
 
 pub fn compact(tokenizer: &mut Tokenizer) -> String {
