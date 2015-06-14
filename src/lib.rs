@@ -6,7 +6,7 @@ use std::borrow::Cow::{Borrowed};
 use std::collections::HashMap;
 
 pub fn compile(sass: &str, style: &str) -> Result<String, &'static str> {
-    let mut st = SassTokenizer::new(&sass);
+    let mut st = Tokenizer::new(&sass);
 
     match style {
         "nested"     => Ok(nested_output(&mut st)),
@@ -27,7 +27,7 @@ pub fn substitute_variables<'a>(value: &'a str, substitutions: &'a HashMap<Strin
     ).collect::<Vec<_>>().connect(" ")
 }
 
-pub fn nested_output(tokenizer: &mut SassTokenizer) -> String {
+pub fn nested_output(tokenizer: &mut Tokenizer) -> String {
     let mut output = String::from_str("");
     let mut last = Event::End(Rule::SassRule);
     let mut variables: HashMap<String, String> = HashMap::new();
@@ -61,7 +61,7 @@ pub fn nested_output(tokenizer: &mut SassTokenizer) -> String {
     output
 }
 
-pub fn compressed_output(tokenizer: &mut SassTokenizer) -> String {
+pub fn compressed_output(tokenizer: &mut Tokenizer) -> String {
     let mut output =  String::from_str("");
     let mut last = Event::End(Rule::SassRule);
     let mut variables = HashMap::new();
@@ -101,7 +101,7 @@ pub fn compressed_output(tokenizer: &mut SassTokenizer) -> String {
     output
 }
 
-pub fn expanded_output(tokenizer: &mut SassTokenizer) -> String {
+pub fn expanded_output(tokenizer: &mut Tokenizer) -> String {
     let mut output =  String::from_str("");
     let mut last = Event::End(Rule::SassRule);
     let mut variables = HashMap::new();
@@ -141,7 +141,7 @@ pub fn expanded_output(tokenizer: &mut SassTokenizer) -> String {
     output
 }
 
-pub fn compact_output(tokenizer: &mut SassTokenizer) -> String {
+pub fn compact_output(tokenizer: &mut Tokenizer) -> String {
     let mut output =  String::from_str("");
     let mut last = Event::End(Rule::SassRule);
     let mut variables = HashMap::new();
@@ -181,7 +181,7 @@ pub fn compact_output(tokenizer: &mut SassTokenizer) -> String {
     output
 }
 
-pub fn debug_output(tokenizer: &mut SassTokenizer) -> String {
+pub fn debug_output(tokenizer: &mut Tokenizer) -> String {
     let mut output =  String::from_str("");
     while let Some(token) = tokenizer.next() {
         output.push_str(format!("{:?}\n", token).as_str());
@@ -211,16 +211,16 @@ pub enum Event<'a> {
 }
 
 #[derive(Debug)]
-pub struct SassTokenizer<'a> {
+pub struct Tokenizer<'a> {
     sass: &'a str,
     offset: usize,
     stack: Vec<Rule>,
     state: State,
 }
 
-impl<'a> SassTokenizer<'a> {
-    pub fn new(sass: &'a str) -> SassTokenizer<'a> {
-        SassTokenizer {
+impl<'a> Tokenizer<'a> {
+    pub fn new(sass: &'a str) -> Tokenizer<'a> {
+        Tokenizer {
             sass: &sass,
             offset: 0,
             stack: Vec::new(),
@@ -420,7 +420,7 @@ impl<'a> SassTokenizer<'a> {
     }
 }
 
-impl<'a> Iterator for SassTokenizer<'a> {
+impl<'a> Iterator for Tokenizer<'a> {
     type Item = Event<'a>;
 
     fn next(&mut self) -> Option<Event<'a>> {
