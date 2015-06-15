@@ -25,36 +25,36 @@ pub fn nested_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> Stri
                     0 => children = nested_inner(tokenizer, parents),
                     _ => {
                         children.push_str("\n\n");
-                        children.push_str(&nested_inner(tokenizer, parents)[..]);
+                        children.push_str(&nested_inner(tokenizer, parents));
                     },
                 };
             },
             Event::Selector(name) => {
                 parents.push((*name).to_string());
-                current.push_str(&format!("{} ", name)[..]);
+                current.push_str(&format!("{} ", name));
             },
             Event::Property(name, value) => {
                 match last {
-                    Event::Selector(_) => properties.push_str(&format!("{{\n  {}: {};", name, value)[..]),
-                    _ => properties.push_str(&format!("\n  {}: {};", name, value)[..]),
+                    Event::Selector(_) => properties.push_str(&format!("{{\n  {}: {};", name, value)),
+                    _ => properties.push_str(&format!("\n  {}: {};", name, value)),
                 }
             },
             Event::End(_) => {
                 match (properties.len(), children.len()) {
                     (0, 0) => current.push_str(" }\n"),
                     (_, 0) => {
-                        current.push_str(&properties[..]);
+                        current.push_str(&properties);
                         current.push_str(" }");
                     },
                     (0, _) => {
-                        current.push_str(&children[..]);
+                        current.push_str(&children);
                     },
                     (_, _) => {
-                        current.push_str(&properties[..]);
+                        current.push_str(&properties);
                         current.push_str(" }\n");
                         current.push_str(&parents.connect(" "));
                         current.push_str(" ");
-                        current.push_str(&children[..]);
+                        current.push_str(&children);
                     },
                 }
                 parents.pop();
@@ -89,41 +89,41 @@ fn compressed_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> Stri
                  match children.len() {
                      0 => children = compressed_inner(tokenizer, parents),
                      _ => {
-                         children.push_str(&compressed_inner(tokenizer, parents)[..]);
+                         children.push_str(&compressed_inner(tokenizer, parents));
                      },
                  };
              },
              Event::Selector(name) => {
                  parents.push((*name).to_string());
                  match last {
-                     Event::Selector(_) => current.push_str(&format!(" {}", name)[..]),
-                     _ => current.push_str(&format!("{}", name)[..]),
+                     Event::Selector(_) => current.push_str(&format!(" {}", name)),
+                     _ => current.push_str(&format!("{}", name)),
                  }
              },
              Event::Property(name, value) => {
                  match last {
-                     Event::Selector(..) => properties.push_str(&format!("{{{}:{}", name, value)[..]),
-                     Event::Property(..) => properties.push_str(&format!(";{}:{}", name, value)[..]),
-                     _ => properties.push_str(&format!("{}:{}", name, value)[..]),
+                     Event::Selector(..) => properties.push_str(&format!("{{{}:{}", name, value)),
+                     Event::Property(..) => properties.push_str(&format!(";{}:{}", name, value)),
+                     _ => properties.push_str(&format!("{}:{}", name, value)),
                  }
              },
              Event::End(_) => {
                  match (properties.len(), children.len()) {
                      (0, 0) => current.push_str("}"),
                      (_, 0) => {
-                         current.push_str(&properties[..]);
+                         current.push_str(&properties);
                          current.push_str("}");
                      },
                      (0, _) => {
                          current.push_str(" ");
-                         current.push_str(&children[..]);
+                         current.push_str(&children);
                      },
                      (_, _) => {
-                         current.push_str(&properties[..]);
+                         current.push_str(&properties);
                          current.push_str("}");
                          current.push_str(&parents.connect(" "));
                          current.push_str(" ");
-                         current.push_str(&children[..]);
+                         current.push_str(&children);
                      },
                  }
                  parents.pop();
@@ -159,41 +159,41 @@ fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
                     0 => children = expanded_inner(tokenizer, parents),
                     _ => {
                         children.push_str("\n\n");
-                        children.push_str(&expanded_inner(tokenizer, parents)[..]);
+                        children.push_str(&expanded_inner(tokenizer, parents));
                     },
                 };
             },
             Event::Selector(name) => {
                 parents.push((*name).to_string());
                 match last {
-                    Event::Selector(_) => current.push_str(&format!(" {}", name)[..]),
-                    Event::End(_) => current.push_str(&format!("{}", name)[..]),
-                    _ => current.push_str(&format!("{}", name)[..]),
+                    Event::Selector(_) => current.push_str(&format!(" {}", name)),
+                    Event::End(_) => current.push_str(&format!("{}", name)),
+                    _ => current.push_str(&format!("{}", name)),
                 }
             },
             Event::Property(name, value) => {
                 match last {
-                    Event::Selector(_) => properties.push_str(&format!(" {{\n  {}: {};", name, value)[..]),
-                    _ => properties.push_str(&format!("\n  {}: {};", name, value)[..]),
+                    Event::Selector(_) => properties.push_str(&format!(" {{\n  {}: {};", name, value)),
+                    _ => properties.push_str(&format!("\n  {}: {};", name, value)),
                 }
             },
             Event::End(_) => {
                 match (properties.len(), children.len()) {
                     (0, 0) => current.push_str("\n}"),
                     (_, 0) => {
-                        current.push_str(&properties[..]);
+                        current.push_str(&properties);
                         current.push_str("\n}");
                     },
                     (0, _) => {
                         current.push_str(" ");
-                        current.push_str(&children[..]);
+                        current.push_str(&children);
                     },
                     (_, _) => {
-                        current.push_str(&properties[..]);
+                        current.push_str(&properties);
                         current.push_str("\n}\n");
                         current.push_str(&parents.connect(" "));
                         current.push_str(" ");
-                        current.push_str(&children[..]);
+                        current.push_str(&children);
                     },
                 }
                 parents.pop();
@@ -230,41 +230,41 @@ fn compact_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
                     0 => children = compact_inner(tokenizer, parents),
                     _ => {
                         children.push_str("\n");
-                        children.push_str(&compact_inner(tokenizer, parents)[..]);
+                        children.push_str(&compact_inner(tokenizer, parents));
                     },
                 };
             },
             Event::Selector(name) => {
                 parents.push((*name).to_string());
                 match last {
-                    Event::Selector(_) => current.push_str(&format!(" {}", name)[..]),
-                    Event::End(_) => current.push_str(&format!("{}", name)[..]),
-                    _ => current.push_str(&format!("{}", name)[..]),
+                    Event::Selector(_) => current.push_str(&format!(" {}", name)),
+                    Event::End(_) => current.push_str(&format!("{}", name)),
+                    _ => current.push_str(&format!("{}", name)),
                 }
             },
             Event::Property(name, value) => {
                 match last {
-                    Event::Selector(_) => properties.push_str(&format!(" {{ {}: {};", name, value)[..]),
-                    _ => properties.push_str(&format!(" {}: {};", name, value)[..]),
+                    Event::Selector(_) => properties.push_str(&format!(" {{ {}: {};", name, value)),
+                    _ => properties.push_str(&format!(" {}: {};", name, value)),
                 }
             },
             Event::End(_) => {
                 match (properties.len(), children.len()) {
                     (0, 0) => current.push_str(" }"),
                     (_, 0) => {
-                        current.push_str(&properties[..]);
+                        current.push_str(&properties);
                         current.push_str(" }\n");
                     },
                     (0, _) => {
                         current.push_str(" ");
-                        current.push_str(&children[..]);
+                        current.push_str(&children);
                     },
                     (_, _) => {
-                        current.push_str(&properties[..]);
+                        current.push_str(&properties);
                         current.push_str(" }\n");
                         current.push_str(&parents.connect(" "));
                         current.push_str(" ");
-                        current.push_str(&children[..]);
+                        current.push_str(&children);
                     },
                 }
                 parents.pop();
@@ -282,10 +282,10 @@ pub fn debug(tokenizer: &mut Tokenizer) -> String {
     let mut current = String::from_str("");
 
     while let Some(token) = tokenizer.next() {
-        current.push_str(&format!("{:?}\n", token)[..]);
+        current.push_str(&format!("{:?}\n", token));
         match token {
             Event::End(_) => {
-                output.push_str(&current[..]);
+                output.push_str(&current);
                 current = String::from_str("");
             },
             _ => {},
