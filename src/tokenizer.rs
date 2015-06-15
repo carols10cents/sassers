@@ -21,6 +21,7 @@ fn scan_trailing_whitespace(data: &str) -> usize {
 #[derive(Debug)]
 pub struct Tokenizer<'a> {
     sass: &'a str,
+    bytes: &'a [u8],
     offset: usize,
     stack: Vec<Rule>,
     state: State,
@@ -30,6 +31,7 @@ impl<'a> Tokenizer<'a> {
     pub fn new(sass: &'a str) -> Tokenizer<'a> {
         Tokenizer {
             sass: &sass,
+            bytes: &sass.as_bytes(),
             offset: 0,
             stack: Vec::new(),
             state: State::StartRule,
@@ -43,7 +45,7 @@ impl<'a> Tokenizer<'a> {
             return None
         }
 
-        let c = self.sass.as_bytes()[self.offset];
+        let c = self.bytes[self.offset];
         if c == b'}' {
             self.offset += 1;
             return Some(self.end())
@@ -85,13 +87,12 @@ impl<'a> Tokenizer<'a> {
 
     fn next_variable(&mut self) -> Event<'a> {
         // TODO: can parts of this be deduplicated with properties?
-        let bytes = self.sass.as_bytes();
         let name_beginning = self.offset;
         let mut i = name_beginning;
         let limit = self.sass.len();
 
         while i < limit {
-            match bytes[i..limit].iter().position(|&c| c == b':' ) {
+            match self.bytes[i..limit].iter().position(|&c| c == b':' ) {
                 Some(pos) => { i += pos; },
                 None => { break; },
             }
@@ -106,7 +107,7 @@ impl<'a> Tokenizer<'a> {
             i = value_beginning;
 
             while i < limit {
-                match bytes[i..limit].iter().position(|&c| c == b';') {
+                match self.bytes[i..limit].iter().position(|&c| c == b';') {
                     Some(pos) => { i += pos; },
                     None => { i = limit; break; },
                 }
@@ -129,26 +130,25 @@ impl<'a> Tokenizer<'a> {
     fn next_property(&mut self) -> Event<'a> {
         self.skip_leading_whitespace();
 
-        let bytes = self.sass.as_bytes();
         let name_beginning = self.offset;
         let mut i = name_beginning;
         let limit = self.sass.len();
 
-        let c = bytes[i];
+        let c = self.bytes[i];
         if c == b'}' {
             self.offset += 1;
             return self.end()
         }
 
         while i < limit {
-            match bytes[i..limit].iter().position(|&c| c == b':' || c == b'{') {
+            match self.bytes[i..limit].iter().position(|&c| c == b':' || c == b'{') {
                 Some(pos) => { i += pos; },
                 None => { break; },
             }
 
             // Inefficient since we already skipped the whitespace and we'll have to
             // do it again but oh well
-            let c = bytes[i];
+            let c = self.bytes[i];
             if c == b'{' {
                 self.state = State::InSelectors;
                 self.stack.push(Rule::SassRule);
@@ -165,7 +165,7 @@ impl<'a> Tokenizer<'a> {
             i = value_beginning;
 
             while i < limit {
-                match bytes[i..limit].iter().position(|&c| c == b';') {
+                match self.bytes[i..limit].iter().position(|&c| c == b';') {
                     Some(pos) => { i += pos; },
                     None => { i = limit; break; },
                 }
@@ -187,18 +187,17 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn next_selector(&mut self) -> Event<'a> {
-        let bytes = self.sass.as_bytes();
         let beginning = self.offset;
         let mut i = beginning;
         let limit = self.sass.len();
 
         while i < limit {
-            match bytes[i..limit].iter().position(|&c| c == b',' || c == b'{') {
+            match self.bytes[i..limit].iter().position(|&c| c == b',' || c == b'{') {
                 Some(pos) => { i += pos; },
                 None => { i = limit; break; },
             }
 
-            let c = bytes[i];
+            let c = self.bytes[i];
 
             if c == b',' || c == b'{' {
                 let n = scan_trailing_whitespace(&self.sass[beginning..i]);
