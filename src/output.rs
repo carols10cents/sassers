@@ -85,12 +85,16 @@ pub fn compressed(tokenizer: &mut Tokenizer) -> String {
     output
 }
 
-pub fn expanded(tokenizer: &mut Tokenizer) -> String {
+pub fn expanded<'a, I>(tokenizer: &mut I) -> String
+    where I: Iterator<Item = Event<'a>>
+{
     let mut parents = Vec::new();
     expanded_inner(tokenizer, &mut parents)
 }
 
-fn expanded_inner(tokenizer: &mut Tokenizer, parents: &mut Vec<String>) -> String {
+fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
+    where I: Iterator<Item = Event<'a>>
+{
     let mut last = Event::End(Rule::SassRule);
     let mut variables = HashMap::new();
     let mut current = String::from_str("");

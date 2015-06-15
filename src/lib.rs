@@ -4,6 +4,7 @@
 mod tokenizer;
 mod event;
 mod output;
+mod variable_mapper;
 
 use tokenizer::Tokenizer;
 
