@@ -1,5 +1,4 @@
 #![feature(collections)]
-#![feature(convert)]
 
 mod tokenizer;
 mod event;
