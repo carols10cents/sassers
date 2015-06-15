@@ -1,6 +1,6 @@
 [root]
 name = "sassers"
-version = "0.4.0-uugghh"
+version = "0.5.0-blergh"
 dependencies = [
  "docopt 0.6.66 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
