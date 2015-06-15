@@ -1,5 +1,3 @@
-#![feature(collections)]
-
 mod tokenizer;
 mod event;
 mod output;

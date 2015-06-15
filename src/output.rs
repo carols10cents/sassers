@@ -14,9 +14,9 @@ pub fn nested_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> Stri
     where I: Iterator<Item = Event<'a>>
 {
     let mut last = Event::End(Rule::SassRule);
-    let mut current = String::from_str("");
-    let mut properties = String::from_str("");
-    let mut children = String::from_str("");
+    let mut current = String::new();
+    let mut properties = String::new();
+    let mut children = String::new();
 
     while let Some(token) = tokenizer.next() {
        match token.clone() {
@@ -79,9 +79,9 @@ fn compressed_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> Stri
     where I: Iterator<Item = Event<'a>>
 {
     let mut last = Event::End(Rule::SassRule);
-    let mut current = String::from_str("");
-    let mut properties = String::from_str("");
-    let mut children = String::from_str("");
+    let mut current = String::new();
+    let mut properties = String::new();
+    let mut children = String::new();
 
     while let Some(token) = tokenizer.next() {
          match token.clone() {
@@ -148,9 +148,9 @@ fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
     where I: Iterator<Item = Event<'a>>
 {
     let mut last = Event::End(Rule::SassRule);
-    let mut current = String::from_str("");
-    let mut properties = String::from_str("");
-    let mut children = String::from_str("");
+    let mut current = String::new();
+    let mut properties = String::new();
+    let mut children = String::new();
 
     while let Some(token) = tokenizer.next() {
         match token.clone() {
@@ -219,9 +219,9 @@ fn compact_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
     where I: Iterator<Item = Event<'a>>
 {
     let mut last = Event::End(Rule::SassRule);
-    let mut current = String::from_str("");
-    let mut properties = String::from_str("");
-    let mut children = String::from_str("");
+    let mut current = String::new();
+    let mut properties = String::new();
+    let mut children = String::new();
 
     while let Some(token) = tokenizer.next() {
         match token.clone() {
@@ -278,15 +278,15 @@ fn compact_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
 }
 
 pub fn debug(tokenizer: &mut Tokenizer) -> String {
-    let mut output = String::from_str("");
-    let mut current = String::from_str("");
+    let mut output = String::new();
+    let mut current = String::new();
 
     while let Some(token) = tokenizer.next() {
         current.push_str(&format!("{:?}\n", token));
         match token {
             Event::End(_) => {
                 output.push_str(&current);
-                current = String::from_str("");
+                current = String::new();
             },
             _ => {},
         }
