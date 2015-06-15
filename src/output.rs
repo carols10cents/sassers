@@ -51,10 +51,10 @@ pub fn nested_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> Stri
                     },
                     (_, _) => {
                         current.push_str(&properties);
-                        current.push_str(" }\n");
+                        current.push_str(" }\n  ");
                         current.push_str(&parents.connect(" "));
                         current.push_str(" ");
-                        current.push_str(&children);
+                        current.push_str(&children.split('\n').collect::<Vec<_>>().connect("\n  "));
                     },
                 }
                 parents.pop();
