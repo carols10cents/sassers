@@ -1,36 +1,22 @@
 use tokenizer::Tokenizer;
 use event::{Event, Rule};
 use variable_mapper::VariableMapper;
-use std::collections::HashMap;
 
-fn substitute_variables<'a>(value: &'a str, substitutions: &'a HashMap<String, String>) -> String {
-    value.split(' ').map(|value_part|
-        match substitutions.get(value_part) {
-            Some(v) => &v[..],
-            None => value_part,
-        }
-    ).collect::<Vec<_>>().connect(" ")
-}
-
-pub fn nested(tokenizer: &mut Tokenizer) -> String {
+pub fn nested<'a, I>(tokenizer: &mut I) -> String
+    where I: Iterator<Item = Event<'a>>
+{
+    let mut vm = VariableMapper::new(tokenizer);
     let mut output = String::from_str("");
     let mut last = Event::End(Rule::SassRule);
-    let mut variables: HashMap<String, String> = HashMap::new();
 
-    while let Some(token) = tokenizer.next() {
+    while let Some(token) = vm.next() {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
-            Event::Variable(name, value) => {
-                let val = substitute_variables(&value, &variables);
-                variables.insert((*name).to_string(), val);
-                continue
-            },
             Event::Selector(name) => format!("{} ", name),
             Event::Property(name, value) => {
-                let real_value = substitute_variables(&value, &variables);
                 match last {
-                    Event::Selector(_) => format!("{{\n  {}: {};", name, real_value),
-                    _ => format!("\n  {}: {};", name, real_value),
+                    Event::Selector(_) => format!("{{\n  {}: {};", name, value),
+                    _ => format!("\n  {}: {};", name, value),
                 }
             },
             Event::End(_) => {
@@ -39,6 +25,7 @@ pub fn nested(tokenizer: &mut Tokenizer) -> String {
                     _ => format!(" }}\n"),
                 }
             },
+            Event::Variable(..) => unreachable!(),
         };
         output.push_str(print_token.as_str());
         last = token;
@@ -46,19 +33,16 @@ pub fn nested(tokenizer: &mut Tokenizer) -> String {
     output
 }
 
-pub fn compressed(tokenizer: &mut Tokenizer) -> String {
+pub fn compressed<'a, I>(tokenizer: &mut I) -> String
+    where I: Iterator<Item = Event<'a>>
+{
+    let mut vm = VariableMapper::new(tokenizer);
     let mut output =  String::from_str("");
     let mut last = Event::End(Rule::SassRule);
-    let mut variables = HashMap::new();
 
-    while let Some(token) = tokenizer.next() {
+    while let Some(token) = vm.next() {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
-            Event::Variable(name, value) => {
-                let val = substitute_variables(&value, &variables);
-                variables.insert((*name).to_string(), val);
-                continue
-            },
             Event::Selector(name) => {
                 match last {
                     Event::Selector(_) => format!(" {}", name),
@@ -66,11 +50,10 @@ pub fn compressed(tokenizer: &mut Tokenizer) -> String {
                 }
             },
             Event::Property(name, value) => {
-                let real_value = substitute_variables(&value, &variables);
                 match last {
-                    Event::Selector(_) => format!("{{{}:{}", name, real_value),
-                    Event::Property(_, _) => format!(";{}:{}", name, real_value),
-                    _ => format!("{}:{}", name, real_value),
+                    Event::Selector(_) => format!("{{{}:{}", name, value),
+                    Event::Property(_, _) => format!(";{}:{}", name, value),
+                    _ => format!("{}:{}", name, value),
                 }
             },
             Event::End(_) => {
@@ -79,6 +62,7 @@ pub fn compressed(tokenizer: &mut Tokenizer) -> String {
                     _ => format!("}}"),
                 }
             },
+            Event::Variable(..) => unreachable!(),
         };
         output.push_str(print_token.as_str());
         last = token;
@@ -157,19 +141,16 @@ fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
     children
 }
 
-pub fn compact(tokenizer: &mut Tokenizer) -> String {
+pub fn compact<'a, I>(tokenizer: &mut I) -> String
+    where I: Iterator<Item = Event<'a>>
+{
+    let mut vm = VariableMapper::new(tokenizer);
     let mut output =  String::from_str("");
     let mut last = Event::End(Rule::SassRule);
-    let mut variables = HashMap::new();
 
-    while let Some(token) = tokenizer.next() {
+    while let Some(token) = vm.next() {
         let print_token = match token.clone() {
             Event::Start(_) => continue,
-            Event::Variable(name, value) => {
-                let val = substitute_variables(&value, &variables);
-                variables.insert((*name).to_string(), val);
-                continue
-            },
             Event::Selector(name) => {
                 match last {
                     Event::Selector(_) => format!(" {}", name),
@@ -178,10 +159,9 @@ pub fn compact(tokenizer: &mut Tokenizer) -> String {
                 }
             },
             Event::Property(name, value) => {
-                let real_value = substitute_variables(&value, &variables);
                 match last {
-                    Event::Selector(_) => format!(" {{ {}: {};", name, real_value),
-                    _ => format!(" {}: {};", name, real_value),
+                    Event::Selector(_) => format!(" {{ {}: {};", name, value),
+                    _ => format!(" {}: {};", name, value),
                 }
             },
             Event::End(_) => {
@@ -190,6 +170,7 @@ pub fn compact(tokenizer: &mut Tokenizer) -> String {
                     _ => format!(" }}"),
                 }
             },
+            Event::Variable(..) => unreachable!(),
         };
         output.push_str(print_token.as_str());
         last = token;
