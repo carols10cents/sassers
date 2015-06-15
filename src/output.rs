@@ -1,5 +1,6 @@
 use tokenizer::Tokenizer;
 use event::{Event, Rule};
+use variable_mapper::VariableMapper;
 use std::collections::HashMap;
 
 fn substitute_variables<'a>(value: &'a str, substitutions: &'a HashMap<String, String>) -> String {
@@ -89,14 +90,14 @@ pub fn expanded<'a, I>(tokenizer: &mut I) -> String
     where I: Iterator<Item = Event<'a>>
 {
     let mut parents = Vec::new();
-    expanded_inner(tokenizer, &mut parents)
+    let mut vm = VariableMapper::new(tokenizer);
+    expanded_inner(&mut vm, &mut parents)
 }
 
 fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
     where I: Iterator<Item = Event<'a>>
 {
     let mut last = Event::End(Rule::SassRule);
-    let mut variables = HashMap::new();
     let mut current = String::from_str("");
     let mut properties = String::from_str("");
     let mut children = String::from_str("");
@@ -112,11 +113,6 @@ fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
                     },
                 };
             },
-            Event::Variable(name, value) => {
-                let val = substitute_variables(&value, &variables);
-                variables.insert((*name).to_string(), val);
-                continue
-            },
             Event::Selector(name) => {
                 parents.push((*name).to_string());
                 match last {
@@ -126,10 +122,9 @@ fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
                 }
             },
             Event::Property(name, value) => {
-                let real_value = substitute_variables(&value, &variables);
                 match last {
-                    Event::Selector(_) => properties.push_str(&format!(" {{\n  {}: {};", name, real_value)[..]),
-                    _ => properties.push_str(&format!("\n  {}: {};", name, real_value)[..]),
+                    Event::Selector(_) => properties.push_str(&format!(" {{\n  {}: {};", name, value)[..]),
+                    _ => properties.push_str(&format!("\n  {}: {};", name, value)[..]),
                 }
             },
             Event::End(_) => {
@@ -154,6 +149,7 @@ fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
                 parents.pop();
                 return current
             },
+            Event::Variable(..) => unreachable!(),
         };
 
         last = token;
