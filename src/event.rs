@@ -19,4 +19,5 @@ pub enum Event<'a> {
     Selector(Cow<'a, str>),
     Property(Cow<'a, str>, Cow<'a, str>),
     Variable(Cow<'a, str>, Cow<'a, str>),
+    Comment(Cow<'a, str>),
 }

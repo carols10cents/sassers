@@ -61,6 +61,7 @@ pub fn nested_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> Stri
                 return current
             },
             Event::Variable(..) => unreachable!(),
+            Event::Comment(body) => unimplemented!(),
         };
         last = token;
     }
@@ -130,6 +131,7 @@ fn compressed_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> Stri
                  return current
              },
             Event::Variable(..) => unreachable!(),
+            Event::Comment(body) => unimplemented!(),
         };
         last = token;
     }
@@ -200,6 +202,7 @@ fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
                 return current
             },
             Event::Variable(..) => unreachable!(),
+            Event::Comment(body) => unimplemented!(),
         };
 
         last = token;
@@ -271,6 +274,7 @@ fn compact_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
                 return current
             },
             Event::Variable(..) => unreachable!(),
+            Event::Comment(body) => unimplemented!(),
         };
         last = token;
     }

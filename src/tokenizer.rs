@@ -54,6 +54,11 @@ impl<'a> Tokenizer<'a> {
             return Some(self.next_variable())
         }
 
+        let d = self.bytes[self.offset + 1];
+        if c == b'/' && d == b'*' {
+            return Some(self.next_comment())
+        }
+
         self.state = State::InSelectors;
         self.stack.push(Rule::SassRule);
 
@@ -83,6 +88,27 @@ impl<'a> Tokenizer<'a> {
     fn skip_leading_whitespace(&mut self) {
         let i = self.offset;
         self.offset += self.scan_while(&self.sass[i..self.sass.len()], is_ascii_whitespace);
+    }
+
+    fn next_comment(&mut self) -> Event<'a> {
+        let comment_body_beginning = self.offset;
+        let mut i = comment_body_beginning + 2;
+        let limit = self.sass.len();
+
+        while i < limit {
+            match self.bytes[i..limit].iter().position(|&c| c == b'*' ) {
+                Some(pos) => { i += pos; },
+                None => { break; },
+            }
+
+            if self.bytes[i+1] == b'/' {
+                self.offset = i + 2;
+                return Event::Comment(Borrowed(&self.sass[comment_body_beginning..i + 2]))
+            } else {
+                i += 1;
+            }
+        }
+        Event::End(Rule::SassRule)
     }
 
     fn next_variable(&mut self) -> Event<'a> {
@@ -138,6 +164,11 @@ impl<'a> Tokenizer<'a> {
         if c == b'}' {
             self.offset += 1;
             return self.end()
+        }
+
+        let d = self.bytes[i + 1];
+        if c == b'/' && d == b'*' {
+            return self.next_comment()
         }
 
         while i < limit {
