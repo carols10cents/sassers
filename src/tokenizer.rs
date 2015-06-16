@@ -2,11 +2,15 @@ use event::{Event, Rule, State};
 use std::borrow::Cow::Borrowed;
 
 fn is_ascii_whitespace(c: u8) -> bool {
-    c == b'\n' || c == b'\r' || is_ascii_whitespace_no_nl(c)
+   is_newline(c) || is_ascii_whitespace_no_nl(c)
 }
 
 fn is_ascii_whitespace_no_nl(c: u8) -> bool {
     c == b'\t' || c == 0x0b || c == 0x0c || c == b' '
+}
+
+fn is_newline(c: u8) -> bool {
+    c == b'\n' || c == b'\r'
 }
 
 // unusual among "scan" functions in that it scans from the _back_ of the string
