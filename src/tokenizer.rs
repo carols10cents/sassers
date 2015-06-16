@@ -13,6 +13,10 @@ fn is_newline(c: u8) -> bool {
     c == b'\n' || c == b'\r'
 }
 
+fn isnt_newline(c: u8) -> bool {
+    !is_newline(c)
+}
+
 // unusual among "scan" functions in that it scans from the _back_ of the string
 // TODO: should also scan unicode whitespace?
 fn scan_trailing_whitespace(data: &str) -> usize {
@@ -90,8 +94,21 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn skip_leading_whitespace(&mut self) {
-        let i = self.offset;
-        self.offset += self.scan_while(&self.sass[i..self.sass.len()], is_ascii_whitespace);
+        let mut i = self.offset;
+        let limit = self.sass.len();
+
+        while i < limit {
+            let c = self.bytes[i];
+            if is_ascii_whitespace(c) {
+                i += self.scan_while(&self.sass[i..self.sass.len()], is_ascii_whitespace);
+            } else if c == b'/' && i + 1 < limit && self.bytes[i + 1] == b'/' {
+                i += self.scan_while(&self.sass[i..self.sass.len()], isnt_newline);
+            } else {
+                self.offset = i;
+                return
+            }
+        }
+        self.offset = limit;
     }
 
     fn next_comment(&mut self) -> Event<'a> {
