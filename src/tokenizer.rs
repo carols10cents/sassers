@@ -129,7 +129,7 @@ impl<'a> Tokenizer<'a> {
                 i += 1;
             }
         }
-        Event::End(Rule::SassRule)
+        unreachable!()
     }
 
     fn next_variable(&mut self) -> Event<'a> {
