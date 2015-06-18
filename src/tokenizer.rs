@@ -81,7 +81,13 @@ impl<'a> Tokenizer<'a> {
                 return Event::End(Rule::SassRule)
             },
         };
-        self.state = State::StartRule;
+
+        if self.stack.len() == 0 {
+            self.state = State::StartRule;
+        } else {
+            self.state = State::InProperties;
+        }
+
         Event::End(rule)
     }
 
