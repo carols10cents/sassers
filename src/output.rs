@@ -60,8 +60,8 @@ pub fn nested_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> Stri
                 parents.pop();
                 return current
             },
+            Event::Comment(body) => current.push_str(&body),
             Event::Variable(..) => unreachable!(),
-            Event::Comment(body) => unimplemented!(),
         };
         last = token;
     }
@@ -130,8 +130,8 @@ fn compressed_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> Stri
                 parents.pop();
                 return current
             },
+            Event::Comment(body) => current.push_str(&body),
             Event::Variable(..) => unreachable!(),
-            Event::Comment(body) => unimplemented!(),
         };
         last = token;
     }
@@ -200,13 +200,19 @@ fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
                 parents.pop();
                 return current
             },
+            Event::Comment(body) => {
+                match last {
+                    Event::Property(..) => properties.push_str(&body),
+                    _ => current.push_str(&format!("{}\n", body)),
+                }
+            },
             Event::Variable(..) => unreachable!(),
-            Event::Comment(body) => unimplemented!(),
         };
 
         last = token;
     }
-    children
+    current.push_str(&children);
+    current
 }
 
 pub fn compact<'a, I>(tokenizer: &mut I) -> String
@@ -272,8 +278,8 @@ fn compact_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
                 parents.pop();
                 return current
             },
+            Event::Comment(body) => current.push_str(&body),
             Event::Variable(..) => unreachable!(),
-            Event::Comment(body) => unimplemented!(),
         };
         last = token;
     }
