@@ -85,51 +85,51 @@ fn compressed_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> Stri
     let mut children = String::new();
 
     while let Some(token) = tokenizer.next() {
-         match token.clone() {
-             Event::Start(_) => {
-                 match children.len() {
-                     0 => children = compressed_inner(tokenizer, parents),
-                     _ => {
-                         children.push_str(&compressed_inner(tokenizer, parents));
-                     },
-                 };
-             },
-             Event::Selector(name) => {
-                 parents.push((*name).to_string());
-                 match last {
-                     Event::Selector(_) => current.push_str(&format!(" {}", name)),
-                     _ => current.push_str(&format!("{}", name)),
-                 }
-             },
-             Event::Property(name, value) => {
-                 match last {
-                     Event::Selector(..) => properties.push_str(&format!("{{{}:{}", name, value)),
-                     Event::Property(..) => properties.push_str(&format!(";{}:{}", name, value)),
-                     _ => properties.push_str(&format!("{}:{}", name, value)),
-                 }
-             },
-             Event::End(_) => {
-                 match (properties.len(), children.len()) {
-                     (0, 0) => current.push_str("}"),
-                     (_, 0) => {
-                         current.push_str(&properties);
-                         current.push_str("}");
-                     },
-                     (0, _) => {
-                         current.push_str(" ");
-                         current.push_str(&children);
-                     },
-                     (_, _) => {
-                         current.push_str(&properties);
-                         current.push_str("}");
-                         current.push_str(&parents.connect(" "));
-                         current.push_str(" ");
-                         current.push_str(&children);
-                     },
-                 }
-                 parents.pop();
-                 return current
-             },
+        match token.clone() {
+            Event::Start(_) => {
+                match children.len() {
+                    0 => children = compressed_inner(tokenizer, parents),
+                    _ => {
+                        children.push_str(&compressed_inner(tokenizer, parents));
+                    },
+                };
+            },
+            Event::Selector(name) => {
+                parents.push((*name).to_string());
+                match last {
+                    Event::Selector(_) => current.push_str(&format!(" {}", name)),
+                    _ => current.push_str(&format!("{}", name)),
+                }
+            },
+            Event::Property(name, value) => {
+                match last {
+                    Event::Selector(..) => properties.push_str(&format!("{{{}:{}", name, value)),
+                    Event::Property(..) => properties.push_str(&format!(";{}:{}", name, value)),
+                    _ => properties.push_str(&format!("{}:{}", name, value)),
+                }
+            },
+            Event::End(_) => {
+                match (properties.len(), children.len()) {
+                    (0, 0) => current.push_str("}"),
+                    (_, 0) => {
+                        current.push_str(&properties);
+                        current.push_str("}");
+                    },
+                    (0, _) => {
+                        current.push_str(" ");
+                        current.push_str(&children);
+                    },
+                    (_, _) => {
+                        current.push_str(&properties);
+                        current.push_str("}");
+                        current.push_str(&parents.connect(" "));
+                        current.push_str(" ");
+                        current.push_str(&children);
+                    },
+                }
+                parents.pop();
+                return current
+            },
             Event::Variable(..) => unreachable!(),
             Event::Comment(body) => unimplemented!(),
         };
