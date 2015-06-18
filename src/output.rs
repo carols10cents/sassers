@@ -181,7 +181,6 @@ fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
             },
             Event::End(_) => {
                 match (properties.len(), children.len()) {
-                    (0, 0) => current.push_str("\n}"),
                     (_, 0) => {
                         current.push_str(&properties);
                         current.push_str("\n}");
