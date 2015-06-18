@@ -250,12 +250,17 @@ impl<'a> Tokenizer<'a> {
         let limit = self.sass.len();
 
         while i < limit {
-            match self.bytes[i..limit].iter().position(|&c| c == b',' || c == b'{') {
+            match self.bytes[i..limit].iter().position(|&c| c == b',' || c == b'{' || c == b':') {
                 Some(pos) => { i += pos; },
                 None => { i = limit; break; },
             }
 
             let c = self.bytes[i];
+
+            if c == b':' {
+                self.state = State::InProperties;
+                return self.next_property()
+            }
 
             if c == b',' || c == b'{' {
                 let n = scan_trailing_whitespace(&self.sass[beginning..i]);
