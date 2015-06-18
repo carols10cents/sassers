@@ -174,8 +174,8 @@ fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
                 }
             },
             Event::Property(name, value) => {
-                match last {
-                    Event::Selector(_) => properties.push_str(&format!(" {{\n  {}: {};", name, value)),
+                match properties.len() {
+                    0 => properties.push_str(&format!(" {{\n  {}: {};", name, value)),
                     _ => properties.push_str(&format!("\n  {}: {};", name, value)),
                 }
             },
@@ -201,9 +201,9 @@ fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
                 return current
             },
             Event::Comment(body) => {
-                match last {
-                    Event::Property(..) => properties.push_str(&body),
-                    _ => current.push_str(&format!("{}\n", body)),
+                match properties.len() {
+                    0 => current.push_str(&format!("{}\n", body)),
+                    _ => properties.push_str(&body),
                 }
             },
             Event::Variable(..) => unreachable!(),
