@@ -8,14 +8,15 @@ pub enum State {
 }
 
 #[derive(Debug, Clone)]
-pub enum Rule {
-    SassRule,
+pub enum Entity {
+    Rule,
+    Selectors
 }
 
 #[derive(Debug, Clone)]
 pub enum Event<'a> {
-    Start(Rule),
-    End(Rule),
+    Start(Entity),
+    End(Entity),
     Selector(Cow<'a, str>),
     Property(Cow<'a, str>, Cow<'a, str>),
     Variable(Cow<'a, str>, Cow<'a, str>),

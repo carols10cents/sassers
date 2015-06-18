@@ -1,4 +1,4 @@
-use event::{Event, Rule, State};
+use event::{Event, Entity, State};
 use std::borrow::Cow::Borrowed;
 
 fn is_ascii_whitespace(c: u8) -> bool {
@@ -31,7 +31,7 @@ pub struct Tokenizer<'a> {
     sass: &'a str,
     bytes: &'a [u8],
     offset: usize,
-    stack: Vec<Rule>,
+    stack: Vec<Entity>,
     state: State,
 }
 
@@ -68,9 +68,9 @@ impl<'a> Tokenizer<'a> {
         }
 
         self.state = State::InSelectors;
-        self.stack.push(Rule::SassRule);
+        self.stack.push(Entity::Rule);
 
-        Some(Event::Start(Rule::SassRule))
+        Some(Event::Start(Entity::Rule))
     }
 
     fn end(&mut self) -> Event<'a> {
@@ -78,7 +78,7 @@ impl<'a> Tokenizer<'a> {
             Some(r) => r,
             None => {
                 println!("Unexpected empty stack!");
-                return Event::End(Rule::SassRule)
+                return Event::End(Entity::Rule)
             },
         };
 
@@ -209,8 +209,8 @@ impl<'a> Tokenizer<'a> {
             let c = self.bytes[i];
             if c == b'{' {
                 self.state = State::InSelectors;
-                self.stack.push(Rule::SassRule);
-                return Event::Start(Rule::SassRule)
+                self.stack.push(Entity::Rule);
+                return Event::Start(Entity::Rule)
             }
 
             let name_end = i;

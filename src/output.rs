@@ -1,5 +1,5 @@
 use tokenizer::Tokenizer;
-use event::{Event, Rule};
+use event::{Event, Entity};
 use variable_mapper::VariableMapper;
 
 pub fn nested<'a, I>(tokenizer: &mut I) -> String
@@ -13,7 +13,7 @@ pub fn nested<'a, I>(tokenizer: &mut I) -> String
 pub fn nested_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
     where I: Iterator<Item = Event<'a>>
 {
-    let mut last = Event::End(Rule::SassRule);
+    let mut last = Event::End(Entity::Rule);
     let mut current = String::new();
     let mut properties = String::new();
     let mut children = String::new();
@@ -79,7 +79,7 @@ pub fn compressed<'a, I>(tokenizer: &mut I) -> String
 fn compressed_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
     where I: Iterator<Item = Event<'a>>
 {
-    let mut last = Event::End(Rule::SassRule);
+    let mut last = Event::End(Entity::Rule);
     let mut current = String::new();
     let mut properties = String::new();
     let mut children = String::new();
@@ -149,7 +149,7 @@ pub fn expanded<'a, I>(tokenizer: &mut I) -> String
 fn expanded_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
     where I: Iterator<Item = Event<'a>>
 {
-    let mut last = Event::End(Rule::SassRule);
+    let mut last = Event::End(Entity::Rule);
     let mut current = String::new();
     let mut properties = String::new();
     let mut children = String::new();
@@ -226,7 +226,7 @@ pub fn compact<'a, I>(tokenizer: &mut I) -> String
 fn compact_inner<'a, I>(tokenizer: &mut I, parents: &mut Vec<String>) -> String
     where I: Iterator<Item = Event<'a>>
 {
-    let mut last = Event::End(Rule::SassRule);
+    let mut last = Event::End(Entity::Rule);
     let mut current = String::new();
     let mut properties = String::new();
     let mut children = String::new();
