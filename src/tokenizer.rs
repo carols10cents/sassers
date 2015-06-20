@@ -62,7 +62,6 @@ impl<'a> Tokenizer<'a> {
                 },
                 State::InSelectors => {
                     let sel = self.next_selector();
-                    println!("next sel = {:?}", sel);
                     if sel.is_some() {
                         self.current_sass_rule.selectors.push(sel.unwrap());
                     }
@@ -74,7 +73,6 @@ impl<'a> Tokenizer<'a> {
                     }
                 },
                 State::EndRule => {
-                    println!("in endrule");
                     // consume '}', should probably be checking that's what we actually have
                     self.offset += 1;
 
@@ -124,17 +122,6 @@ impl<'a> Tokenizer<'a> {
                 },
             }
         }
-        //
-        //     State::OutsideRules => {
-        //         println!("picked {:?}", self.state);
-        //         return self.start_something();
-        //     },
-        //     State::InRule => return Some(self.next_rule()),
-        //     State::InProperties => return Some(self.next_property()),
-        //     State::InVariable => return Some(self.next_variable()),
-        //     State::InComment => return Some(self.next_comment()),
-        //     State::Eof => return None,
-        // }
 
         Some(TopLevelEvent::Rule(self.current_sass_rule.clone()))
     }
@@ -144,7 +131,6 @@ impl<'a> Tokenizer<'a> {
 
         if self.offset == self.sass.len() {
             self.state = State::Eof;
-            println!("picked eof");
             return
         }
 
@@ -152,13 +138,11 @@ impl<'a> Tokenizer<'a> {
 
         if c == b'}' {
             self.state = State::EndRule;
-            println!("picked endrule");
             return
         }
 
         if c == b'$' {
             self.state = State::InVariable;
-            println!("picked variable");
             return
         }
 
@@ -166,12 +150,9 @@ impl<'a> Tokenizer<'a> {
             let d = self.bytes[self.offset + 1];
             if d == b'*' {
                 self.state = State::InComment;
-                println!("picked comment");
                 return
             }
         }
-
-        println!("picked selectors");
 
         self.state = State::InSelectors;
     }
