@@ -49,11 +49,6 @@ impl<'a> fmt::Debug for SassRule<'a> {
 }
 
 #[derive(Debug,Clone)]
-pub struct SassVariable<'a> {
-    pub variable: Event<'a>,
-}
-
-#[derive(Debug,Clone)]
 pub struct SassComment<'a> {
     pub comment: Event<'a>,
 }
@@ -78,7 +73,6 @@ pub enum State {
 #[derive(Debug, Clone)]
 pub enum Event<'a> {
     Property(Cow<'a, str>, Cow<'a, str>),
-    Variable(Cow<'a, str>, Cow<'a, str>),
     Comment(Cow<'a, str>),
     ChildRule(SassRule<'a>),
     Selector(SassSelector<'a>),
@@ -88,7 +82,6 @@ impl<'a> Event<'a> {
     pub fn expanded(&self) -> String {
         match (*self).clone() {
             Event::Property(name, value) => format!("  {}: {};\n", name, value),
-            Event::Variable(..) => String::new(),
             Event::Comment(comment) => (*comment).to_string(),
             Event::ChildRule(sass_rule) => sass_rule.expanded(),
             Event::Selector(..) => unreachable!(),
@@ -106,6 +99,6 @@ impl<'a> Event<'a> {
 #[derive(Debug, Clone)]
 pub enum TopLevelEvent<'a> {
     Rule(SassRule<'a>),
-    Variable(SassVariable<'a>),
+    SassVariable { name: Cow<'a, str>, value: Cow<'a, str> },
     Comment(SassComment<'a>),
 }

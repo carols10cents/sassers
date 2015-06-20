@@ -1,4 +1,4 @@
-use event::{Event, State, SassRule, SassVariable, SassComment, SassSelector, TopLevelEvent};
+use event::{Event, State, SassRule, SassComment, SassSelector, TopLevelEvent};
 use std::borrow::Cow::Borrowed;
 
 fn is_ascii_whitespace(c: u8) -> bool {
@@ -92,7 +92,7 @@ impl<'a> Tokenizer<'a> {
                 State::InVariable => {
                     let var = self.next_variable();
                     if var.is_some() {
-                        return Some(TopLevelEvent::Variable(SassVariable { variable: var.unwrap() }))
+                        return var
                     } else {
                         // is this really what we should be doing here? reachable?
                         self.state = State::Eof;
@@ -203,7 +203,7 @@ impl<'a> Tokenizer<'a> {
         None
     }
 
-    fn next_variable(&mut self) -> Option<Event<'a>> {
+    fn next_variable(&mut self) -> Option<TopLevelEvent<'a>> {
         // TODO: can parts of this be deduplicated with properties?
         let name_beginning = self.offset;
         let mut i = name_beginning;
@@ -235,10 +235,10 @@ impl<'a> Tokenizer<'a> {
 
                 self.skip_leading_whitespace();
 
-                return Some(Event::Variable(
-                    Borrowed(&self.sass[name_beginning..name_end]),
-                    Borrowed(&self.sass[value_beginning..value_end])
-                ))
+                return Some(TopLevelEvent::SassVariable {
+                    name: Borrowed(&self.sass[name_beginning..name_end]),
+                    value: Borrowed(&self.sass[value_beginning..value_end]),
+                })
             }
         }
         self.offset = self.sass.len();

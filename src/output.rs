@@ -293,7 +293,7 @@ pub fn expanded<'a, I>(tokenizer: &mut I) -> String
     while let Some(event) = tokenizer.next() {
         match event.clone() {
             TopLevelEvent::Rule(rule) => output.push_str(&rule.expanded()),
-            TopLevelEvent::Variable(variable) => {},
+            TopLevelEvent::SassVariable{..} => {},
             TopLevelEvent::Comment(comment) => {},
         }
     }
