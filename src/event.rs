@@ -16,6 +16,14 @@ impl<'a> SassRule<'a> {
             children: Vec::new(),
         }
     }
+
+    pub fn expanded(&self) -> String {
+        let mut exp = String::new();
+        exp.push_str(&format!("{} {{\n", self.selectors.iter().map(|s| (*s.name).to_string()).collect::<Vec<_>>().connect(", ")));
+        exp.push_str(&self.children.iter().map(|c| c.expanded()).collect::<Vec<_>>().connect("\n  "));
+        exp.push_str("}");
+        exp
+    }
 }
 
 impl<'a> fmt::Debug for SassRule<'a> {
@@ -62,7 +70,19 @@ pub enum Event<'a> {
     Selector(SassSelector<'a>),
 }
 
-#[derive(Debug)]
+impl<'a> Event<'a> {
+    pub fn expanded(&self) -> String {
+        match (*self).clone() {
+            Event::Property(name, value) => format!("  {}: {};\n", name, value),
+            Event::Variable(..) => String::new(),
+            Event::Comment(comment) => (*comment).to_string(),
+            Event::ChildRule(sass_rule) => sass_rule.expanded(),
+            Event::Selector(..) => unreachable!(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum TopLevelEvent<'a> {
     Rule(SassRule<'a>),
     Variable(SassVariable<'a>),
