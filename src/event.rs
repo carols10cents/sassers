@@ -1,5 +1,20 @@
 use std::borrow::Cow;
 
+#[derive(Debug,Clone)]
+pub struct SassRule<'a> {
+    pub selectors: Vec<Event<'a>>,
+    pub children: Vec<Event<'a>>,
+}
+
+impl<'a> SassRule<'a> {
+    pub fn new() -> SassRule<'a> {
+        SassRule {
+            selectors: Vec::new(),
+            children: Vec::new(),
+        }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum State {
     OutsideRules,
@@ -26,4 +41,5 @@ pub enum Event<'a> {
     Property(Cow<'a, str>, Cow<'a, str>),
     Variable(Cow<'a, str>, Cow<'a, str>),
     Comment(Cow<'a, str>),
+    ChildRule(SassRule<'a>),
 }
