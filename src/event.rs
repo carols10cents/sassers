@@ -19,10 +19,24 @@ impl<'a> SassRule<'a> {
 
     pub fn expanded(&self) -> String {
         let mut exp = String::new();
-        exp.push_str(&format!("{} {{\n", self.selectors.iter().map(|s| (*s.name).to_string()).collect::<Vec<_>>().connect(", ")));
-        exp.push_str(&self.children.iter().map(|c| c.expanded()).collect::<Vec<_>>().connect("\n  "));
-        exp.push_str("}");
+
+        let selector_string = self.selectors.iter().map(|s| (*s.name).to_string()).collect::<Vec<_>>().connect(", ");
+        exp.push_str(&selector_string);
+        exp.push_str(" ");
+
+        let children_string = self.children.iter().map(|c| c.expanded()).collect::<Vec<_>>().connect("\n  ");
+
+        if self.has_properties() {
+            exp.push_str(&format!("{{\n{}}}", children_string));
+        } else {
+            exp.push_str(&children_string);
+        }
+
         exp
+    }
+
+    fn has_properties(&self) -> bool {
+        self.children.iter().any(|c| c.is_property() )
     }
 }
 
@@ -78,6 +92,13 @@ impl<'a> Event<'a> {
             Event::Comment(comment) => (*comment).to_string(),
             Event::ChildRule(sass_rule) => sass_rule.expanded(),
             Event::Selector(..) => unreachable!(),
+        }
+    }
+
+    pub fn is_property(&self) -> bool {
+        match self {
+            &Event::Property(..) => true,
+            _ => false,
         }
     }
 }
