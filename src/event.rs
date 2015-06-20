@@ -1,6 +1,7 @@
 use std::borrow::Cow;
+use std::fmt;
 
-#[derive(Debug,Clone)]
+#[derive(Clone)]
 pub struct SassRule<'a> {
     pub selectors: Vec<Event<'a>>,
     pub children: Vec<Event<'a>>,
@@ -12,6 +13,14 @@ impl<'a> SassRule<'a> {
             selectors: Vec::new(),
             children: Vec::new(),
         }
+    }
+}
+
+impl<'a> fmt::Debug for SassRule<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let children = self.children.iter().map(|c| format!("{:?}", c)).collect::<Vec<_>>().connect("\n");
+        let indented_children = children.split("\n").collect::<Vec<_>>().connect("\n  ");
+        write!(f, "{:?} {{\n  {}\n}}", self.selectors, indented_children)
     }
 }
 
