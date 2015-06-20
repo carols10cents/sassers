@@ -1,4 +1,4 @@
-use event::{Event, Entity, State, SassRule, SassVariable, TopLevelEvent};
+use event::{Event, Entity, State, SassRule, SassVariable, SassComment, TopLevelEvent};
 use std::borrow::Cow::Borrowed;
 
 fn is_ascii_whitespace(c: u8) -> bool {
@@ -101,9 +101,22 @@ impl<'a> Tokenizer<'a> {
                         self.state = State::Eof;
                     }
                 },
-                // State::InComment => {
-                //     let comment
-                // }
+                State::InComment => {
+                    let comment = self.next_comment();
+                    if comment.is_some() {
+                        if self.sass_rule_stack.len() == 0 &&
+                           self.current_sass_rule.selectors.len() == 0 &&
+                           self.current_sass_rule.children.len() == 0 {
+                               return Some(TopLevelEvent::Comment(SassComment { comment: comment.unwrap() }))
+                        } else {
+                            self.current_sass_rule.children.push(comment.unwrap());
+                            self.pick_something();
+                        }
+                    } else {
+                        // is this really what we should be doing here? reachable?
+                        self.state = State::Eof;
+                    }
+                }
                 unknown_state => {
                     println!("i dont know what to do for {:?}", unknown_state);
                     println!("current sass rule = {:?}", self.current_sass_rule);
@@ -189,26 +202,26 @@ impl<'a> Tokenizer<'a> {
         self.offset = limit;
     }
 
-    // fn next_comment(&mut self) -> Event<'a> {
-    //     let comment_body_beginning = self.offset;
-    //     let mut i = comment_body_beginning + 2;
-    //     let limit = self.sass.len();
-    //
-    //     while i < limit {
-    //         match self.bytes[i..limit].iter().position(|&c| c == b'*' ) {
-    //             Some(pos) => { i += pos; },
-    //             None => { break; },
-    //         }
-    //
-    //         if self.bytes[i+1] == b'/' {
-    //             self.offset = i + 2;
-    //             return Event::Comment(Borrowed(&self.sass[comment_body_beginning..i + 2]))
-    //         } else {
-    //             i += 1;
-    //         }
-    //     }
-    //     unreachable!()
-    // }
+    fn next_comment(&mut self) -> Option<Event<'a>> {
+        let comment_body_beginning = self.offset;
+        let mut i = comment_body_beginning + 2;
+        let limit = self.sass.len();
+
+        while i < limit {
+            match self.bytes[i..limit].iter().position(|&c| c == b'*' ) {
+                Some(pos) => { i += pos; },
+                None => { break; },
+            }
+
+            if self.bytes[i+1] == b'/' {
+                self.offset = i + 2;
+                return Some(Event::Comment(Borrowed(&self.sass[comment_body_beginning..i + 2])))
+            } else {
+                i += 1;
+            }
+        }
+        None
+    }
 
     fn next_variable(&mut self) -> Option<Event<'a>> {
         // TODO: can parts of this be deduplicated with properties?
