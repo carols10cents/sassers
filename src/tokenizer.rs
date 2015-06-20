@@ -61,16 +61,16 @@ impl<'a> Tokenizer<'a> {
                     return None
                 },
                 State::InSelectors => {
-                    let next_sel = self.next_selector();
-                    println!("next sel = {:?}", next_sel);
-                    if next_sel.is_some() {
-                        self.current_sass_rule.selectors.push(next_sel.unwrap());
+                    let sel = self.next_selector();
+                    println!("next sel = {:?}", sel);
+                    if sel.is_some() {
+                        self.current_sass_rule.selectors.push(sel.unwrap());
                     }
                 },
                 State::InProperties => {
-                    let next_prop = self.next_property();
-                    if next_prop.is_some() {
-                        self.current_sass_rule.children.push(next_prop.unwrap());
+                    let prop = self.next_property();
+                    if prop.is_some() {
+                        self.current_sass_rule.children.push(prop.unwrap());
                     }
                 },
                 State::EndRule => {
@@ -93,13 +93,17 @@ impl<'a> Tokenizer<'a> {
                     self.pick_something();
                 },
                 State::InVariable => {
-                    let next_var = self.next_variable();
-                    if next_var.is_some() {
-                        return Some(TopLevelEvent::Variable(SassVariable { variable: next_var.unwrap() }))
+                    let var = self.next_variable();
+                    if var.is_some() {
+                        return Some(TopLevelEvent::Variable(SassVariable { variable: var.unwrap() }))
                     } else {
-                       self.state = State::Eof;
+                        // is this really what we should be doing here? reachable?
+                        self.state = State::Eof;
                     }
                 },
+                // State::InComment => {
+                //     let comment
+                // }
                 unknown_state => {
                     println!("i dont know what to do for {:?}", unknown_state);
                     println!("current sass rule = {:?}", self.current_sass_rule);
