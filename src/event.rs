@@ -3,7 +3,7 @@ use std::fmt;
 
 #[derive(Clone)]
 pub struct SassRule<'a> {
-    pub selectors: Vec<Event<'a>>,
+    pub selectors: Vec<SassSelector<'a>>,
     pub selectors_done: bool,
     pub children: Vec<Event<'a>>,
 }
@@ -36,6 +36,11 @@ pub struct SassComment<'a> {
     pub comment: Event<'a>,
 }
 
+#[derive(Debug,Clone)]
+pub struct SassSelector<'a> {
+    pub name: Cow<'a, str>,
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum State {
     OutsideRules,
@@ -52,11 +57,11 @@ pub enum State {
 pub enum Event<'a> {
     Start,
     End,
-    Selector(Cow<'a, str>),
     Property(Cow<'a, str>, Cow<'a, str>),
     Variable(Cow<'a, str>, Cow<'a, str>),
     Comment(Cow<'a, str>),
     ChildRule(SassRule<'a>),
+    Selector(SassSelector<'a>),
 }
 
 #[derive(Debug)]
