@@ -352,7 +352,13 @@ impl<'a> Tokenizer<'a> {
                 let end = i - n;
                 if end > beginning {
                     if c == b'{' {
-                        self.state = State::InProperties;
+                        if self.current_sass_rule.selectors_done {
+                            self.state = State::InRule;
+                            return None
+                        } else {
+                            self.current_sass_rule.selectors_done = true;
+                            self.state = State::InProperties;
+                        }
                     }
                     self.offset = i + 1;
                     return Some(Event::Selector(Borrowed(&self.sass[beginning..end])))
