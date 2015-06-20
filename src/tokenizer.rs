@@ -27,12 +27,29 @@ fn scan_trailing_whitespace(data: &str) -> usize {
 }
 
 #[derive(Debug)]
+pub struct SassRule<'a> {
+    selectors: Vec<Event<'a>>,
+    children: Vec<Event<'a>>,
+}
+
+impl<'a> SassRule<'a> {
+    pub fn new() -> SassRule<'a> {
+        SassRule {
+            selectors: Vec::new(),
+            children: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Tokenizer<'a> {
     sass: &'a str,
     bytes: &'a [u8],
     offset: usize,
     stack: Vec<Entity>,
     state: State,
+    sass_rule_stack: Vec<SassRule<'a>>,
+    current_sass_rule: SassRule<'a>,
 }
 
 impl<'a> Tokenizer<'a> {
@@ -42,35 +59,56 @@ impl<'a> Tokenizer<'a> {
             bytes: &sass.as_bytes(),
             offset: 0,
             stack: Vec::new(),
-            state: State::StartRule,
+            state: State::OutsideRules,
+            sass_rule_stack: Vec::new(),
+            current_sass_rule: SassRule::new(),
         }
     }
 
-    fn start_rule(&mut self) -> Option<Event<'a>> {
+    fn start_something(&mut self) -> Option<Event<'a>> {
+        match self.state {
+            State::OutsideRules => {
+                self.pick_something();
+                println!("picked {:?}", self.state);
+                return self.start_something();
+            },
+            State::InRule => return Some(self.next_rule()),
+            State::InSelectors => return Some(self.next_selector()),
+            State::InProperties => return Some(self.next_property()),
+            State::InVariable => return Some(self.next_variable()),
+            State::InComment => return Some(self.next_comment()),
+            State::Eof => return None,
+        }
+    }
+
+    fn pick_something(&mut self) {
         self.skip_leading_whitespace();
 
         if self.offset == self.sass.len() {
-            return None
+            self.state = State::Eof;
+            return
         }
 
         let c = self.bytes[self.offset];
-        if c == b'}' {
-            self.offset += 1;
-            return Some(self.end())
-        }
+        let d = self.bytes[self.offset + 1];
+
+        // if c == b'}' {
+        //     self.offset += 1;
+        //     return Some(self.end())
+        // }
+
         if c == b'$' {
-            return Some(self.next_variable())
+            self.state = State::InVariable;
+            return
         }
 
-        let d = self.bytes[self.offset + 1];
         if c == b'/' && d == b'*' {
-            return Some(self.next_comment())
+            self.state = State::InComment;
+            return
         }
 
         self.state = State::InSelectors;
         self.stack.push(Entity::Rule);
-
-        Some(Event::Start(Entity::Rule))
     }
 
     fn end(&mut self) -> Event<'a> {
@@ -83,7 +121,7 @@ impl<'a> Tokenizer<'a> {
         };
 
         if self.stack.len() == 0 {
-            self.state = State::StartRule;
+            self.state = State::InRule;
         } else {
             self.state = State::InProperties;
         }
@@ -257,6 +295,8 @@ impl<'a> Tokenizer<'a> {
 
             let c = self.bytes[i];
 
+            println!("c = {:?}", c);
+
             if c == b':' {
                 self.state = State::InProperties;
                 return self.next_property()
@@ -288,23 +328,18 @@ impl<'a> Tokenizer<'a> {
             self.end()
         }
     }
+
+    fn next_rule(&mut self) -> Event<'a> {
+        Event::Start(Entity::Rule)
+    }
 }
 
 impl<'a> Iterator for Tokenizer<'a> {
-    type Item = Event<'a>;
+    type Item = SassRule<'a>;
 
-    fn next(&mut self) -> Option<Event<'a>> {
+    fn next(&mut self) -> Option<SassRule<'a>> {
         if self.offset < self.sass.len() {
-            match self.state {
-                State::StartRule => {
-                    let ret = self.start_rule();
-                    if ret.is_some() {
-                        return ret
-                    }
-                },
-                State::InSelectors => return Some(self.next_selector()),
-                State::InProperties => return Some(self.next_property()),
-            }
+            self.start_something();
         }
         None
     }

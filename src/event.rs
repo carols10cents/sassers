@@ -2,9 +2,13 @@ use std::borrow::Cow;
 
 #[derive(PartialEq, Debug)]
 pub enum State {
-    StartRule,
+    OutsideRules,
+    InVariable,
+    InComment,
+    InRule,
     InSelectors,
     InProperties,
+    Eof,
 }
 
 #[derive(Debug, Clone)]
