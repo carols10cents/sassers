@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum State {
     OutsideRules,
     InVariable,
@@ -8,6 +8,7 @@ pub enum State {
     InRule,
     InSelectors,
     InProperties,
+    EndRule,
     Eof,
 }
 

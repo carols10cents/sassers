@@ -26,7 +26,7 @@ fn scan_trailing_whitespace(data: &str) -> usize {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct SassRule<'a> {
     selectors: Vec<Event<'a>>,
     children: Vec<Event<'a>>,
@@ -65,20 +65,50 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn start_something(&mut self) -> Option<Event<'a>> {
-        match self.state {
-            State::OutsideRules => {
-                self.pick_something();
-                println!("picked {:?}", self.state);
-                return self.start_something();
-            },
-            State::InRule => return Some(self.next_rule()),
-            State::InSelectors => return Some(self.next_selector()),
-            State::InProperties => return Some(self.next_property()),
-            State::InVariable => return Some(self.next_variable()),
-            State::InComment => return Some(self.next_comment()),
-            State::Eof => return None,
+    fn start_something(&mut self) -> Option<SassRule<'a>> {
+        self.current_sass_rule = SassRule::new();
+
+        self.pick_something();
+        while self.state != State::OutsideRules && self.state != State::Eof {
+            let curr_state = self.state.clone();
+            match curr_state {
+                State::InSelectors => {
+                    let next_sel = self.next_selector();
+                    if next_sel.is_some() {
+                        self.current_sass_rule.selectors.push(next_sel.unwrap());
+                    }
+                },
+                State::InProperties => {
+                    let next_prop = self.next_property();
+                    if next_prop.is_some() {
+                        self.current_sass_rule.children.push(next_prop.unwrap());
+                    }
+                },
+                State::EndRule => {
+                    // consume '}', should probably be checking that's what we actually have
+                    self.offset += 1;
+                    self.state = State::OutsideRules;
+                }
+                unknown_state => {
+                    println!("i dont know what to do for {:?}", unknown_state);
+                    println!("current sass rule = {:?}", self.current_sass_rule);
+                    self.state = State::Eof;
+                },
+            }
         }
+        //
+        //     State::OutsideRules => {
+        //         println!("picked {:?}", self.state);
+        //         return self.start_something();
+        //     },
+        //     State::InRule => return Some(self.next_rule()),
+        //     State::InProperties => return Some(self.next_property()),
+        //     State::InVariable => return Some(self.next_variable()),
+        //     State::InComment => return Some(self.next_comment()),
+        //     State::Eof => return None,
+        // }
+
+        Some(self.current_sass_rule.clone())
     }
 
     fn pick_something(&mut self) {
@@ -218,7 +248,7 @@ impl<'a> Tokenizer<'a> {
         Event::Property(Borrowed(""), Borrowed(""))
     }
 
-    fn next_property(&mut self) -> Event<'a> {
+    fn next_property(&mut self) -> Option<Event<'a>> {
         self.skip_leading_whitespace();
 
         let name_beginning = self.offset;
@@ -227,13 +257,14 @@ impl<'a> Tokenizer<'a> {
 
         let c = self.bytes[i];
         if c == b'}' {
-            self.offset += 1;
-            return self.end()
+            self.state = State::EndRule;
+            return None
         }
 
         let d = self.bytes[i + 1];
         if c == b'/' && d == b'*' {
-            return self.next_comment()
+            self.state = State::InComment;
+            return None
         }
 
         while i < limit {
@@ -246,9 +277,10 @@ impl<'a> Tokenizer<'a> {
             // do it again but oh well
             let c = self.bytes[i];
             if c == b'{' {
-                self.state = State::InSelectors;
-                self.stack.push(Entity::Rule);
-                return Event::Start(Entity::Rule)
+                self.state = State::InRule;
+                // self.stack.push(Entity::Rule);
+                // return Event::Start(Entity::Rule)
+                return None
             }
 
             let name_end = i;
@@ -271,18 +303,18 @@ impl<'a> Tokenizer<'a> {
 
                 self.skip_leading_whitespace();
 
-                return Event::Property(
+                return Some(Event::Property(
                     Borrowed(&self.sass[name_beginning..name_end]),
                     Borrowed(&self.sass[value_beginning..value_end])
-                )
+                ))
 
             }
         }
         self.offset = self.sass.len();
-        Event::Property(Borrowed(""), Borrowed(""))
+        None
     }
 
-    fn next_selector(&mut self) -> Event<'a> {
+    fn next_selector(&mut self) -> Option<Event<'a>> {
         let beginning = self.offset;
         let mut i = beginning;
         let limit = self.sass.len();
@@ -295,11 +327,9 @@ impl<'a> Tokenizer<'a> {
 
             let c = self.bytes[i];
 
-            println!("c = {:?}", c);
-
             if c == b':' {
                 self.state = State::InProperties;
-                return self.next_property()
+                return None
             }
 
             if c == b',' || c == b'{' {
@@ -310,22 +340,22 @@ impl<'a> Tokenizer<'a> {
                         self.state = State::InProperties;
                     }
                     self.offset = i + 1;
-                    return Event::Selector(Borrowed(&self.sass[beginning..end]));
+                    return Some(Event::Selector(Borrowed(&self.sass[beginning..end])))
                 }
             }
 
             self.offset = i;
             if i > beginning {
-                return Event::Selector(Borrowed(&self.sass[beginning..i]))
+                return Some(Event::Selector(Borrowed(&self.sass[beginning..i])))
             }
             i += 1;
         }
 
         if i > beginning {
             self.offset = i;
-            Event::Selector(Borrowed(&self.sass[beginning..i]))
+            Some(Event::Selector(Borrowed(&self.sass[beginning..i])))
         } else {
-            self.end()
+            None
         }
     }
 
@@ -339,7 +369,7 @@ impl<'a> Iterator for Tokenizer<'a> {
 
     fn next(&mut self) -> Option<SassRule<'a>> {
         if self.offset < self.sass.len() {
-            self.start_something();
+            return self.start_something()
         }
         None
     }
