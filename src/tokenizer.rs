@@ -1,4 +1,4 @@
-use event::{Event, Entity, State, SassRule, SassVariable, SassComment, TopLevelEvent};
+use event::{Event, State, SassRule, SassVariable, SassComment, TopLevelEvent};
 use std::borrow::Cow::Borrowed;
 
 fn is_ascii_whitespace(c: u8) -> bool {
