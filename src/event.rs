@@ -55,8 +55,6 @@ pub enum State {
 
 #[derive(Debug, Clone)]
 pub enum Event<'a> {
-    Start,
-    End,
     Property(Cow<'a, str>, Cow<'a, str>),
     Variable(Cow<'a, str>, Cow<'a, str>),
     Comment(Cow<'a, str>),
