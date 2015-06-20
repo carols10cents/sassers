@@ -54,9 +54,12 @@ impl<'a> Tokenizer<'a> {
         self.current_sass_rule = SassRule::new();
 
         self.pick_something();
-        while self.state != State::OutsideRules && self.state != State::Eof {
+        while self.state != State::OutsideRules {
             let curr_state = self.state.clone();
             match curr_state {
+                State::Eof => {
+                    return None
+                },
                 State::InSelectors => {
                     let next_sel = self.next_selector();
                     println!("next sel = {:?}", next_sel);
