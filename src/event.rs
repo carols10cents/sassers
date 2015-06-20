@@ -15,6 +15,11 @@ impl<'a> SassRule<'a> {
     }
 }
 
+#[derive(Debug,Clone)]
+pub struct SassVariable<'a> {
+    pub variable: Event<'a>,
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum State {
     OutsideRules,
@@ -42,4 +47,10 @@ pub enum Event<'a> {
     Variable(Cow<'a, str>, Cow<'a, str>),
     Comment(Cow<'a, str>),
     ChildRule(SassRule<'a>),
+}
+
+#[derive(Debug)]
+pub enum TopLevelEvent<'a> {
+    Rule(SassRule<'a>),
+    Variable(SassVariable<'a>),
 }

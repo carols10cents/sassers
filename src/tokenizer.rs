@@ -1,4 +1,4 @@
-use event::{Event, Entity, State, SassRule};
+use event::{Event, Entity, State, SassRule, SassVariable, TopLevelEvent};
 use std::borrow::Cow::Borrowed;
 
 fn is_ascii_whitespace(c: u8) -> bool {
@@ -50,7 +50,7 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn start_something(&mut self) -> Option<SassRule<'a>> {
+    fn start_something(&mut self) -> Option<TopLevelEvent<'a>> {
         self.current_sass_rule = SassRule::new();
 
         self.pick_something();
@@ -89,6 +89,14 @@ impl<'a> Tokenizer<'a> {
                     self.current_sass_rule = SassRule::new();
                     self.pick_something();
                 },
+                State::InVariable => {
+                    let next_var = self.next_variable();
+                    if next_var.is_some() {
+                        return Some(TopLevelEvent::Variable(SassVariable { variable: next_var.unwrap() }))
+                    } else {
+                       self.state = State::Eof;
+                    }
+                },
                 unknown_state => {
                     println!("i dont know what to do for {:?}", unknown_state);
                     println!("current sass rule = {:?}", self.current_sass_rule);
@@ -108,7 +116,7 @@ impl<'a> Tokenizer<'a> {
         //     State::Eof => return None,
         // }
 
-        Some(self.current_sass_rule.clone())
+        Some(TopLevelEvent::Rule(self.current_sass_rule.clone()))
     }
 
     fn pick_something(&mut self) {
@@ -195,47 +203,47 @@ impl<'a> Tokenizer<'a> {
     //     unreachable!()
     // }
 
-    // fn next_variable(&mut self) -> Event<'a> {
-    //     // TODO: can parts of this be deduplicated with properties?
-    //     let name_beginning = self.offset;
-    //     let mut i = name_beginning;
-    //     let limit = self.sass.len();
-    //
-    //     while i < limit {
-    //         match self.bytes[i..limit].iter().position(|&c| c == b':' ) {
-    //             Some(pos) => { i += pos; },
-    //             None => { break; },
-    //         }
-    //
-    //         let name_end = i;
-    //
-    //         i += 1;
-    //         self.offset = i;
-    //         self.skip_leading_whitespace();
-    //
-    //         let value_beginning = self.offset;
-    //         i = value_beginning;
-    //
-    //         while i < limit {
-    //             match self.bytes[i..limit].iter().position(|&c| c == b';') {
-    //                 Some(pos) => { i += pos; },
-    //                 None => { i = limit; break; },
-    //             }
-    //
-    //             let value_end = i;
-    //             self.offset = i + 1;
-    //
-    //             self.skip_leading_whitespace();
-    //
-    //             return Event::Variable(
-    //                 Borrowed(&self.sass[name_beginning..name_end]),
-    //                 Borrowed(&self.sass[value_beginning..value_end])
-    //             )
-    //         }
-    //     }
-    //     self.offset = self.sass.len();
-    //     Event::Property(Borrowed(""), Borrowed(""))
-    // }
+    fn next_variable(&mut self) -> Option<Event<'a>> {
+        // TODO: can parts of this be deduplicated with properties?
+        let name_beginning = self.offset;
+        let mut i = name_beginning;
+        let limit = self.sass.len();
+
+        while i < limit {
+            match self.bytes[i..limit].iter().position(|&c| c == b':' ) {
+                Some(pos) => { i += pos; },
+                None => { break; },
+            }
+
+            let name_end = i;
+
+            i += 1;
+            self.offset = i;
+            self.skip_leading_whitespace();
+
+            let value_beginning = self.offset;
+            i = value_beginning;
+
+            while i < limit {
+                match self.bytes[i..limit].iter().position(|&c| c == b';') {
+                    Some(pos) => { i += pos; },
+                    None => { i = limit; break; },
+                }
+
+                let value_end = i;
+                self.offset = i + 1;
+
+                self.skip_leading_whitespace();
+
+                return Some(Event::Variable(
+                    Borrowed(&self.sass[name_beginning..name_end]),
+                    Borrowed(&self.sass[value_beginning..value_end])
+                ))
+            }
+        }
+        self.offset = self.sass.len();
+        None
+    }
 
     fn next_property(&mut self) -> Option<Event<'a>> {
         self.skip_leading_whitespace();
@@ -349,9 +357,9 @@ impl<'a> Tokenizer<'a> {
 }
 
 impl<'a> Iterator for Tokenizer<'a> {
-    type Item = SassRule<'a>;
+    type Item = TopLevelEvent<'a>;
 
-    fn next(&mut self) -> Option<SassRule<'a>> {
+    fn next(&mut self) -> Option<TopLevelEvent<'a>> {
         if self.offset < self.sass.len() {
             return self.start_something()
         }
