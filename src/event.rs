@@ -31,18 +31,18 @@ impl<'a> SassRule<'a> {
             }
         }).collect::<Vec<_>>().connect(", ");
 
-        let properties_string = self.children.iter().filter(|c| c.is_property() ).map(|c| {
+        let properties_string = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
             c.expanded()
         }).collect::<Vec<_>>().connect("\n");
 
-        let child_rules_string = self.children.iter().filter(|c| !c.is_property() ).map(|c| {
+        let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
             match c {
                 &Event::ChildRule(ref rule) => rule.expanded_with_parent(&selector_string),
                 _ => "".to_string(),
             }
         }).collect::<Vec<_>>().connect("\n");
 
-        if self.has_properties() {
+        if properties_string.len() > 0 {
             exp.push_str(&selector_string);
             exp.push_str(" ");
             exp.push_str(&format!("{{\n{}\n}}\n", properties_string));
@@ -72,10 +72,6 @@ impl<'a> SassRule<'a> {
         SassRule {
             children: replacement_children, ..self
         }
-    }
-
-    fn has_properties(&self) -> bool {
-        self.children.iter().any(|c| c.is_property() )
     }
 }
 
@@ -130,15 +126,15 @@ impl<'a> Event<'a> {
     pub fn expanded(&self) -> String {
         match (*self).clone() {
             Event::Property(name, value) => format!("  {}: {};", name, value),
-            Event::Comment(comment) => (*comment).to_string(),
+            Event::Comment(comment) => format!("  {}", comment),
             Event::ChildRule(sass_rule) => sass_rule.expanded(),
             Event::Selector(..) => unreachable!(),
         }
     }
 
-    pub fn is_property(&self) -> bool {
+    pub fn is_child_rule(&self) -> bool {
         match self {
-            &Event::Property(..) => true,
+            &Event::ChildRule(..) => true,
             _ => false,
         }
     }
