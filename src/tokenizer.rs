@@ -248,6 +248,11 @@ impl<'a> Tokenizer<'a> {
     fn next_property(&mut self) -> Option<Event<'a>> {
         self.skip_leading_whitespace();
 
+        if self.offset == self.sass.len() {
+            self.state = State::Eof;
+            return None
+        }
+
         let name_beginning = self.offset;
         let mut i = name_beginning;
         let limit = self.sass.len();
