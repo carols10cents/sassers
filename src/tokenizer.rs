@@ -60,9 +60,8 @@ impl<'a> Tokenizer<'a> {
                 },
                 State::InSelectors => {
                     let sel = self.next_selector();
-                    match sel {
-                        Some(Event::Selector(sass_selector)) => self.current_sass_rule.selectors.push(sass_selector),
-                        _ => {},
+                    if sel.is_some() {
+                        self.current_sass_rule.selectors.push(sel.unwrap());
                     }
                 },
                 State::InProperties => {
@@ -314,7 +313,7 @@ impl<'a> Tokenizer<'a> {
         None
     }
 
-    fn next_selector(&mut self) -> Option<Event<'a>> {
+    fn next_selector(&mut self) -> Option<SassSelector<'a>> {
         let beginning = self.offset;
         let mut i = beginning;
         let limit = self.sass.len();
@@ -346,20 +345,20 @@ impl<'a> Tokenizer<'a> {
                         }
                     }
                     self.offset = i + 1;
-                    return Some(Event::Selector(SassSelector { name: Borrowed(&self.sass[beginning..end]) }))
+                    return Some(SassSelector { name: Borrowed(&self.sass[beginning..end]) })
                 }
             }
 
             self.offset = i;
             if i > beginning {
-                return Some(Event::Selector(SassSelector { name: Borrowed(&self.sass[beginning..i]) }))
+                return Some(SassSelector { name: Borrowed(&self.sass[beginning..i]) })
             }
             i += 1;
         }
 
         if i > beginning {
             self.offset = i;
-            Some(Event::Selector(SassSelector { name: Borrowed(&self.sass[beginning..i]) }))
+            Some(SassSelector { name: Borrowed(&self.sass[beginning..i]) })
         } else {
             self.state = State::Eof;
             None

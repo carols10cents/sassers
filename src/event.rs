@@ -38,7 +38,7 @@ impl<'a> SassRule<'a> {
         let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
             match c {
                 &Event::ChildRule(ref rule) => rule.expanded_with_parent(&selector_string),
-                _ => "".to_string(),
+                _ => unreachable!(),
             }
         }).collect::<Vec<_>>().connect("\n");
 
@@ -92,7 +92,7 @@ impl <'a> SassComment<'a> {
     pub fn expanded(&self) -> String {
         match &self.comment {
             &Event::Comment(ref c) => (*c).to_string(),
-            _ => "".to_string(),
+            _ => unreachable!(),
         }
     }
 }
@@ -119,7 +119,6 @@ pub enum Event<'a> {
     Property(Cow<'a, str>, Cow<'a, str>),
     Comment(Cow<'a, str>),
     ChildRule(SassRule<'a>),
-    Selector(SassSelector<'a>),
 }
 
 impl<'a> Event<'a> {
@@ -128,7 +127,6 @@ impl<'a> Event<'a> {
             Event::Property(name, value) => format!("  {}: {};", name, value),
             Event::Comment(comment) => format!("  {}", comment),
             Event::ChildRule(sass_rule) => sass_rule.expanded(),
-            Event::Selector(..) => unreachable!(),
         }
     }
 
