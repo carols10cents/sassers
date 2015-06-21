@@ -18,15 +18,29 @@ impl<'a> SassRule<'a> {
     }
 
     pub fn expanded(&self) -> String {
+        self.expanded_with_parent("")
+    }
+
+    pub fn expanded_with_parent(&self, parents: &str) -> String {
         let mut exp = String::new();
 
-        let selector_string = self.selectors.iter().map(|s| (*s.name).to_string()).collect::<Vec<_>>().connect(", ");
-        exp.push_str(&selector_string);
-        exp.push_str(" ");
+        let selector_string = self.selectors.iter().map(|s| {
+            match parents.len() {
+                0 => (*s.name).to_string(),
+                _ => format!("{} {}", parents, s.name),
+            }
+        }).collect::<Vec<_>>().connect(", ");
 
-        let children_string = self.children.iter().map(|c| c.expanded()).collect::<Vec<_>>().connect("\n");
+        let children_string = self.children.iter().map(|c| {
+            match c {
+                &Event::ChildRule(ref rule) => rule.expanded_with_parent(&selector_string),
+                other => other.expanded(),
+            }
+        }).collect::<Vec<_>>().connect("\n");
 
         if self.has_properties() {
+            exp.push_str(&selector_string);
+            exp.push_str(" ");
             exp.push_str(&format!("{{\n{}\n}}", children_string));
         } else {
             exp.push_str(&children_string);
