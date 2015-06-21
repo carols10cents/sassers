@@ -31,19 +31,24 @@ impl<'a> SassRule<'a> {
             }
         }).collect::<Vec<_>>().connect(", ");
 
-        let children_string = self.children.iter().map(|c| {
+        let properties_string = self.children.iter().filter(|c| c.is_property() ).map(|c| {
+            c.expanded()
+        }).collect::<Vec<_>>().connect("\n");
+
+        let child_rules_string = self.children.iter().filter(|c| !c.is_property() ).map(|c| {
             match c {
                 &Event::ChildRule(ref rule) => rule.expanded_with_parent(&selector_string),
-                other => other.expanded(),
+                _ => "".to_string(),
             }
         }).collect::<Vec<_>>().connect("\n");
 
         if self.has_properties() {
             exp.push_str(&selector_string);
             exp.push_str(" ");
-            exp.push_str(&format!("{{\n{}\n}}", children_string));
+            exp.push_str(&format!("{{\n{}\n}}\n", properties_string));
+            exp.push_str(&child_rules_string);
         } else {
-            exp.push_str(&children_string);
+            exp.push_str(&child_rules_string);
         }
 
         exp
