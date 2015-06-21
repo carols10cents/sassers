@@ -299,7 +299,10 @@ pub fn expanded<'a, I>(tokenizer: &mut I) -> String
                 output.push_str("\n");
             },
             TopLevelEvent::SassVariable{..} => {},
-            TopLevelEvent::Comment(comment) => {},
+            TopLevelEvent::Comment(comment) => {
+                output.push_str(&comment.expanded());
+                output.push_str("\n");
+            },
         }
     }
 
