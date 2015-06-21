@@ -35,6 +35,26 @@ impl<'a> SassRule<'a> {
         exp
     }
 
+    pub fn map_over_property_values<F>(self, f: &F) -> SassRule<'a>
+        where F: Fn(Cow<'a, str>) -> Cow<'a, str>
+    {
+        let replacement_children = self.children.into_iter().map(|c|
+            match c {
+                Event::Property(name, value) => {
+                    Event::Property(name, f(value))
+                },
+                Event::ChildRule(rule) => {
+                    Event::ChildRule(rule.map_over_property_values(f))
+                },
+                other => other
+            }
+        ).collect();
+
+        SassRule {
+            children: replacement_children, ..self
+        }
+    }
+
     fn has_properties(&self) -> bool {
         self.children.iter().any(|c| c.is_property() )
     }

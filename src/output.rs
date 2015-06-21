@@ -1,5 +1,6 @@
 use tokenizer::Tokenizer;
-use event::{TopLevelEvent};
+use event::TopLevelEvent;
+use variable_mapper::VariableMapper;
 
 // pub fn nested<'a, I>(tokenizer: &mut I) -> String
 //     where I: Iterator<Item = Event<'a>>
@@ -288,9 +289,10 @@ use event::{TopLevelEvent};
 pub fn expanded<'a, I>(tokenizer: &mut I) -> String
     where I: Iterator<Item = TopLevelEvent<'a>>
 {
+    let mut vm = VariableMapper::new(tokenizer);
     let mut output = String::new();
 
-    while let Some(event) = tokenizer.next() {
+    while let Some(event) = vm.next() {
         match event.clone() {
             TopLevelEvent::Rule(rule) => output.push_str(&rule.expanded()),
             TopLevelEvent::SassVariable{..} => {},

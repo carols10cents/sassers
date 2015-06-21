@@ -1,4 +1,4 @@
-use event::{TopLevelEvent, Event, SassRule};
+use event::TopLevelEvent;
 use std::collections::HashMap;
 
 pub struct VariableMapper<I> {
@@ -36,10 +36,13 @@ impl<'a, I> Iterator for VariableMapper<I>
                 self.variables.insert((*name).to_string(), val);
                 self.next()
             },
-            // Some(Event::Property(name, value)) => {
-            //     let real_value = self.substitute_variables(&value);
-            //     Some(Event::Property(name, real_value.into()))
-            // },
+            Some(TopLevelEvent::Rule(sass_rule)) => {
+                let replacement = sass_rule.map_over_property_values(&|property_value| {
+                    self.substitute_variables(&property_value).into()
+                });
+
+                Some(TopLevelEvent::Rule(replacement))
+            },
             other => other,
         }
     }
