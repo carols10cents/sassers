@@ -294,7 +294,10 @@ pub fn expanded<'a, I>(tokenizer: &mut I) -> String
 
     while let Some(event) = vm.next() {
         match event.clone() {
-            TopLevelEvent::Rule(rule) => output.push_str(&rule.expanded()),
+            TopLevelEvent::Rule(rule) => {
+                output.push_str(&rule.expanded());
+                output.push_str("\n\n");
+            },
             TopLevelEvent::SassVariable{..} => {},
             TopLevelEvent::Comment(comment) => {},
         }

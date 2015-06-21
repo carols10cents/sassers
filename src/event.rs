@@ -24,10 +24,10 @@ impl<'a> SassRule<'a> {
         exp.push_str(&selector_string);
         exp.push_str(" ");
 
-        let children_string = self.children.iter().map(|c| c.expanded()).collect::<Vec<_>>().connect("\n  ");
+        let children_string = self.children.iter().map(|c| c.expanded()).collect::<Vec<_>>().connect("\n");
 
         if self.has_properties() {
-            exp.push_str(&format!("{{\n{}}}", children_string));
+            exp.push_str(&format!("{{\n{}\n}}", children_string));
         } else {
             exp.push_str(&children_string);
         }
@@ -101,7 +101,7 @@ pub enum Event<'a> {
 impl<'a> Event<'a> {
     pub fn expanded(&self) -> String {
         match (*self).clone() {
-            Event::Property(name, value) => format!("  {}: {};\n", name, value),
+            Event::Property(name, value) => format!("  {}: {};", name, value),
             Event::Comment(comment) => (*comment).to_string(),
             Event::ChildRule(sass_rule) => sass_rule.expanded(),
             Event::Selector(..) => unreachable!(),
