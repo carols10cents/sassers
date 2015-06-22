@@ -49,10 +49,8 @@ impl<'a> SassRule<'a> {
             output.push_str(&selector_string);
             output.push_str(" ");
             output.push_str(&format!("{{\n{}\n}}\n", properties_string));
-            output.push_str(&child_rules_string);
-        } else {
-            output.push_str(&child_rules_string);
         }
+        output.push_str(&child_rules_string);
 
         output
     }
