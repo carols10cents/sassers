@@ -1,4 +1,4 @@
-use sass_rule::SassRule;
+use sass::rule::SassRule;
 
 use std::borrow::Cow;
 

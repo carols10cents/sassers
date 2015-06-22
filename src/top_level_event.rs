@@ -1,5 +1,5 @@
-use sass_rule::SassRule;
-use sass_comment::SassComment;
+use sass::rule::SassRule;
+use sass::comment::SassComment;
 
 use std::borrow::Cow;
 

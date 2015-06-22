@@ -1,5 +1,5 @@
 use event::Event;
-use sass_selector::SassSelector;
+use sass::selector::SassSelector;
 
 use std::borrow::Cow;
 use std::fmt;
