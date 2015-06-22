@@ -309,6 +309,29 @@ pub fn expanded<'a, I>(tokenizer: &mut I) -> String
     output
 }
 
+pub fn nested<'a, I>(tokenizer: &mut I) -> String
+    where I: Iterator<Item = TopLevelEvent<'a>>
+{
+    let mut vm = VariableMapper::new(tokenizer);
+    let mut output = String::new();
+
+    while let Some(event) = vm.next() {
+        match event.clone() {
+            TopLevelEvent::Rule(rule) => {
+                output.push_str(&rule.nested());
+                output.push_str("\n\n");
+            },
+            TopLevelEvent::SassVariable{..} => {},
+            TopLevelEvent::Comment(comment) => {
+                output.push_str(&comment.nested());
+                output.push_str("\n");
+            },
+        }
+    }
+
+    output
+}
+
 pub fn debug(tokenizer: &mut Tokenizer) -> String {
     let mut output = String::new();
 

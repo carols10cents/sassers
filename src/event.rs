@@ -18,6 +18,14 @@ impl<'a> Event<'a> {
         }
     }
 
+    pub fn nested(&self) -> String {
+        match (*self).clone() {
+            Event::Property(name, value) => format!("  {}: {};", name, value),
+            Event::Comment(comment) => format!("  {}", comment),
+            Event::ChildRule(sass_rule) => sass_rule.nested(),
+        }
+    }
+
     pub fn is_child_rule(&self) -> bool {
         match self {
             &Event::ChildRule(..) => true,

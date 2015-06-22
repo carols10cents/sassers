@@ -55,6 +55,46 @@ impl<'a> SassRule<'a> {
         output
     }
 
+    pub fn nested(&self) -> String {
+        self.nested_with_parent("")
+    }
+
+    pub fn nested_with_parent(&self, parents: &str) -> String {
+        let mut output = String::new();
+
+        let selector_string = self.selectors.iter().map(|s| {
+            match parents.len() {
+                0 => (*s.name).to_string(),
+                _ => format!("{} {}", parents, s.name),
+            }
+        }).collect::<Vec<_>>().connect(", ");
+
+        let properties_string = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
+            c.nested()
+        }).collect::<Vec<_>>().connect("\n");
+
+        let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
+            match c {
+                &Event::ChildRule(ref rule) => rule.nested_with_parent(&selector_string),
+                _ => unreachable!(),
+            }
+        }).collect::<Vec<_>>().connect("\n  ");
+
+        if properties_string.len() > 0 {
+            output.push_str(&selector_string);
+            output.push_str(" ");
+            output.push_str(&format!("{{\n{} }}", properties_string));
+            if child_rules_string.len() > 0 {
+                output.push_str("\n  ");
+                output.push_str(&child_rules_string.split('\n').collect::<Vec<_>>().connect("\n  "));
+            }
+        } else {
+            output.push_str(&child_rules_string);
+        }
+
+        output
+    }
+
     pub fn map_over_property_values<F>(self, f: &F) -> SassRule<'a>
         where F: Fn(Cow<'a, str>) -> Cow<'a, str>
     {
