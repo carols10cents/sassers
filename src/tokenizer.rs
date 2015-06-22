@@ -1,5 +1,6 @@
-use event::{Event, SassComment, SassSelector};
+use event::{Event, SassComment};
 use sass_rule::SassRule;
+use sass_selector::SassSelector;
 use top_level_event::TopLevelEvent;
 
 use std::borrow::Cow::Borrowed;

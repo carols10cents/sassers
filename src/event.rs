@@ -16,11 +16,6 @@ impl <'a> SassComment<'a> {
     }
 }
 
-#[derive(Debug,Clone)]
-pub struct SassSelector<'a> {
-    pub name: Cow<'a, str>,
-}
-
 #[derive(Debug, Clone)]
 pub enum Event<'a> {
     Property(Cow<'a, str>, Cow<'a, str>),

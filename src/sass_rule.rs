@@ -1,4 +1,5 @@
-use event::{Event, SassSelector};
+use event::Event;
+use sass_selector::SassSelector;
 
 use std::borrow::Cow;
 use std::fmt;

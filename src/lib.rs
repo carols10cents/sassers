@@ -1,6 +1,7 @@
 mod event;
 mod output;
 mod sass_rule;
+mod sass_selector;
 mod tokenizer;
 mod top_level_event;
 mod variable_mapper;
