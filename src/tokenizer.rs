@@ -1,5 +1,7 @@
-use event::{Event, SassComment, SassSelector, TopLevelEvent};
+use event::{Event, SassComment, SassSelector};
 use sass_rule::SassRule;
+use top_level_event::TopLevelEvent;
+
 use std::borrow::Cow::Borrowed;
 
 fn is_ascii_whitespace(c: u8) -> bool {

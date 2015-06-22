@@ -1,4 +1,4 @@
-use event::TopLevelEvent;
+use top_level_event::TopLevelEvent;
 use std::collections::HashMap;
 
 pub struct VariableMapper<I> {

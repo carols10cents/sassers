@@ -44,10 +44,3 @@ impl<'a> Event<'a> {
         }
     }
 }
-
-#[derive(Debug, Clone)]
-pub enum TopLevelEvent<'a> {
-    Rule(SassRule<'a>),
-    SassVariable { name: Cow<'a, str>, value: Cow<'a, str> },
-    Comment(SassComment<'a>),
-}

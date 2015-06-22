@@ -2,6 +2,7 @@ mod event;
 mod output;
 mod sass_rule;
 mod tokenizer;
+mod top_level_event;
 mod variable_mapper;
 
 use tokenizer::Tokenizer;

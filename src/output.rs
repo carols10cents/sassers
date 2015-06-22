@@ -1,5 +1,5 @@
 use tokenizer::Tokenizer;
-use event::TopLevelEvent;
+use top_level_event::TopLevelEvent;
 use variable_mapper::VariableMapper;
 
 // pub fn nested<'a, I>(tokenizer: &mut I) -> String
