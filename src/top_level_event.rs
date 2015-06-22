@@ -1,5 +1,5 @@
 use sass_rule::SassRule;
-use event::SassComment;
+use sass_comment::SassComment;
 
 use std::borrow::Cow;
 

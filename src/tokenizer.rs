@@ -1,4 +1,5 @@
-use event::{Event, SassComment};
+use event::Event;
+use sass_comment::SassComment;
 use sass_rule::SassRule;
 use sass_selector::SassSelector;
 use top_level_event::TopLevelEvent;
