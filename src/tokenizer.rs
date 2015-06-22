@@ -1,4 +1,4 @@
-use event::{Event, State, SassComment, SassSelector, TopLevelEvent};
+use event::{Event, SassComment, SassSelector, TopLevelEvent};
 use sass_rule::SassRule;
 use std::borrow::Cow::Borrowed;
 
@@ -35,6 +35,18 @@ pub struct Tokenizer<'a> {
     state: State,
     sass_rule_stack: Vec<SassRule<'a>>,
     current_sass_rule: SassRule<'a>,
+}
+
+#[derive(PartialEq, Debug, Clone)]
+enum State {
+    OutsideRules,
+    InVariable,
+    InComment,
+    InRule,
+    InSelectors,
+    InProperties,
+    EndRule,
+    Eof,
 }
 
 impl<'a> Tokenizer<'a> {

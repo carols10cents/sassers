@@ -21,18 +21,6 @@ pub struct SassSelector<'a> {
     pub name: Cow<'a, str>,
 }
 
-#[derive(PartialEq, Debug, Clone)]
-pub enum State {
-    OutsideRules,
-    InVariable,
-    InComment,
-    InRule,
-    InSelectors,
-    InProperties,
-    EndRule,
-    Eof,
-}
-
 #[derive(Debug, Clone)]
 pub enum Event<'a> {
     Property(Cow<'a, str>, Cow<'a, str>),
