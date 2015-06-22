@@ -25,7 +25,7 @@ impl<'a> SassRule<'a> {
     }
 
     pub fn expanded_with_parent(&self, parents: &str) -> String {
-        let mut exp = String::new();
+        let mut output = String::new();
 
         let selector_string = self.selectors.iter().map(|s| {
             match parents.len() {
@@ -46,15 +46,15 @@ impl<'a> SassRule<'a> {
         }).collect::<Vec<_>>().connect("\n");
 
         if properties_string.len() > 0 {
-            exp.push_str(&selector_string);
-            exp.push_str(" ");
-            exp.push_str(&format!("{{\n{}\n}}\n", properties_string));
-            exp.push_str(&child_rules_string);
+            output.push_str(&selector_string);
+            output.push_str(" ");
+            output.push_str(&format!("{{\n{}\n}}\n", properties_string));
+            output.push_str(&child_rules_string);
         } else {
-            exp.push_str(&child_rules_string);
+            output.push_str(&child_rules_string);
         }
 
-        exp
+        output
     }
 
     pub fn map_over_property_values<F>(self, f: &F) -> SassRule<'a>
