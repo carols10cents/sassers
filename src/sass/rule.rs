@@ -48,9 +48,16 @@ impl<'a> SassRule<'a> {
         if properties_string.len() > 0 {
             output.push_str(&selector_string);
             output.push_str(" ");
-            output.push_str(&format!("{{\n{}\n}}\n", properties_string));
+            output.push_str(&format!("{{\n{}\n}}", properties_string));
         }
-        output.push_str(&child_rules_string);
+
+        if properties_string.len() > 0 && child_rules_string.len() > 0 {
+            output.push_str("\n");
+        }
+
+        if child_rules_string.len() > 0 {
+            output.push_str(&child_rules_string);
+        }
 
         output
     }
