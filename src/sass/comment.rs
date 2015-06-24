@@ -26,4 +26,11 @@ impl <'a> SassComment<'a> {
             _ => unreachable!(),
         }
     }
+
+    pub fn compressed(&self) -> String {
+        match &self.comment {
+            &Event::Comment(ref c) => (*c).to_string(),
+            _ => unreachable!(),
+        }
+    }
 }
