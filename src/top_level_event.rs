@@ -1,11 +1,10 @@
 use sass::rule::SassRule;
 use sass::comment::SassComment;
-
-use std::borrow::Cow;
+use sass::variable::SassVariable;
 
 #[derive(Debug, Clone)]
 pub enum TopLevelEvent<'a> {
     Rule(SassRule<'a>),
-    SassVariable { name: Cow<'a, str>, value: Cow<'a, str> },
+    Variable(SassVariable<'a>),
     Comment(SassComment<'a>),
 }

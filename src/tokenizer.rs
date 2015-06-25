@@ -2,6 +2,7 @@ use event::Event;
 use sass::comment::SassComment;
 use sass::rule::SassRule;
 use sass::selector::SassSelector;
+use sass::variable::SassVariable;
 use top_level_event::TopLevelEvent;
 
 use std::borrow::Cow::Borrowed;
@@ -251,10 +252,10 @@ impl<'a> Tokenizer<'a> {
 
                 self.skip_leading_whitespace();
 
-                return Some(TopLevelEvent::SassVariable {
+                return Some(TopLevelEvent::Variable(SassVariable{
                     name: Borrowed(&self.sass[name_beginning..name_end]),
                     value: Borrowed(&self.sass[value_beginning..value_end]),
-                })
+                }))
             }
         }
         self.offset = self.sass.len();

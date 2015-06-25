@@ -1,4 +1,5 @@
 use top_level_event::TopLevelEvent;
+use sass::variable::SassVariable;
 use std::collections::HashMap;
 
 pub struct VariableMapper<I> {
@@ -31,7 +32,7 @@ impl<'a, I> Iterator for VariableMapper<I>
 
     fn next(&mut self) -> Option<TopLevelEvent<'a>> {
         match self.tokenizer.next() {
-            Some(TopLevelEvent::SassVariable { name, value }) => {
+            Some(TopLevelEvent::Variable(SassVariable { name, value })) => {
                 let val = self.substitute_variables(&value);
                 self.variables.insert((*name).to_string(), val);
                 self.next()

@@ -14,7 +14,7 @@ pub fn expanded<'a, I>(tokenizer: &mut I) -> String
                 output.push_str(&rule.expanded());
                 output.push_str("\n\n");
             },
-            TopLevelEvent::SassVariable{..} => {},
+            TopLevelEvent::Variable(..) => {},
             TopLevelEvent::Comment(comment) => {
                 output.push_str(&comment.expanded());
                 output.push_str("\n");
@@ -37,7 +37,7 @@ pub fn nested<'a, I>(tokenizer: &mut I) -> String
                 output.push_str(&rule.nested());
                 output.push_str("\n\n");
             },
-            TopLevelEvent::SassVariable{..} => {},
+            TopLevelEvent::Variable(..) => {},
             TopLevelEvent::Comment(comment) => {
                 output.push_str(&comment.nested());
                 output.push_str("\n");
@@ -60,7 +60,7 @@ pub fn compact<'a, I>(tokenizer: &mut I) -> String
                 output.push_str(&rule.compact());
                 output.push_str("\n\n");
             },
-            TopLevelEvent::SassVariable{..} => {},
+            TopLevelEvent::Variable(..) => {},
             TopLevelEvent::Comment(comment) => {
                 output.push_str(&comment.compact());
                 output.push_str("\n");
@@ -82,7 +82,7 @@ pub fn compressed<'a, I>(tokenizer: &mut I) -> String
             TopLevelEvent::Rule(rule) => {
                 output.push_str(&rule.compressed());
             },
-            TopLevelEvent::SassVariable{..} => {},
+            TopLevelEvent::Variable(..) => {},
             TopLevelEvent::Comment(comment) => {
                 output.push_str(&comment.compressed());
                 output.push_str("\n");
