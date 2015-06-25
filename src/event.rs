@@ -1,4 +1,5 @@
 use sass::rule::SassRule;
+use sass::variable::SassVariable;
 
 use std::borrow::Cow;
 
@@ -7,6 +8,7 @@ pub enum Event<'a> {
     Property(Cow<'a, str>, Cow<'a, str>),
     Comment(Cow<'a, str>),
     ChildRule(SassRule<'a>),
+    Variable(SassVariable<'a>),
 }
 
 impl<'a> Event<'a> {
@@ -15,6 +17,7 @@ impl<'a> Event<'a> {
             Event::Property(name, value) => format!("  {}: {};", name, value),
             Event::Comment(comment) => format!("  {}", comment),
             Event::ChildRule(sass_rule) => sass_rule.expanded(),
+            Event::Variable(..) => unreachable!(),
         }
     }
 
@@ -23,6 +26,7 @@ impl<'a> Event<'a> {
             Event::Property(name, value) => format!("  {}: {};", name, value),
             Event::Comment(comment) => format!("  {}", comment),
             Event::ChildRule(sass_rule) => sass_rule.nested(),
+            Event::Variable(..) => unreachable!(),
         }
     }
 
@@ -31,6 +35,7 @@ impl<'a> Event<'a> {
             Event::Property(name, value) => format!("{}: {};", name, value),
             Event::Comment(comment) => format!("  {}", comment),
             Event::ChildRule(sass_rule) => sass_rule.compact(),
+            Event::Variable(..) => unreachable!(),
         }
     }
 
@@ -39,6 +44,7 @@ impl<'a> Event<'a> {
             Event::Property(name, value) => format!("{}:{}", name, value),
             Event::Comment(comment) => format!("  {}", comment),
             Event::ChildRule(sass_rule) => sass_rule.compact(),
+            Event::Variable(..) => unreachable!(),
         }
     }
 

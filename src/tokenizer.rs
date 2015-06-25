@@ -320,11 +320,17 @@ impl<'a> Tokenizer<'a> {
 
                 self.skip_leading_whitespace();
 
-                return Some(Event::Property(
-                    Borrowed(&self.sass[name_beginning..name_end]),
-                    Borrowed(&self.sass[value_beginning..value_end])
-                ))
-
+                if self.bytes[name_beginning] == b'$' {
+                    return Some(Event::Variable(SassVariable {
+                        name: Borrowed(&self.sass[name_beginning..name_end]),
+                        value: Borrowed(&self.sass[value_beginning..value_end])
+                    }))
+                } else {
+                    return Some(Event::Property(
+                        Borrowed(&self.sass[name_beginning..name_end]),
+                        Borrowed(&self.sass[value_beginning..value_end])
+                    ))
+                }
             }
         }
         self.offset = self.sass.len();
