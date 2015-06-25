@@ -1,7 +1,6 @@
 use event::Event;
 use sass::selector::SassSelector;
 
-use std::borrow::Cow;
 use std::fmt;
 
 #[derive(Clone)]
@@ -178,26 +177,6 @@ impl<'a> SassRule<'a> {
         }
 
         output
-    }
-
-    pub fn map_over_property_values<F>(self, f: &F) -> SassRule<'a>
-        where F: Fn(Cow<'a, str>) -> Cow<'a, str>
-    {
-        let replacement_children = self.children.into_iter().map(|c|
-            match c {
-                Event::Property(name, value) => {
-                    Event::Property(name, f(value))
-                },
-                Event::ChildRule(rule) => {
-                    Event::ChildRule(rule.map_over_property_values(f))
-                },
-                other => other
-            }
-        ).collect();
-
-        SassRule {
-            children: replacement_children, ..self
-        }
     }
 }
 
