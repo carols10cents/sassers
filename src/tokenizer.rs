@@ -330,6 +330,8 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn next_selector(&mut self) -> Option<SassSelector<'a>> {
+        self.skip_leading_whitespace();
+
         let beginning = self.offset;
         let mut i = beginning;
         let limit = self.sass.len();
@@ -361,7 +363,15 @@ impl<'a> Tokenizer<'a> {
                         }
                     }
                     self.offset = i + 1;
+                    if c == b',' && beginning + 1 == end {
+                        self.offset += 1;
+                        return self.next_selector()
+                    }
                     return Some(SassSelector { name: Borrowed(&self.sass[beginning..end]) })
+                } else {
+                    // only whitespace between commas
+                    self.offset += 1;
+                    return self.next_selector()
                 }
             }
 
