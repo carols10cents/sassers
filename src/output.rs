@@ -83,10 +83,7 @@ pub fn compressed<'a, I>(tokenizer: &mut I) -> String
                 output.push_str(&rule.compressed());
             },
             TopLevelEvent::Variable(..) => {},
-            TopLevelEvent::Comment(comment) => {
-                output.push_str(&comment.compressed());
-                output.push_str("\n");
-            },
+            TopLevelEvent::Comment(..) => {},
         }
     }
 

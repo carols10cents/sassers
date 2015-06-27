@@ -27,10 +27,9 @@ impl <'a> SassComment<'a> {
         }
     }
 
+    // Comments are never output in the compressed format.
+    #[allow(dead_code)]
     pub fn compressed(&self) -> String {
-        match &self.comment {
-            &Event::Comment(ref c) => (*c).to_string(),
-            _ => unreachable!(),
-        }
+        unreachable!()
     }
 }
