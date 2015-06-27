@@ -363,10 +363,6 @@ impl<'a> Tokenizer<'a> {
                         }
                     }
                     self.offset = i + 1;
-                    if c == b',' && beginning + 1 == end {
-                        self.offset += 1;
-                        return self.next_selector()
-                    }
                     return Some(SassSelector { name: Borrowed(&self.sass[beginning..end]) })
                 } else {
                     // only whitespace between commas
