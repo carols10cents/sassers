@@ -39,7 +39,7 @@ pub struct Tokenizer<'a> {
     offset: usize,
     state: State,
     sass_rule_stack: Vec<SassRule<'a>>,
-    current_sass_rule: SassRule<'a>,
+    current_sass_rule_selectors_done: bool,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -62,12 +62,13 @@ impl<'a> Tokenizer<'a> {
             offset: 0,
             state: State::OutsideRules,
             sass_rule_stack: Vec::new(),
-            current_sass_rule: SassRule::new(),
+            current_sass_rule_selectors_done: false,
         }
     }
 
     fn start_something(&mut self) -> Option<TopLevelEvent<'a>> {
-        self.current_sass_rule = SassRule::new();
+        let mut current_sass_rule = SassRule::new();
+        self.current_sass_rule_selectors_done = false;
 
         self.pick_something();
         while self.state != State::OutsideRules {
@@ -76,12 +77,12 @@ impl<'a> Tokenizer<'a> {
             if self.state == State::InSelectors {
                 let sel = self.next_selector();
                 if sel.is_some() {
-                    self.current_sass_rule.selectors.push(sel.unwrap());
+                    current_sass_rule.selectors.push(sel.unwrap());
                 }
             } else if self.state == State::InProperties {
                 let prop = self.next_property();
                 if prop.is_some() {
-                    self.current_sass_rule.children.push(prop.unwrap());
+                    current_sass_rule.children.push(prop.unwrap());
                 }
             } else if self.state == State::EndRule {
                 // consume '}', should probably be checking that's what we actually have
@@ -89,15 +90,16 @@ impl<'a> Tokenizer<'a> {
 
                 match self.sass_rule_stack.pop() {
                     Some(ref mut rule) => {
-                        rule.children.push(Event::ChildRule(self.current_sass_rule.clone()));
-                        self.current_sass_rule = (*rule).clone();
+                        rule.children.push(Event::ChildRule(current_sass_rule.clone()));
+                        current_sass_rule = (*rule).clone();
                         self.pick_something();
                     },
                     None => self.state = State::OutsideRules,
                 }
             } else if self.state == State::InRule {
-                self.sass_rule_stack.push(self.current_sass_rule.clone());
-                self.current_sass_rule = SassRule::new();
+                self.sass_rule_stack.push(current_sass_rule.clone());
+                current_sass_rule = SassRule::new();
+                self.current_sass_rule_selectors_done = false;
                 self.pick_something();
             } else if self.state == State::InVariable {
                 let var = self.next_variable();
@@ -111,11 +113,11 @@ impl<'a> Tokenizer<'a> {
                 let comment = self.next_comment();
                 if comment.is_some() {
                     if self.sass_rule_stack.len() == 0 &&
-                       self.current_sass_rule.selectors.len() == 0 &&
-                       self.current_sass_rule.children.len() == 0 {
+                       current_sass_rule.selectors.len() == 0 &&
+                       current_sass_rule.children.len() == 0 {
                            return Some(TopLevelEvent::Comment(SassComment { comment: comment.unwrap() }))
                     } else {
-                        self.current_sass_rule.children.push(comment.unwrap());
+                        current_sass_rule.children.push(comment.unwrap());
                         self.pick_something();
                     }
                 } else {
@@ -124,12 +126,12 @@ impl<'a> Tokenizer<'a> {
                 }
             } else {
                 println!("i dont know what to do for {:?}", self.state);
-                println!("current sass rule = {:?}", self.current_sass_rule);
+                println!("current sass rule = {:?}", current_sass_rule);
                 self.state = State::Eof;
             }
         }
 
-        Some(TopLevelEvent::Rule(self.current_sass_rule.clone()))
+        Some(TopLevelEvent::Rule(current_sass_rule))
     }
 
     fn pick_something(&mut self) {
@@ -350,11 +352,11 @@ impl<'a> Tokenizer<'a> {
                 let end = i - n;
                 if end > beginning {
                     if c == b'{' {
-                        if self.current_sass_rule.selectors_done {
+                        if self.current_sass_rule_selectors_done {
                             self.state = State::InRule;
                             return None
                         } else {
-                            self.current_sass_rule.selectors_done = true;
+                            self.current_sass_rule_selectors_done = true;
                             self.state = State::InProperties;
                         }
                     }

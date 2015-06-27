@@ -6,7 +6,6 @@ use std::fmt;
 #[derive(Clone)]
 pub struct SassRule<'a> {
     pub selectors: Vec<SassSelector<'a>>,
-    pub selectors_done: bool,
     pub children: Vec<Event<'a>>,
 }
 
@@ -14,7 +13,6 @@ impl<'a> SassRule<'a> {
     pub fn new() -> SassRule<'a> {
         SassRule {
             selectors: Vec::new(),
-            selectors_done: false,
             children: Vec::new(),
         }
     }
