@@ -33,7 +33,7 @@ impl<'a> Event<'a> {
     pub fn compact(&self) -> String {
         match (*self).clone() {
             Event::Property(name, value) => format!("{}: {};", name, value),
-            Event::Comment(comment) => format!("  {}", comment),
+            Event::Comment(comment) => (*comment).to_string(),
             Event::ChildRule(sass_rule) => sass_rule.compact(),
             Event::Variable(..) => unreachable!(),
         }
