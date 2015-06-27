@@ -84,7 +84,7 @@ impl<'a> SassRule<'a> {
                 &Event::ChildRule(ref rule) => rule.nested_with_parent(&selector_string),
                 _ => unreachable!(),
             }
-        }).collect::<Vec<_>>().connect("\n  ");
+        }).collect::<Vec<_>>().connect("\n");
 
         if properties_string.len() > 0 {
             output.push_str(&selector_string);
