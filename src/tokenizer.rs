@@ -89,15 +89,15 @@ impl<'a> Tokenizer<'a> {
                 self.offset += 1;
 
                 match self.sass_rule_stack.pop() {
-                    Some(ref mut rule) => {
-                        rule.children.push(Event::ChildRule(current_sass_rule.clone()));
-                        current_sass_rule = (*rule).clone();
+                    Some(mut rule) => {
+                        rule.children.push(Event::ChildRule(current_sass_rule));
+                        current_sass_rule = rule;
                         self.pick_something();
                     },
                     None => self.state = State::OutsideRules,
                 }
             } else if self.state == State::InRule {
-                self.sass_rule_stack.push(current_sass_rule.clone());
+                self.sass_rule_stack.push(current_sass_rule);
                 current_sass_rule = SassRule::new();
                 self.current_sass_rule_selectors_done = false;
                 self.pick_something();
