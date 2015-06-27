@@ -9,7 +9,7 @@ pub fn expanded<'a, I>(tokenizer: &mut I) -> String
     let mut output = String::new();
 
     while let Some(event) = vm.next() {
-        match event.clone() {
+        match event {
             TopLevelEvent::Rule(rule) => {
                 output.push_str(&rule.expanded());
                 output.push_str("\n\n");
@@ -32,7 +32,7 @@ pub fn nested<'a, I>(tokenizer: &mut I) -> String
     let mut output = String::new();
 
     while let Some(event) = vm.next() {
-        match event.clone() {
+        match event {
             TopLevelEvent::Rule(rule) => {
                 output.push_str(&rule.nested());
                 output.push_str("\n\n");
@@ -55,7 +55,7 @@ pub fn compact<'a, I>(tokenizer: &mut I) -> String
     let mut output = String::new();
 
     while let Some(event) = vm.next() {
-        match event.clone() {
+        match event {
             TopLevelEvent::Rule(rule) => {
                 output.push_str(&rule.compact());
                 output.push_str("\n\n");
@@ -78,7 +78,7 @@ pub fn compressed<'a, I>(tokenizer: &mut I) -> String
     let mut output = String::new();
 
     while let Some(event) = vm.next() {
-        match event.clone() {
+        match event {
             TopLevelEvent::Rule(rule) => {
                 output.push_str(&rule.compressed());
             },
