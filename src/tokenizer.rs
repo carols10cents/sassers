@@ -162,6 +162,11 @@ impl<'a> Tokenizer<'a> {
             }
         }
 
+        if self.current_sass_rule_selectors_done {
+            self.state = State::InProperties;
+            return
+        }
+
         self.state = State::InSelectors;
     }
 
