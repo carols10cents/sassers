@@ -17,6 +17,17 @@ impl<'a> SassRule<'a> {
         }
     }
 
+    fn selector_distribution(&self, parents: &str, separator: &str) -> String {
+        match parents.len() {
+            0 => self.selectors.iter().map(|s| (*s.name).to_string()).collect::<Vec<_>>().connect(separator),
+            _ => parents.split(",").map(|p| {
+                self.selectors.iter().map(|s| {
+                    format!("{} {}", p.trim(), s.name)
+                }).collect::<Vec<_>>().connect(separator)
+            }).collect::<Vec<_>>().connect(separator),
+        }
+    }
+
     pub fn expanded(&self) -> String {
         self.expanded_with_parent("")
     }
@@ -24,12 +35,7 @@ impl<'a> SassRule<'a> {
     pub fn expanded_with_parent(&self, parents: &str) -> String {
         let mut output = String::new();
 
-        let selector_string = self.selectors.iter().map(|s| {
-            match parents.len() {
-                0 => (*s.name).to_string(),
-                _ => format!("{} {}", parents, s.name),
-            }
-        }).collect::<Vec<_>>().connect(", ");
+        let selector_string = self.selector_distribution(parents, ", ");
 
         let properties_string = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
             c.expanded()
@@ -66,12 +72,7 @@ impl<'a> SassRule<'a> {
     pub fn nested_with_parent(&self, parents: &str) -> String {
         let mut output = String::new();
 
-        let selector_string = self.selectors.iter().map(|s| {
-            match parents.len() {
-                0 => (*s.name).to_string(),
-                _ => format!("{} {}", parents, s.name),
-            }
-        }).collect::<Vec<_>>().connect(", ");
+        let selector_string = self.selector_distribution(parents, ", ");
 
         let properties_string = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
             c.nested()
@@ -106,12 +107,7 @@ impl<'a> SassRule<'a> {
     pub fn compact_with_parent(&self, parents: &str) -> String {
         let mut output = String::new();
 
-        let selector_string = self.selectors.iter().map(|s| {
-            match parents.len() {
-                0 => (*s.name).to_string(),
-                _ => format!("{} {}", parents, s.name),
-            }
-        }).collect::<Vec<_>>().connect(", ");
+        let selector_string = self.selector_distribution(parents, ", ");
 
         let properties_string = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
             c.compact()
@@ -146,12 +142,7 @@ impl<'a> SassRule<'a> {
     pub fn compressed_with_parent(&self, parents: &str) -> String {
         let mut output = String::new();
 
-        let selector_string = self.selectors.iter().map(|s| {
-            match parents.len() {
-                0 => (*s.name).to_string(),
-                _ => format!("{} {}", parents, s.name),
-            }
-        }).collect::<Vec<_>>().connect(", ");
+        let selector_string = self.selector_distribution(parents, ",");
 
         let properties_string = self.children.iter().filter(|c| !c.is_child_rule() && !c.is_comment() ).map(|c| {
             c.compressed()
