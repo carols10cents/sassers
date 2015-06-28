@@ -142,7 +142,7 @@ impl<'a> SassRule<'a> {
     pub fn compressed_with_parent(&self, parents: &str) -> String {
         let mut output = String::new();
 
-        let selector_string = self.selector_distribution(parents, ",");
+        let selector_string = compress_selectors(self.selector_distribution(parents, ","));
 
         let properties_string = self.children.iter().filter(|c| !c.is_child_rule() && !c.is_comment() ).map(|c| {
             c.compressed()
@@ -167,6 +167,10 @@ impl<'a> SassRule<'a> {
 
         output
     }
+}
+
+fn compress_selectors(selector_string: String) -> String {
+    selector_string.replace(" > ", ">").replace(" + ", "+")
 }
 
 impl<'a> fmt::Debug for SassRule<'a> {
