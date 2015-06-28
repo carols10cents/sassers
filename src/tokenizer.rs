@@ -7,6 +7,7 @@ use top_level_event::TopLevelEvent;
 
 use std::borrow::Cow::Borrowed;
 use regex::Regex;
+use regex::Captures;
 
 fn is_ascii_whitespace(c: u8) -> bool {
    is_newline(c) || is_ascii_whitespace_no_nl(c)
@@ -36,6 +37,13 @@ fn scan_trailing_whitespace(data: &str) -> usize {
 fn squeeze(data: &str) -> String {
     let re = Regex::new(r"\s{2,}").unwrap();
     re.replace_all(data, " ")
+}
+
+fn compress_attr_selectors(data: &str) -> String {
+    let re = Regex::new(r"\[\s*(?P<attrname>[^\s*~^|=]+)\s*(?P<operator>[*~^$|]?=)\s*(?P<attrval>[^\s\]]+)\s*\]").unwrap();
+    re.replace(data, |caps: &Captures| {
+        format!("[{}{}{}]", caps.at(1).unwrap_or(""), caps.at(2).unwrap_or(""), caps.at(3).unwrap_or(""))
+    })
 }
 
 #[derive(Debug)]
@@ -374,7 +382,7 @@ impl<'a> Tokenizer<'a> {
                         }
                     }
                     self.offset = i + 1;
-                    return Some(SassSelector { name: squeeze(&self.sass[beginning..end]).into() })
+                    return Some(SassSelector { name: compress_attr_selectors(&squeeze(&self.sass[beginning..end])).into() })
                 } else {
                     // only whitespace between commas
                     self.offset += 1;
@@ -384,14 +392,14 @@ impl<'a> Tokenizer<'a> {
 
             self.offset = i;
             if i > beginning {
-                return Some(SassSelector { name: squeeze(&self.sass[beginning..i]).into() })
+                return Some(SassSelector { name: compress_attr_selectors(&squeeze(&self.sass[beginning..i])).into() })
             }
             i += 1;
         }
 
         if i > beginning {
             self.offset = i;
-            Some(SassSelector { name: squeeze(&self.sass[beginning..i]).into() })
+            Some(SassSelector { name: compress_attr_selectors(&squeeze(&self.sass[beginning..i])).into() })
         } else {
             self.state = State::Eof;
             None
