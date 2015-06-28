@@ -9,3 +9,4 @@ license = "MIT"
 
 [dependencies]
 docopt = "0.6.64"
+regex = "0.1.38"

@@ -1,3 +1,5 @@
+extern crate regex;
+
 mod event;
 mod output;
 mod sass;

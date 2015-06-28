@@ -3,6 +3,7 @@ name = "sassers"
 version = "0.7.0-wompwomp"
 dependencies = [
  "docopt 0.6.67 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
