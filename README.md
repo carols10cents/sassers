@@ -17,3 +17,14 @@ Sassers follows [Sentimental Versioning](http://sentimentalversioning.org/).
 ## License
 
 MIT. See LICENSE.
+
+## Optimizations
+
+* Pass `T: Write` down into methods instead of returning String all the time to avoid allocating so many times
+
+## TODO
+
+* Travis running sass-spec
+* Compare speed/memory usage to libsass
+* Profile if it's significantly worse than libsass and fix
+* Shell script for running sets of sass-specs
