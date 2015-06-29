@@ -22,7 +22,11 @@ impl<'a> SassRule<'a> {
             0 => self.selectors.iter().map(|s| (*s.name).to_string()).collect::<Vec<_>>().connect(separator),
             _ => parents.split(",").map(|p| {
                 self.selectors.iter().map(|s| {
-                    format!("{} {}", p.trim(), s.name)
+                    if s.name.contains("&") {
+                        s.name.replace("&", p.trim())
+                    } else {
+                        format!("{} {}", p.trim(), s.name)
+                    }
                 }).collect::<Vec<_>>().connect(separator)
             }).collect::<Vec<_>>().connect(separator),
         }
