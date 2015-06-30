@@ -50,6 +50,7 @@ enum State {
     InRule,
     InSelectors,
     InProperties,
+    InImport,
     EndRule,
     Eof,
 }
@@ -127,6 +128,12 @@ impl<'a> Tokenizer<'a> {
                     // is this really what we should be doing here? reachable?
                     self.state = State::Eof;
                 }
+            } else if self.state == State::InImport {
+                let imp = self.next_import_filename();
+                if imp.is_some() {
+                    println!("should import {:?}", imp.unwrap());
+                }
+                self.pick_something();
             } else {
                 println!("i dont know what to do for {:?}", self.state);
                 println!("current sass rule = {:?}", current_sass_rule);
@@ -165,6 +172,11 @@ impl<'a> Tokenizer<'a> {
             }
         }
 
+        if c == b'@' {
+            self.state = State::InImport;
+            return
+        }
+
         if self.current_sass_rule_selectors_done {
             self.state = State::InProperties;
             return
@@ -197,6 +209,50 @@ impl<'a> Tokenizer<'a> {
             }
         }
         self.offset = limit;
+    }
+
+    fn eat(&mut self, expected: &str) -> bool {
+        for c in expected.as_bytes().iter() {
+            if !self.eatch(c) {
+                return false
+            }
+        }
+        return true
+    }
+
+    fn eatch(&mut self, expected_char: &u8) -> bool {
+        if self.bytes[self.offset] == *expected_char {
+            self.offset += 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn next_import_filename(&mut self) -> Option<&'a str> {
+        if self.eat("@import \"") {
+            let filename_beginning = self.offset;
+            let mut i = self.offset;
+            let limit = self.sass.len();
+
+            while i < limit {
+                match self.bytes[i..limit].iter().position(|&c| c == b'"' ) {
+                    Some(pos) => { i += pos; },
+                    None => { break; },
+                }
+                let filename_end = i;
+                self.offset = i + 1;
+                if self.eatch(&b';') {
+                    return Some(&self.sass[filename_beginning..filename_end])
+                } else {
+                    return None // UNEXPECTED CHAR
+                }
+            }
+            self.offset = self.sass.len();
+            None
+        } else {
+            None
+        }
     }
 
     fn next_comment(&mut self) -> Option<Event<'a>> {
@@ -277,6 +333,11 @@ impl<'a> Tokenizer<'a> {
         let c = self.bytes[i];
         if c == b'}' {
             self.state = State::EndRule;
+            return None
+        }
+
+        if c == b'@' {
+            self.state = State::InImport;
             return None
         }
 
