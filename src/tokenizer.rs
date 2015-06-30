@@ -42,7 +42,7 @@ pub struct Tokenizer<'a> {
     current_sass_rule_selectors_done: bool,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 enum State {
     OutsideRules,
     InVariable,
@@ -73,6 +73,9 @@ impl<'a> Tokenizer<'a> {
         self.pick_something();
         while self.state != State::OutsideRules {
             if self.state == State::Eof { return None }
+
+            // See if this works now that State is Copy
+            // self.state = match self.state
 
             if self.state == State::InSelectors {
                 let sel = self.next_selector();
