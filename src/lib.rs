@@ -12,7 +12,22 @@ mod variable_mapper;
 
 use tokenizer::Tokenizer;
 
-pub fn compile(inputfile: &str, style: &str) -> Result<String, &'static str> {
+pub type Result<T> = ::std::result::Result<T, Error>;
+
+#[derive(Debug)]
+pub struct Error {
+    pub message: String,
+    pub kind: ErrorKind,
+}
+
+#[derive(Debug)]
+pub enum ErrorKind {
+    FileNotFound,
+    FileNotReadable,
+    InvalidStyle,
+}
+
+pub fn compile(inputfile: &str, style: &str) -> Result<String> {
     let mut file = match File::open(&Path::new(inputfile)) {
         Ok(f) => f,
         Err(msg) => panic!("File not found! {}", msg),
@@ -27,10 +42,14 @@ pub fn compile(inputfile: &str, style: &str) -> Result<String, &'static str> {
                 "expanded"   => Ok(output::expanded(&mut st)),
                 "compact"    => Ok(output::compact(&mut st)),
                 "debug"      => Ok(output::debug(&mut st)),
-                _            => Err("Unknown style:. Please specify one of nested, compressed, expanded, or compact."),
+                _            => {
+                    Err(Error {
+                        kind: ErrorKind::InvalidStyle,
+                        message: format!("Unknown style {:?}. Please specify one of nested, compressed, expanded, or compact.", style),
+                    })
+                },
             }
         },
         Err(msg) => panic!("Could not read file! {}", msg),
     }
 }
-

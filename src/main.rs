@@ -28,7 +28,7 @@ Options:
 
         match sassers::compile(&inputfile, style) {
             Ok(compiled) => println!("{}", compiled),
-            Err(msg) => println!("Compilation failed: {}", msg),
+            Err(e) => println!("Compilation failed: {}", e.message),
         }
     }
 }
