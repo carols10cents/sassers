@@ -1,5 +1,5 @@
 extern crate regex;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::fs::File;
 use std::io::Read;
 use regex::Regex;
@@ -33,20 +33,7 @@ pub enum ErrorKind {
     InvalidStyle,
 }
 
-fn read_import(inputfile: &PathBuf, buffer: &mut String) {
-    match File::open(&Path::new(inputfile)) {
-        Ok(ref mut file) => {
-            match file.read_to_string(buffer) {
-                Ok(..) => {},
-                Err(e) => panic!("Can't read import file! Filename: {:?} Error: {}", inputfile, e),
-            }
-        },
-        Err(e) => panic!("Can't open import file! Filename: {:?} Error: {}", inputfile, e),
-    }
-}
-
-pub fn compile(inputfile: &str, style: &str) -> Result<String> {
-    let inputpath = PathBuf::from(inputfile);
+fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
     let mut file = try!(File::open(&inputpath));
     let mut sass = String::new();
 
@@ -58,14 +45,21 @@ pub fn compile(inputfile: &str, style: &str) -> Result<String> {
 
         match re.captures(line) {
             Some(caps) => {
-                read_import(&inputpath.with_file_name(caps.at(1).unwrap()), &mut imports_resolved);
+                let imported = try!(resolve_imports(&inputpath.with_file_name(caps.at(1).unwrap())));
+                imports_resolved.push_str(&imported);
             },
             None => {
                 imports_resolved.push_str(line);
-                imports_resolved.push_str("\n");
             },
         }
+        imports_resolved.push_str("\n");
     }
+    Ok(imports_resolved)
+}
+
+pub fn compile(inputfile: &str, style: &str) -> Result<String> {
+    let inputpath = PathBuf::from(inputfile);
+    let imports_resolved = try!(resolve_imports(&inputpath));
 
     let mut tokenizer = Tokenizer::new(&imports_resolved);
     match style {
