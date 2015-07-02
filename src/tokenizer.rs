@@ -88,8 +88,7 @@ impl<'a> Tokenizer<'a> {
                     current_sass_rule.children.push(prop.unwrap());
                 }
             } else if self.state == State::EndRule {
-                // consume '}', should probably be checking that's what we actually have
-                self.offset += 1;
+                self.eat("}");
 
                 match self.sass_rule_stack.pop() {
                     Some(mut rule) => {
