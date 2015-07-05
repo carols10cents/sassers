@@ -1,0 +1,8 @@
+language: rust
+rust: nighthly
+install:
+  - git clone git://github.com:sass/sass-spec.git
+  - cd sass-spec
+  - bundle install
+  - cd .. 
+script: cargo build --verbose && cd sass-spec && ./sass-spec.rb -c '../target/debug/sassers'
