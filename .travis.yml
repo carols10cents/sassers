@@ -1,5 +1,5 @@
 language: rust
-rust: nighthly
+rust: nightly
 install:
   - git clone git://github.com:sass/sass-spec.git
   - cd sass-spec
