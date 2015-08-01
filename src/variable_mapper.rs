@@ -23,12 +23,12 @@ impl<I> VariableMapper<I> {
         children.into_iter().filter_map(|c|
             match c {
                 Event::Variable(SassVariable { name, value }) => {
-                    let val = self.substitute_variables_using_locals(&value, &local_variables);
+                    let val = self.substitute_variables(&value, &local_variables);
                     local_variables.insert((*name).to_string(), val);
                     None
                 },
                 Event::Property(name, value) => {
-                    Some(Event::Property(name, self.substitute_variables_using_locals(&value, &local_variables).into()))
+                    Some(Event::Property(name, self.substitute_variables(&value, &local_variables).into()))
                 },
                 Event::ChildRule(rule) => {
                     Some(Event::ChildRule(SassRule {
@@ -40,7 +40,7 @@ impl<I> VariableMapper<I> {
         ).collect::<Vec<_>>()
     }
 
-    fn substitute_variables_using_locals(&self, value: &str, local_variables: &HashMap<String, String>) -> String {
+    fn substitute_variables(&self, value: &str, local_variables: &HashMap<String, String>) -> String {
         value.split(' ').map(|value_part|
             match (*local_variables).get(value_part) {
                 Some(v) => &v[..],
@@ -58,7 +58,7 @@ impl<'a, I> Iterator for VariableMapper<I>
     fn next(&mut self) -> Option<TopLevelEvent<'a>> {
         match self.tokenizer.next() {
             Some(TopLevelEvent::Variable(SassVariable { name, value })) => {
-                let val = self.substitute_variables_using_locals(&value, &self.variables);
+                let val = self.substitute_variables(&value, &self.variables);
                 self.variables.insert((*name).to_string(), val);
                 self.next()
             },
