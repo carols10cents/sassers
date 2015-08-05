@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::Read;
 use regex::Regex;
 
+mod evaluator;
 mod event;
 mod output;
 mod sass;
