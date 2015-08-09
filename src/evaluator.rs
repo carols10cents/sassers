@@ -41,10 +41,11 @@ impl<'a> ValueTokenizer<'a> {
         let mut i = self.offset;
         let limit = self.value_str.len();
 
-        while i < limit {
-            i += 1;
+        match self.bytes[i..limit].iter().position(|&c| c == b' ' ) {
+            Some(pos) => { i += pos; },
+            None      => { i = limit },
         }
-        self.offset = i;
+        self.offset = i + 1;
         Some(ValuePart::String(Borrowed(&self.value_str[start..i])))
     }
 }
@@ -69,6 +70,14 @@ mod tests {
     fn it_returns_string_part() {
         let mut vt = ValueTokenizer::new("foo");
         assert_eq!(Some(ValuePart::String(Borrowed(&"foo"))), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_returns_space_separated_string_parts() {
+        let mut vt = ValueTokenizer::new("foo bar");
+        assert_eq!(Some(ValuePart::String(Borrowed(&"foo"))), vt.next());
+        assert_eq!(Some(ValuePart::String(Borrowed(&"bar"))), vt.next());
         assert_eq!(None, vt.next());
     }
 }
