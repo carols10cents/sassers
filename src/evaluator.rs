@@ -1,5 +1,3 @@
-use sass::variable::SassVariable;
-
 use std::fmt;
 use std::borrow::Cow;
 use std::borrow::Cow::Borrowed;
