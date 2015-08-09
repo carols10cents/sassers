@@ -1,9 +1,9 @@
 extern crate sassers;
 extern crate docopt;
 
-use docopt::Docopt;
-
+#[cfg(not(test))]
 fn main() {
+    use docopt::Docopt;
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
     static USAGE: &'static str = "
 Usage:
