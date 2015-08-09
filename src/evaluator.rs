@@ -16,7 +16,7 @@ pub fn evaluate(original: &str, variables: &HashMap<String, String>) -> String {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValuePart<'a> {
-    Variable(SassVariable<'a>),
+    Variable(Cow<'a, str>),
     String(Cow<'a, str>),
 }
 
@@ -46,7 +46,11 @@ impl<'a> ValueTokenizer<'a> {
             None      => { i = limit },
         }
         self.offset = i + 1;
-        Some(ValuePart::String(Borrowed(&self.value_str[start..i])))
+        if self.bytes[start] == b'$' {
+            Some(ValuePart::Variable(Borrowed(&self.value_str[start..i])))
+        } else {
+            Some(ValuePart::String(Borrowed(&self.value_str[start..i])))
+        }
     }
 }
 
@@ -80,4 +84,22 @@ mod tests {
         assert_eq!(Some(ValuePart::String(Borrowed(&"bar"))), vt.next());
         assert_eq!(None, vt.next());
     }
+
+    #[test]
+    fn it_returns_variable() {
+        let mut vt = ValueTokenizer::new("$foo");
+        assert_eq!(Some(ValuePart::Variable(Borrowed(&"$foo"))), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_returns_variables_and_string_parts() {
+        let mut vt = ValueTokenizer::new("foo $bar baz $quux");
+        assert_eq!(Some(ValuePart::String(Borrowed(&"foo"))), vt.next());
+        assert_eq!(Some(ValuePart::Variable(Borrowed(&"$bar"))), vt.next());
+        assert_eq!(Some(ValuePart::String(Borrowed(&"baz"))), vt.next());
+        assert_eq!(Some(ValuePart::Variable(Borrowed(&"$quux"))), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
 }
