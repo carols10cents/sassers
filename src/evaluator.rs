@@ -1,15 +1,21 @@
 use sass::variable::SassVariable;
 
+use std::fmt;
 use std::borrow::Cow;
 use std::borrow::Cow::Borrowed;
 use std::collections::HashMap;
 
 pub fn evaluate(original: &str, variables: &HashMap<String, String>) -> String {
     let vt = ValueTokenizer::new(original);
-    original.split(' ').map(|original_part|
-        match (*variables).get(original_part) {
-            Some(v) => &v[..],
-            None => original_part,
+    vt.into_iter().map(|part|
+        match part {
+            ValuePart::Variable(ref name) => {
+                match (*variables).get(&(*name).to_string()) {
+                    Some(v) => v.to_owned(),
+                    None => name.to_string(),
+                }
+            },
+            ValuePart::String(ref s) => s.to_string(),
         }
     ).collect::<Vec<_>>().connect(" ")
 }
@@ -18,6 +24,16 @@ pub fn evaluate(original: &str, variables: &HashMap<String, String>) -> String {
 pub enum ValuePart<'a> {
     Variable(Cow<'a, str>),
     String(Cow<'a, str>),
+}
+
+impl<'a> fmt::Display for ValuePart<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let val = match self {
+            &ValuePart::Variable(ref s) => s,
+            &ValuePart::String(ref s) => s,
+        };
+        write!(f, "{}", val)
+    }
 }
 
 #[derive(Debug)]
@@ -69,6 +85,7 @@ impl<'a> Iterator for ValueTokenizer<'a> {
 mod tests {
     use super::*;
     use std::borrow::Cow::Borrowed;
+    use std::collections::HashMap;
 
     #[test]
     fn it_returns_string_part() {
@@ -102,4 +119,12 @@ mod tests {
         assert_eq!(None, vt.next());
     }
 
+    #[test]
+    fn it_subtitutes_variable_values() {
+        let mut vars = HashMap::new();
+        vars.insert("$bar".to_string(), "4".to_string());
+        vars.insert("$quux".to_string(), "3px 10px".to_string());
+        let answer = evaluate("foo $bar baz $quux", &vars);
+        assert_eq!("foo 4 baz 3px 10px", answer);
+    }
 }
