@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::borrow::Cow;
 use std::borrow::Cow::Borrowed;
 use std::collections::HashMap;
@@ -14,6 +15,7 @@ pub fn evaluate(original: &str, variables: &HashMap<String, String>) -> String {
             },
             ValuePart::String(ref s) => s.to_string(),
             ValuePart::Number(n) => n.to_string(),
+            ValuePart::Operator(..) => unreachable!(), // Not doing anything with operators atm
         }
     ).collect::<Vec<_>>().connect(" ")
 }
@@ -23,6 +25,36 @@ pub enum ValuePart<'a> {
     Variable(Cow<'a, str>),
     String(Cow<'a, str>),
     Number(f32),
+    Operator(Op),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Op {
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    LeftParen,
+    RightParen,
+    Comma,
+}
+
+impl FromStr for Op {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "+" => Ok(Op::Plus),
+            "-" => Ok(Op::Minus),
+            "*" => Ok(Op::Star),
+            "/" => Ok(Op::Slash),
+            "%" => Ok(Op::Percent),
+            "(" => Ok(Op::LeftParen),
+            ")" => Ok(Op::RightParen),
+            "," => Ok(Op::Comma),
+            _   => Err(()),
+        }
+    }
 }
 
 fn isnt_space(c: u8) -> bool {
@@ -35,6 +67,13 @@ fn is_number(c: u8) -> bool {
         _ => false,
     };
     result
+}
+
+fn is_operator(c: u8) -> bool {
+    match c {
+        b'+' | b'-' | b'*' | b'/' | b'%' | b'(' | b')' | b',' => true,
+        _ => false,
+    }
 }
 
 #[derive(Debug)]
@@ -58,7 +97,10 @@ impl<'a> ValueTokenizer<'a> {
         let mut i = self.offset;
         let limit = self.value_str.len();
 
-        if is_number(self.bytes[start]) {
+        if is_operator(self.bytes[start]) {
+            self.offset = start + 2;
+            Some(ValuePart::Operator(self.value_str[start..start + 1].parse().unwrap()))
+        } else if is_number(self.bytes[start]) {
             i += self.scan_while(&self.value_str[i..limit], is_number);
             self.offset = i + 1;
             Some(ValuePart::Number(self.value_str[start..i].parse().unwrap()))
@@ -144,6 +186,22 @@ mod tests {
         let mut vt = ValueTokenizer::new("3 8.9");
         assert_eq!(Some(ValuePart::Number(3.0)), vt.next());
         assert_eq!(Some(ValuePart::Number(8.9)), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_returns_operator() {
+        let mut vt = ValueTokenizer::new("+");
+        assert_eq!(Some(ValuePart::Operator(Op::Plus)), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_returns_numbers_and_operators() {
+        let mut vt = ValueTokenizer::new("6 + 75.2");
+        assert_eq!(Some(ValuePart::Number(6.0)), vt.next());
+        assert_eq!(Some(ValuePart::Operator(Op::Plus)), vt.next());
+        assert_eq!(Some(ValuePart::Number(75.2)), vt.next());
         assert_eq!(None, vt.next());
     }
 
