@@ -14,6 +14,7 @@ pub fn evaluate(original: &str, variables: &HashMap<String, String>) -> String {
                 }
             },
             ValuePart::String(ref s) => s.to_string(),
+            ValuePart::Number(n) => n.to_string(),
         }
     ).collect::<Vec<_>>().connect(" ")
 }
@@ -22,6 +23,7 @@ pub fn evaluate(original: &str, variables: &HashMap<String, String>) -> String {
 pub enum ValuePart<'a> {
     Variable(Cow<'a, str>),
     String(Cow<'a, str>),
+    Number(f32),
 }
 
 impl<'a> fmt::Display for ValuePart<'a> {
@@ -36,6 +38,14 @@ impl<'a> fmt::Display for ValuePart<'a> {
 
 fn isnt_space(c: u8) -> bool {
     c != b' '
+}
+
+fn is_number(c: u8) -> bool {
+    let result = match c {
+        b'0' ... b'9' | b'.' => true,
+        _ => false,
+    };
+    result
 }
 
 #[derive(Debug)]
@@ -59,7 +69,11 @@ impl<'a> ValueTokenizer<'a> {
         let mut i = self.offset;
         let limit = self.value_str.len();
 
-        if self.bytes[start] == b'$' {
+        if is_number(self.bytes[start]) {
+            i += self.scan_while(&self.value_str[i..limit], is_number);
+            self.offset = i + 1;
+            Some(ValuePart::Number(self.value_str[start..i].parse().unwrap()))
+        } else if self.bytes[start] == b'$' {
             i += self.scan_while(&self.value_str[i..limit], isnt_space);
             self.offset = i + 1;
             Some(ValuePart::Variable(Borrowed(&self.value_str[start..i])))
@@ -126,6 +140,21 @@ mod tests {
         assert_eq!(Some(ValuePart::Variable(Borrowed(&"$bar"))), vt.next());
         assert_eq!(Some(ValuePart::String(Borrowed(&"baz"))), vt.next());
         assert_eq!(Some(ValuePart::Variable(Borrowed(&"$quux"))), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_returns_number() {
+        let mut vt = ValueTokenizer::new("3");
+        assert_eq!(Some(ValuePart::Number(3.0)), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_returns_two_numbers() {
+        let mut vt = ValueTokenizer::new("3 8.9");
+        assert_eq!(Some(ValuePart::Number(3.0)), vt.next());
+        assert_eq!(Some(ValuePart::Number(8.9)), vt.next());
         assert_eq!(None, vt.next());
     }
 
