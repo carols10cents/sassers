@@ -34,6 +34,10 @@ impl<'a> fmt::Display for ValuePart<'a> {
     }
 }
 
+fn isnt_space(c: u8) -> bool {
+    c != b' '
+}
+
 #[derive(Debug)]
 pub struct ValueTokenizer<'a> {
     value_str: &'a str,
@@ -55,17 +59,25 @@ impl<'a> ValueTokenizer<'a> {
         let mut i = self.offset;
         let limit = self.value_str.len();
 
-        match self.bytes[i..limit].iter().position(|&c| c == b' ' ) {
-            Some(pos) => { i += pos; },
-            None      => { i = limit },
-        }
-        self.offset = i + 1;
         if self.bytes[start] == b'$' {
+            i += self.scan_while(&self.value_str[i..limit], isnt_space);
+            self.offset = i + 1;
             Some(ValuePart::Variable(Borrowed(&self.value_str[start..i])))
         } else {
+            i += self.scan_while(&self.value_str[i..limit], isnt_space);
+            self.offset = i + 1;
             Some(ValuePart::String(Borrowed(&self.value_str[start..i])))
         }
     }
+
+    fn scan_while<F>(&mut self, data: &str, f: F) -> usize
+            where F: Fn(u8) -> bool {
+        match data.as_bytes().iter().position(|&c| !f(c)) {
+            Some(i) => i,
+            None => data.len()
+        }
+    }
+
 }
 
 impl<'a> Iterator for ValueTokenizer<'a> {
@@ -117,11 +129,14 @@ mod tests {
         assert_eq!(None, vt.next());
     }
 
+    // evaluate tests =====================
+
     #[test]
     fn it_subtitutes_variable_values() {
         let mut vars = HashMap::new();
         vars.insert("$bar".to_string(), "4".to_string());
         vars.insert("$quux".to_string(), "3px 10px".to_string());
+
         let answer = evaluate("foo $bar baz $quux", &vars);
         assert_eq!("foo 4 baz 3px 10px", answer);
     }
