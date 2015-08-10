@@ -166,7 +166,7 @@ mod tests {
         vars.insert("$bar".to_string(), "4".to_string());
         vars.insert("$quux".to_string(), "3px 10px".to_string());
 
-        let answer = evaluate("foo $bar baz $quux", &vars);
-        assert_eq!("foo 4 baz 3px 10px", answer);
+        let answer = evaluate("foo $bar 199.82 baz $quux", &vars);
+        assert_eq!("foo 4 199.82 baz 3px 10px", answer);
     }
 }
