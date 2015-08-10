@@ -1,4 +1,3 @@
-use std::fmt;
 use std::borrow::Cow;
 use std::borrow::Cow::Borrowed;
 use std::collections::HashMap;
@@ -24,16 +23,6 @@ pub enum ValuePart<'a> {
     Variable(Cow<'a, str>),
     String(Cow<'a, str>),
     Number(f32),
-}
-
-impl<'a> fmt::Display for ValuePart<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let val = match self {
-            &ValuePart::Variable(ref s) => s,
-            &ValuePart::String(ref s) => s,
-        };
-        write!(f, "{}", val)
-    }
 }
 
 fn isnt_space(c: u8) -> bool {
