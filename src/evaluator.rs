@@ -1,5 +1,5 @@
-use std::str::FromStr;
-use std::borrow::Cow;
+use sass::value_part::ValuePart;
+
 use std::borrow::Cow::Borrowed;
 use std::collections::HashMap;
 
@@ -18,43 +18,6 @@ pub fn evaluate(original: &str, variables: &HashMap<String, String>) -> String {
             ValuePart::Operator(..) => unreachable!(), // Not doing anything with operators atm
         }
     ).collect::<Vec<_>>().join(" ")
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum ValuePart<'a> {
-    Variable(Cow<'a, str>),
-    String(Cow<'a, str>),
-    Number(f32),
-    Operator(Op),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Op {
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Percent,
-    LeftParen,
-    RightParen,
-    Comma,
-}
-
-impl FromStr for Op {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "+" => Ok(Op::Plus),
-            "-" => Ok(Op::Minus),
-            "*" => Ok(Op::Star),
-            "/" => Ok(Op::Slash),
-            "%" => Ok(Op::Percent),
-            "(" => Ok(Op::LeftParen),
-            ")" => Ok(Op::RightParen),
-            "," => Ok(Op::Comma),
-            _   => Err(()),
-        }
-    }
 }
 
 fn isnt_space(c: u8) -> bool {
@@ -139,6 +102,8 @@ impl<'a> Iterator for ValueTokenizer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sass::value_part::ValuePart;
+    use sass::op::Op;
     use std::borrow::Cow::Borrowed;
     use std::collections::HashMap;
 
