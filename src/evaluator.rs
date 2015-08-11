@@ -17,7 +17,7 @@ pub fn evaluate(original: &str, variables: &HashMap<String, String>) -> String {
             ValuePart::Number(n) => n.to_string(),
             ValuePart::Operator(..) => unreachable!(), // Not doing anything with operators atm
         }
-    ).collect::<Vec<_>>().connect(" ")
+    ).collect::<Vec<_>>().join(" ")
 }
 
 #[derive(Debug, Clone, PartialEq)]

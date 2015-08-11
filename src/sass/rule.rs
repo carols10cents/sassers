@@ -19,7 +19,7 @@ impl<'a> SassRule<'a> {
 
     fn selector_distribution(&self, parents: &str, separator: &str) -> String {
         match parents.len() {
-            0 => self.selectors.iter().map(|s| (*s.name).to_string()).collect::<Vec<_>>().connect(separator),
+            0 => self.selectors.iter().map(|s| (*s.name).to_string()).collect::<Vec<_>>().join(separator),
             _ => parents.split(",").map(|p| {
                 self.selectors.iter().map(|s| {
                     if s.name.contains("&") {
@@ -27,8 +27,8 @@ impl<'a> SassRule<'a> {
                     } else {
                         format!("{} {}", p.trim(), s.name)
                     }
-                }).collect::<Vec<_>>().connect(separator)
-            }).collect::<Vec<_>>().connect(separator),
+                }).collect::<Vec<_>>().join(separator)
+            }).collect::<Vec<_>>().join(separator),
         }
     }
 
@@ -43,14 +43,14 @@ impl<'a> SassRule<'a> {
 
         let properties_string = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
             c.expanded()
-        }).collect::<Vec<_>>().connect("\n");
+        }).collect::<Vec<_>>().join("\n");
 
         let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
             match c {
                 &Event::ChildRule(ref rule) => rule.expanded_with_parent(&selector_string),
                 _ => unreachable!(),
             }
-        }).collect::<Vec<_>>().connect("\n");
+        }).collect::<Vec<_>>().join("\n");
 
         if properties_string.len() > 0 {
             output.push_str(&selector_string);
@@ -80,14 +80,14 @@ impl<'a> SassRule<'a> {
 
         let properties_string = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
             c.nested()
-        }).collect::<Vec<_>>().connect("\n");
+        }).collect::<Vec<_>>().join("\n");
 
         let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
             match c {
                 &Event::ChildRule(ref rule) => rule.nested_with_parent(&selector_string),
                 _ => unreachable!(),
             }
-        }).collect::<Vec<_>>().connect("\n");
+        }).collect::<Vec<_>>().join("\n");
 
         if properties_string.len() > 0 {
             output.push_str(&selector_string);
@@ -95,7 +95,7 @@ impl<'a> SassRule<'a> {
             output.push_str(&format!("{{\n{} }}", properties_string));
             if child_rules_string.len() > 0 {
                 output.push_str("\n  ");
-                output.push_str(&child_rules_string.split('\n').collect::<Vec<_>>().connect("\n  "));
+                output.push_str(&child_rules_string.split('\n').collect::<Vec<_>>().join("\n  "));
             }
         } else {
             output.push_str(&child_rules_string);
@@ -115,14 +115,14 @@ impl<'a> SassRule<'a> {
 
         let properties_string = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
             c.compact()
-        }).collect::<Vec<_>>().connect(" ");
+        }).collect::<Vec<_>>().join(" ");
 
         let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
             match c {
                 &Event::ChildRule(ref rule) => rule.compact_with_parent(&selector_string),
                 _ => unreachable!(),
             }
-        }).collect::<Vec<_>>().connect("\n");
+        }).collect::<Vec<_>>().join("\n");
 
         if properties_string.len() > 0 {
             output.push_str(&selector_string);
@@ -150,14 +150,14 @@ impl<'a> SassRule<'a> {
 
         let properties_string = self.children.iter().filter(|c| !c.is_child_rule() && !c.is_comment() ).map(|c| {
             c.compressed()
-        }).collect::<Vec<_>>().connect(";");
+        }).collect::<Vec<_>>().join(";");
 
         let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
             match c {
                 &Event::ChildRule(ref rule) => rule.compressed_with_parent(&selector_string),
                 _ => unreachable!(),
             }
-        }).collect::<Vec<_>>().connect("");
+        }).collect::<Vec<_>>().join("");
 
         if properties_string.len() > 0 {
             output.push_str(&selector_string);
@@ -179,8 +179,8 @@ fn compress_selectors(selector_string: String) -> String {
 
 impl<'a> fmt::Debug for SassRule<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let children = self.children.iter().map(|c| format!("{:?}", c)).collect::<Vec<_>>().connect("\n");
-        let indented_children = children.split("\n").collect::<Vec<_>>().connect("\n  ");
+        let children = self.children.iter().map(|c| format!("{:?}", c)).collect::<Vec<_>>().join("\n");
+        let indented_children = children.split("\n").collect::<Vec<_>>().join("\n  ");
         write!(f, "{:?} {{\n  {}\n}}", self.selectors, indented_children)
     }
 }

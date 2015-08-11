@@ -22,7 +22,7 @@ impl <'a> SassComment<'a> {
 
     pub fn compact(&self) -> String {
         match &self.comment {
-            &Event::Comment(ref c) => (*c).to_string().lines().map(|s| s.trim()).collect::<Vec<_>>().connect(" "),
+            &Event::Comment(ref c) => (*c).to_string().lines().map(|s| s.trim()).collect::<Vec<_>>().join(" "),
             _ => unreachable!(),
         }
     }
