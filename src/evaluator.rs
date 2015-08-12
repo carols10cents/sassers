@@ -31,8 +31,12 @@ pub fn evaluate(original: &str, variables: &HashMap<String, String>) -> String {
     value_stack.into_iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ")
 }
 
+fn is_space(c: u8) -> bool {
+    c == b' '
+}
+
 fn isnt_space(c: u8) -> bool {
-    c != b' '
+    !is_space(c)
 }
 
 fn is_number(c: u8) -> bool {
@@ -67,24 +71,26 @@ impl<'a> ValueTokenizer<'a> {
     }
 
     pub fn parse(&mut self) -> Option<ValuePart<'a>> {
+        self.skip_leading_whitespace();
+
         let start = self.offset;
         let mut i = self.offset;
         let limit = self.value_str.len();
 
         if is_operator(self.bytes[start]) {
-            self.offset = start + 2;
+            self.offset = start + 1;
             Some(ValuePart::Operator(self.value_str[start..start + 1].parse().unwrap()))
         } else if is_number(self.bytes[start]) {
             i += self.scan_while(&self.value_str[i..limit], is_number);
-            self.offset = i + 1;
+            self.offset = i;
             Some(ValuePart::Number(self.value_str[start..i].parse().unwrap()))
         } else if self.bytes[start] == b'$' {
             i += self.scan_while(&self.value_str[i..limit], isnt_space);
-            self.offset = i + 1;
+            self.offset = i;
             Some(ValuePart::Variable(Borrowed(&self.value_str[start..i])))
         } else {
             i += self.scan_while(&self.value_str[i..limit], isnt_space);
-            self.offset = i + 1;
+            self.offset = i;
             Some(ValuePart::String(Borrowed(&self.value_str[start..i])))
         }
     }
@@ -97,6 +103,21 @@ impl<'a> ValueTokenizer<'a> {
         }
     }
 
+    fn skip_leading_whitespace(&mut self) {
+       let mut i = self.offset;
+       let limit = self.value_str.len();
+
+       while i < limit {
+           let c = self.bytes[i];
+           if is_space(c) {
+               i += self.scan_while(&self.value_str[i..limit], is_space);
+           } else {
+               self.offset = i;
+               return
+           }
+       }
+       self.offset = limit;
+   }
 }
 
 impl<'a> Iterator for ValueTokenizer<'a> {
@@ -198,4 +219,11 @@ mod tests {
         let answer = evaluate("1 + 2", &HashMap::new());
         assert_eq!("3", answer);
     }
+
+    #[test]
+    fn it_doesnt_need_space_around_operators() {
+        let answer = evaluate("12*4", &HashMap::new());
+        assert_eq!("48", answer);
+    }
+
 }
