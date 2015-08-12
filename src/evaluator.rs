@@ -4,20 +4,31 @@ use std::borrow::Cow::Borrowed;
 use std::collections::HashMap;
 
 pub fn evaluate(original: &str, variables: &HashMap<String, String>) -> String {
-    let vt = ValueTokenizer::new(original);
-    vt.into_iter().map(|part|
+    let mut vt = ValueTokenizer::new(original);
+    let mut value_stack = Vec::new();
+    let mut op_stack = Vec::new();
+
+    while let Some(part) = vt.next() {
         match part {
-            ValuePart::Variable(ref name) => {
+            ValuePart::Variable(name) => {
                 match (*variables).get(&(*name).to_string()) {
-                    Some(v) => v.to_owned(),
-                    None => name.to_string(),
+                    Some(v) => value_stack.push(ValuePart::String(Borrowed(v))),
+                    None => value_stack.push(ValuePart::String(name)),
                 }
             },
-            ValuePart::String(ref s) => s.to_string(),
-            ValuePart::Number(n) => n.to_string(),
-            ValuePart::Operator(..) => unreachable!(), // Not doing anything with operators atm
+            s @ ValuePart::String(..) => value_stack.push(s),
+            n @ ValuePart::Number(..) => value_stack.push(n),
+            o @ ValuePart::Operator(..) => op_stack.push(o),
         }
-    ).collect::<Vec<_>>().join(" ")
+    }
+
+    while let Some(ValuePart::Operator(current_op)) = op_stack.pop() {
+        let second = value_stack.pop().unwrap();
+        let first  = value_stack.pop().unwrap();
+        value_stack.push(current_op.apply(first, second));
+    }
+
+    value_stack.into_iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ")
 }
 
 fn isnt_space(c: u8) -> bool {
@@ -180,5 +191,11 @@ mod tests {
 
         let answer = evaluate("foo $bar 199.82 baz $quux", &vars);
         assert_eq!("foo 4 199.82 baz 3px 10px", answer);
+    }
+
+    #[test]
+    fn it_adds() {
+        let answer = evaluate("1 + 2", &HashMap::new());
+        assert_eq!("3", answer);
     }
 }

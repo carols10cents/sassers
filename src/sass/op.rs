@@ -1,3 +1,5 @@
+use sass::value_part::ValuePart;
+
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -26,5 +28,23 @@ impl FromStr for Op {
             "," => Ok(Op::Comma),
             _   => Err(()),
         }
+    }
+}
+
+impl Op {
+    pub fn apply<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
+        let (first_num, second_num) = match (first, second) {
+            (ValuePart::Number(f), ValuePart::Number(s)) => (f, s),
+            (f, s) => panic!("Invalid arguments {:?} {:?}", f, s),
+        };
+        let result = match *self {
+            Op::Plus => first_num + second_num,
+            Op::Minus => first_num - second_num,
+            Op::Star => first_num * second_num,
+            Op::Slash => first_num / second_num,
+            Op::Percent => first_num % second_num,
+            ref o => panic!("Invalid binary operator {:?}", o),
+        };
+        ValuePart::Number(result)
     }
 }
