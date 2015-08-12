@@ -2,7 +2,7 @@ use sass::value_part::ValuePart;
 
 use std::str::FromStr;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Op {
     Plus,
     Minus,
@@ -46,5 +46,15 @@ impl Op {
             ref o => panic!("Invalid binary operator {:?}", o),
         };
         ValuePart::Number(result)
+    }
+
+    pub fn same_or_greater_precedence(self, other: Op) -> bool {
+        match (self, other) {
+            (Op::Plus, Op::Star) |
+            (Op::Minus, Op::Star) |
+            (Op::Plus, Op::Slash) |
+            (Op::Minus, Op::Slash) => false,
+            (_, _) => true,
+        }
     }
 }

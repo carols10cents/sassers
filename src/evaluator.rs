@@ -18,7 +18,19 @@ pub fn evaluate(original: &str, variables: &HashMap<String, String>) -> String {
             },
             s @ ValuePart::String(..) => value_stack.push(s),
             n @ ValuePart::Number(..) => value_stack.push(n),
-            o @ ValuePart::Operator(..) => op_stack.push(o),
+            ValuePart::Operator(ref o) => {
+                while let Some(ValuePart::Operator(last_operator)) = op_stack.pop() {
+                    if last_operator.same_or_greater_precedence(*o) {
+                        let second = value_stack.pop().unwrap();
+                        let first  = value_stack.pop().unwrap();
+                        value_stack.push(last_operator.apply(first, second));
+                    } else {
+                        op_stack.push(ValuePart::Operator(last_operator));
+                        break;
+                    }
+                }
+                op_stack.push(ValuePart::Operator(*o));
+            },
         }
     }
 
@@ -226,4 +238,9 @@ mod tests {
         assert_eq!("48", answer);
     }
 
+    #[test]
+    fn it_divides_and_adds_with_the_right_precedence() {
+        let answer = evaluate("3 + 3/4", &HashMap::new());
+        assert_eq!("3.75", answer);
+    }
 }
