@@ -1,4 +1,4 @@
-use evaluator;
+use evaluator::Evaluator;
 use event::Event;
 use top_level_event::TopLevelEvent;
 use sass::rule::SassRule;
@@ -24,12 +24,12 @@ impl<I> VariableMapper<I> {
         children.into_iter().filter_map(|c|
             match c {
                 Event::Variable(SassVariable { name, value }) => {
-                    let val = evaluator::evaluate(&value, &local_variables);
+                    let val = Evaluator::new(&value, &local_variables).evaluate();
                     local_variables.insert((*name).to_string(), val);
                     None
                 },
                 Event::Property(name, value) => {
-                    Some(Event::Property(name, evaluator::evaluate(&value, &local_variables).into()))
+                    Some(Event::Property(name, Evaluator::new(&value, &local_variables).evaluate().into()))
                 },
                 Event::ChildRule(rule) => {
                     Some(Event::ChildRule(SassRule {
@@ -50,7 +50,7 @@ impl<'a, I> Iterator for VariableMapper<I>
     fn next(&mut self) -> Option<TopLevelEvent<'a>> {
         match self.tokenizer.next() {
             Some(TopLevelEvent::Variable(SassVariable { name, value })) => {
-                let val = evaluator::evaluate(&value, &self.variables);
+                let val = Evaluator::new(&value, &self.variables).evaluate();
                 self.variables.insert((*name).to_string(), val);
                 self.next()
             },

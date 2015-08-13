@@ -1,47 +1,67 @@
 use sass::value_part::ValuePart;
+use sass::op::Op;
 use value_tokenizer::ValueTokenizer;
 
 use std::borrow::Cow::Borrowed;
 use std::collections::HashMap;
 
-pub fn evaluate(original: &str, variables: &HashMap<String, String>) -> String {
-    let mut vt = ValueTokenizer::new(original);
-    let mut value_stack = Vec::new();
-    let mut op_stack = Vec::new();
+#[derive(Debug)]
+pub struct Evaluator<'a> {
+    original: &'a str,
+    variables: &'a HashMap<String, String>,
+    value_stack: Vec<ValuePart<'a>>,
+    op_stack: Vec<Op>,
+}
 
-    while let Some(part) = vt.next() {
-        match part {
-            ValuePart::Variable(name) => {
-                match (*variables).get(&(*name).to_string()) {
-                    Some(v) => value_stack.push(ValuePart::String(Borrowed(v))),
-                    None => value_stack.push(ValuePart::String(name)),
-                }
-            },
-            s @ ValuePart::String(..) => value_stack.push(s),
-            n @ ValuePart::Number(..) => value_stack.push(n),
-            ValuePart::Operator(ref o) => {
-                while let Some(ValuePart::Operator(last_operator)) = op_stack.pop() {
-                    if last_operator.same_or_greater_precedence(*o) {
-                        let second = value_stack.pop().unwrap();
-                        let first  = value_stack.pop().unwrap();
-                        value_stack.push(last_operator.apply(first, second));
-                    } else {
-                        op_stack.push(ValuePart::Operator(last_operator));
-                        break;
-                    }
-                }
-                op_stack.push(ValuePart::Operator(*o));
-            },
+impl<'a> Evaluator<'a> {
+    pub fn new(original: &'a str, variables: &'a HashMap<String, String>) -> Evaluator<'a> {
+        Evaluator {
+            original: &original,
+            variables: &variables,
+            value_stack: Vec::new(),
+            op_stack: Vec::new(),
         }
     }
 
-    while let Some(ValuePart::Operator(current_op)) = op_stack.pop() {
-        let second = value_stack.pop().unwrap();
-        let first  = value_stack.pop().unwrap();
-        value_stack.push(current_op.apply(first, second));
+    pub fn evaluate(&mut self) -> String {
+        let mut vt = ValueTokenizer::new(self.original);
+
+        while let Some(part) = vt.next() {
+            match part {
+                ValuePart::Variable(name) => {
+                    match (*self.variables).get(&(*name).to_string()) {
+                        Some(ref v) => self.value_stack.push(ValuePart::String(Borrowed(v))),
+                        None => self.value_stack.push(ValuePart::String(name)),
+                    }
+                },
+                s @ ValuePart::String(..) => self.value_stack.push(s),
+                n @ ValuePart::Number(..) => self.value_stack.push(n),
+                ValuePart::Operator(ref o) => {
+                    if let Some(&last_operator) = self.op_stack.last() {
+                        if last_operator.same_or_greater_precedence(*o) {
+                            self.math_machine();
+                        }
+                    }
+                    self.op_stack.push(*o);
+                },
+            }
+        }
+
+        while !self.op_stack.is_empty() {
+            self.math_machine();
+        }
+
+        // TODO: figure out how to make borrowck like not cloning this, it's cool i swear
+        let vs = self.value_stack.clone().into_iter();
+        vs.map(|v| v.to_string()).collect::<Vec<_>>().join(" ")
     }
 
-    value_stack.into_iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ")
+    fn math_machine(&mut self) {
+        let op = self.op_stack.pop().unwrap();
+        let second = self.value_stack.pop().unwrap();
+        let first  = self.value_stack.pop().unwrap();
+        self.value_stack.push(op.apply(first, second));
+    }
 }
 
 #[cfg(test)]
@@ -55,37 +75,37 @@ mod tests {
         vars.insert("$bar".to_string(), "4".to_string());
         vars.insert("$quux".to_string(), "3px 10px".to_string());
 
-        let answer = evaluate("foo $bar 199.82 baz $quux", &vars);
+        let answer = Evaluator::new("foo $bar 199.82 baz $quux", &vars).evaluate();
         assert_eq!("foo 4 199.82 baz 3px 10px", answer);
     }
 
     #[test]
     fn it_adds() {
-        let answer = evaluate("1 + 2", &HashMap::new());
+        let answer = Evaluator::new("1 + 2", &HashMap::new()).evaluate();
         assert_eq!("3", answer);
     }
 
     #[test]
     fn it_doesnt_need_space_around_operators() {
-        let answer = evaluate("12*4", &HashMap::new());
+        let answer = Evaluator::new("12*4", &HashMap::new()).evaluate();
         assert_eq!("48", answer);
     }
 
     #[test]
     fn it_divides_and_adds_with_the_right_precedence() {
-        let answer = evaluate("3 + 3/4", &HashMap::new());
+        let answer = Evaluator::new("3 + 3/4", &HashMap::new()).evaluate();
         assert_eq!("3.75", answer);
     }
 
     // #[test]
     // fn it_does_string_concat_when_adding_to_list() {
-    //     let answer = evaluate("2+(3 4)", &HashMap::new());
+    //     let answer = Evaluator::new("2+(3 4)", &HashMap::new()).evaluate();
     //     assert_eq!("23 4", answer);
     // }
 
     // #[test]
     // fn it_divides_because_parens_and_string_concats_because_list() {
-    //     let answer = evaluate("1 + (5/10 2 3)", &HashMap::new());
+    //     let answer = Evaluator::new("1 + (5/10 2 3)", &HashMap::new()).evaluate();
     //     assert_eq!("10.5 2 3", answer);
     // }
 }
