@@ -53,7 +53,8 @@ impl Op {
             (Op::Plus, Op::Star) |
             (Op::Minus, Op::Star) |
             (Op::Plus, Op::Slash) |
-            (Op::Minus, Op::Slash) => false,
+            (Op::Minus, Op::Slash) |
+            (Op::LeftParen, _) => false,
             (_, _) => true,
         }
     }

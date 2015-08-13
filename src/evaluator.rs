@@ -37,12 +37,23 @@ impl<'a> Evaluator<'a> {
                 s @ ValuePart::String(..) => self.value_stack.push(s),
                 n @ ValuePart::Number(..) => self.value_stack.push(n),
                 ValuePart::Operator(ref o) => {
-                    if let Some(&last_operator) = self.op_stack.last() {
-                        if last_operator.same_or_greater_precedence(*o) {
+                    if *o == Op::RightParen {
+                        let mut last_operator = self.op_stack.last().expect("Ran out of operators looking for a left paren!").clone();
+                        while last_operator != Op::LeftParen {
                             self.math_machine();
+                            last_operator = self.op_stack.last().expect("Ran out of operators looking for a left paren!").clone();
                         }
+                        self.op_stack.pop();
+                    } else if *o == Op::LeftParen {
+                        self.op_stack.push(*o);
+                    } else {
+                        if let Some(&last_operator) = self.op_stack.last() {
+                            if last_operator.same_or_greater_precedence(*o) {
+                                self.math_machine();
+                            }
+                        }
+                        self.op_stack.push(*o);
                     }
-                    self.op_stack.push(*o);
                 },
             }
         }
@@ -57,9 +68,9 @@ impl<'a> Evaluator<'a> {
     }
 
     fn math_machine(&mut self) {
-        let op = self.op_stack.pop().unwrap();
-        let second = self.value_stack.pop().unwrap();
-        let first  = self.value_stack.pop().unwrap();
+        let op = self.op_stack.pop().expect("No operator on the operator stack!");
+        let second = self.value_stack.pop().expect("No second operand on the value stack!");
+        let first  = self.value_stack.pop().expect("No first operand on the value stack!");
         self.value_stack.push(op.apply(first, second));
     }
 }
@@ -95,6 +106,12 @@ mod tests {
     fn it_divides_and_adds_with_the_right_precedence() {
         let answer = Evaluator::new("3 + 3/4", &HashMap::new()).evaluate();
         assert_eq!("3.75", answer);
+    }
+
+    #[test]
+    fn it_gets_the_right_precedence_with_parens() {
+        let answer = Evaluator::new("(3 + 3)/4", &HashMap::new()).evaluate();
+        assert_eq!("1.5", answer);
     }
 
     // #[test]
