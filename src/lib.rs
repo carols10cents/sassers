@@ -10,6 +10,7 @@ mod output;
 mod sass;
 mod tokenizer;
 mod top_level_event;
+mod value_tokenizer;
 mod variable_mapper;
 
 use tokenizer::Tokenizer;
