@@ -214,6 +214,18 @@ mod tests {
         assert_eq!(None, vt.next());
     }
 
+    #[test]
+    fn it_does_stuff_with_parens() {
+        let mut vt = ValueTokenizer::new("2+(3 4)");
+        assert_eq!(Some(ValuePart::Number(2.0)), vt.next());
+        assert_eq!(Some(ValuePart::Operator(Op::Plus)), vt.next());
+        assert_eq!(Some(ValuePart::Operator(Op::LeftParen)), vt.next());
+        assert_eq!(Some(ValuePart::Number(3.0)), vt.next());
+        assert_eq!(Some(ValuePart::Number(4.0)), vt.next());
+        assert_eq!(Some(ValuePart::Operator(Op::RightParen)), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
     // evaluate tests =====================
 
     #[test]
@@ -243,4 +255,16 @@ mod tests {
         let answer = evaluate("3 + 3/4", &HashMap::new());
         assert_eq!("3.75", answer);
     }
+
+    // #[test]
+    // fn it_does_string_concat_when_adding_to_list() {
+    //     let answer = evaluate("2+(3 4)", &HashMap::new());
+    //     assert_eq!("23 4", answer);
+    // }
+
+    // #[test]
+    // fn it_divides_because_parens_and_string_concats_because_list() {
+    //     let answer = evaluate("1 + (5/10 2 3)", &HashMap::new());
+    //     assert_eq!("10.5 2 3", answer);
+    // }
 }
