@@ -67,8 +67,10 @@ impl<'a> Evaluator<'a> {
                             last_operator = self.op_stack.last().expect("Ran out of operators looking for a left paren!").clone();
                         }
                         self.op_stack.pop();
+                        last_was_an_operator = false;
                     } else if *o == Op::LeftParen {
                         self.op_stack.push(*o);
+                        last_was_an_operator = true;
                     } else {
                         if let Some(&last_operator) = self.op_stack.last() {
                             if last_operator.same_or_greater_precedence(*o) {
@@ -76,8 +78,8 @@ impl<'a> Evaluator<'a> {
                             }
                         }
                         self.op_stack.push(*o);
+                        last_was_an_operator = true;
                     }
-                    last_was_an_operator = true;
                 },
                 _ => unreachable!(),
             }
@@ -149,6 +151,12 @@ mod tests {
     fn it_does_string_concat_when_adding_to_list() {
         let answer = Evaluator::new("2+(3 4)", &HashMap::new()).evaluate();
         assert_eq!("23 4", answer);
+    }
+
+    #[test]
+    fn it_does_string_concat_when_adding_to_list_in_a_list() {
+        let answer = Evaluator::new("(2+(3 4) 5)", &HashMap::new()).evaluate();
+        assert_eq!("23 4 5", answer);
     }
 
     #[test]
