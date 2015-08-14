@@ -204,4 +204,15 @@ mod tests {
         assert_eq!(Some(ValuePart::Operator(Op::RightParen)), vt.next());
         assert_eq!(None, vt.next());
     }
+
+    #[test]
+    fn it_does_stuff_with_slash_separators() {
+        let mut vt = ValueTokenizer::new("15 / 3 / 5");
+        assert_eq!(Some(ValuePart::Number(15.0)), vt.next());
+        assert_eq!(Some(ValuePart::Operator(Op::Slash)), vt.next());
+        assert_eq!(Some(ValuePart::Number(3.0)), vt.next());
+        assert_eq!(Some(ValuePart::Operator(Op::Slash)), vt.next());
+        assert_eq!(Some(ValuePart::Number(5.0)), vt.next());
+        assert_eq!(None, vt.next());
+    }
 }

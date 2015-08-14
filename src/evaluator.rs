@@ -11,6 +11,7 @@ pub struct Evaluator<'a, T> {
     variables: &'a HashMap<String, String>,
     value_stack: Vec<ValuePart<'a>>,
     op_stack: Vec<Op>,
+    paren_level: i32,
 }
 
 impl<'a> Evaluator<'a, ValueTokenizer<'a>> {
@@ -21,6 +22,7 @@ impl<'a> Evaluator<'a, ValueTokenizer<'a>> {
             variables: &variables,
             value_stack: Vec::new(),
             op_stack: Vec::new(),
+            paren_level: 0,
         }
     }
 }
@@ -72,9 +74,11 @@ where T: Iterator<Item = ValuePart<'a>>
                         }
                         self.op_stack.pop();
                         last_was_an_operator = false;
+                        self.paren_level -= 1;
                     } else if *o == Op::LeftParen {
                         self.op_stack.push(*o);
                         last_was_an_operator = true;
+                        self.paren_level += 1;
                     } else {
                         if let Some(&last_operator) = self.op_stack.last() {
                             if last_operator.same_or_greater_precedence(*o) {
@@ -105,7 +109,7 @@ where T: Iterator<Item = ValuePart<'a>>
         let op = self.op_stack.pop().unwrap_or(Op::Plus);
         let second = self.value_stack.pop().unwrap_or(ValuePart::Number(0.0));
         let first  = self.value_stack.pop().unwrap_or(ValuePart::Number(0.0));
-        self.value_stack.push(op.apply(first, second));
+        self.value_stack.push(op.apply(first, second, self.paren_level));
     }
 }
 
@@ -192,5 +196,11 @@ mod tests {
         let vars = HashMap::new();
         let answer = Evaluator::new("1 + (5/10 2 3)", &vars).evaluate();
         assert_eq!(ValuePart::List(vec![ValuePart::String(Borrowed("10.5")), ValuePart::Number(2.0), ValuePart::Number(3.0)]), answer);
+    }
+
+    #[test]
+    fn it_does_not_divide_when_slash_is_separating() {
+        let answer = Evaluator::new("15 / 3 / 5", &HashMap::new()).evaluate();
+        assert_eq!("15 / 3 / 5", answer);
     }
 }
