@@ -44,6 +44,9 @@ impl<'a> Evaluator<'a> {
                     if last_was_an_operator {
                         self.value_stack.push(n);
                     } else {
+                        while !self.op_stack.is_empty() && self.op_stack.last() != Some(&Op::LeftParen) {
+                            self.math_machine();
+                        }
                         let list_starter = self.value_stack.pop().expect("No expected list starter on the value stack!");
                         let list_parts = match list_starter {
                             ValuePart::List(mut v) => {
@@ -142,9 +145,9 @@ mod tests {
         assert_eq!("23 4", answer);
     }
 
-    // #[test]
-    // fn it_divides_because_parens_and_string_concats_because_list() {
-    //     let answer = Evaluator::new("1 + (5/10 2 3)", &HashMap::new()).evaluate();
-    //     assert_eq!("10.5 2 3", answer);
-    // }
+    #[test]
+    fn it_divides_because_parens_and_string_concats_because_list() {
+        let answer = Evaluator::new("1 + (5/10 2 3)", &HashMap::new()).evaluate();
+        assert_eq!("10.5 2 3", answer);
+    }
 }
