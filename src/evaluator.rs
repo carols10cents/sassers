@@ -25,6 +25,7 @@ impl<'a> Evaluator<'a> {
 
     pub fn evaluate(&mut self) -> String {
         let mut vt = ValueTokenizer::new(self.original);
+        let mut last_was_an_operator = true;
 
         while let Some(part) = vt.next() {
             match part {
@@ -32,10 +33,29 @@ impl<'a> Evaluator<'a> {
                     match (*self.variables).get(&(*name).to_string()) {
                         Some(ref v) => self.value_stack.push(ValuePart::String(Borrowed(v))),
                         None => self.value_stack.push(ValuePart::String(name)),
-                    }
+                    };
+                    last_was_an_operator = false;
                 },
-                s @ ValuePart::String(..) => self.value_stack.push(s),
-                n @ ValuePart::Number(..) => self.value_stack.push(n),
+                s @ ValuePart::String(..) => {
+                    self.value_stack.push(s);
+                    last_was_an_operator = false;
+                },
+                n @ ValuePart::Number(..) => {
+                    if last_was_an_operator {
+                        self.value_stack.push(n);
+                    } else {
+                        let list_starter = self.value_stack.pop().expect("No expected list starter on the value stack!");
+                        let list_parts = match list_starter {
+                            ValuePart::List(mut v) => {
+                                v.push(n);
+                                v
+                            },
+                            other => vec![other, n],
+                        };
+                        self.value_stack.push(ValuePart::List(list_parts));
+                    }
+                    last_was_an_operator = false;
+                },
                 ValuePart::Operator(ref o) => {
                     if *o == Op::RightParen {
                         let mut last_operator = self.op_stack.last().expect("Ran out of operators looking for a left paren!").clone();
@@ -54,7 +74,9 @@ impl<'a> Evaluator<'a> {
                         }
                         self.op_stack.push(*o);
                     }
+                    last_was_an_operator = true;
                 },
+                _ => unreachable!(),
             }
         }
 
@@ -114,11 +136,11 @@ mod tests {
         assert_eq!("1.5", answer);
     }
 
-    // #[test]
-    // fn it_does_string_concat_when_adding_to_list() {
-    //     let answer = Evaluator::new("2+(3 4)", &HashMap::new()).evaluate();
-    //     assert_eq!("23 4", answer);
-    // }
+    #[test]
+    fn it_does_string_concat_when_adding_to_list() {
+        let answer = Evaluator::new("2+(3 4)", &HashMap::new()).evaluate();
+        assert_eq!("23 4", answer);
+    }
 
     // #[test]
     // fn it_divides_because_parens_and_string_concats_because_list() {

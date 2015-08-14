@@ -33,6 +33,26 @@ impl FromStr for Op {
 
 impl Op {
     pub fn apply<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
+        match (self, &second) {
+            (&Op::Plus, &ValuePart::List(..)) => self.apply_list(first, second),
+            (_, _) => self.apply_math(first, second),
+        }
+    }
+
+    fn apply_list<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
+        match (first, second) {
+            (ValuePart::Number(f), ValuePart::List(mut l)) => {
+                let new_first_item_value = format!("{}{}", f, l.remove(0));
+                let v = ValuePart::String(new_first_item_value.into());
+                let mut ve = vec![v];
+                ve.append(&mut l);
+                ValuePart::List(ve)
+            },
+            (f, s) => panic!("Invalid arguments for concatenating with list {:?} {:?}", f, s),
+        }
+    }
+
+    fn apply_math<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
         let (first_num, second_num) = match (first, second) {
             (ValuePart::Number(f), ValuePart::Number(s)) => (f, s),
             (f, s) => panic!("Invalid arguments {:?} {:?}", f, s),

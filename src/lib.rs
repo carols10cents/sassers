@@ -1,3 +1,5 @@
+#![feature(append)]
+
 extern crate regex;
 use std::path::PathBuf;
 use std::fs::File;
