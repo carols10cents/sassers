@@ -31,7 +31,18 @@ impl<'a> ValueTokenizer<'a> {
         } else if is_number(self.bytes[start]) {
             i += self.scan_while(&self.value_str[i..limit], is_number);
             self.offset = i;
-            Some(ValuePart::Number(self.value_str[start..i].parse().unwrap()))
+            if i < limit && (self.bytes[i] == b'%' || (!is_operator(self.bytes[i]) && isnt_space(self.bytes[i]))) {
+                let unit_start = i;
+                i += self.scan_while(&self.value_str[i..limit], isnt_space);
+                self.offset = i;
+                Some(ValuePart::NumberUnits(
+                    self.value_str[start..unit_start].parse().unwrap(),
+                    Borrowed(&self.value_str[unit_start..i])
+                ))
+            }
+            else {
+                Some(ValuePart::Number(self.value_str[start..i].parse().unwrap()))
+            }
         } else if self.bytes[start] == b'$' {
             i += self.scan_while(&self.value_str[i..limit], isnt_space);
             self.offset = i;
@@ -153,6 +164,13 @@ mod tests {
         let mut vt = ValueTokenizer::new("3 8.9");
         assert_eq!(Some(ValuePart::Number(3.0)), vt.next());
         assert_eq!(Some(ValuePart::Number(8.9)), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_returns_numbers_with_units() {
+        let mut vt = ValueTokenizer::new("3px");
+        assert_eq!(Some(ValuePart::NumberUnits(3.0, Borrowed(&"px"))), vt.next());
         assert_eq!(None, vt.next());
     }
 

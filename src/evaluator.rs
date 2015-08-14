@@ -40,7 +40,7 @@ impl<'a> Evaluator<'a> {
                     self.value_stack.push(s);
                     last_was_an_operator = false;
                 },
-                n @ ValuePart::Number(..) => {
+                n @ ValuePart::Number(..) | n @ ValuePart::NumberUnits(..) => {
                     if last_was_an_operator {
                         self.value_stack.push(n);
                     } else {
@@ -113,6 +113,12 @@ mod tests {
 
         let answer = Evaluator::new("foo $bar 199.82 baz $quux", &vars).evaluate();
         assert_eq!("foo 4 199.82 baz 3px 10px", answer);
+    }
+
+    #[test]
+    fn it_handles_units() {
+        let answer = Evaluator::new("0px", &HashMap::new()).evaluate();
+        assert_eq!("0px", answer);
     }
 
     #[test]

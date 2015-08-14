@@ -8,6 +8,7 @@ pub enum ValuePart<'a> {
     Variable(Cow<'a, str>),
     String(Cow<'a, str>),
     Number(f32),
+    NumberUnits(f32, Cow<'a, str>),
     Operator(Op),
     List(Vec<ValuePart<'a>>)
 }
@@ -18,6 +19,7 @@ impl<'a> fmt::Display for ValuePart<'a> {
             ValuePart::Variable(ref name) => write!(f, "{}", name),
             ValuePart::String(ref str) => write!(f, "{}", str),
             ValuePart::Number(ref num) => write!(f, "{}", num),
+            ValuePart::NumberUnits(ref num, ref units) => write!(f, "{}{}", num, units),
             ValuePart::List(ref list) => {
                 write!(f, "{}", list.iter().map( |l| l.to_string() ).collect::<Vec<_>>().join(" "))
             },
