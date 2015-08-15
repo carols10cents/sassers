@@ -6,28 +6,32 @@ use std::borrow::Cow::Borrowed;
 use std::collections::HashMap;
 
 #[derive(Debug)]
-pub struct Evaluator<'a> {
-    original: &'a str,
+pub struct Evaluator<'a, T> {
+    value_tokens: T,
     variables: &'a HashMap<String, String>,
     value_stack: Vec<ValuePart<'a>>,
     op_stack: Vec<Op>,
 }
 
-impl<'a> Evaluator<'a> {
-    pub fn new(original: &'a str, variables: &'a HashMap<String, String>) -> Evaluator<'a> {
+impl<'a> Evaluator<'a, ValueTokenizer<'a>> {
+    pub fn new(original: &'a str, variables: &'a HashMap<String, String>) -> Evaluator<'a, ValueTokenizer<'a>>
+    {
         Evaluator {
-            original: &original,
+            value_tokens: ValueTokenizer::new(&original),
             variables: &variables,
             value_stack: Vec::new(),
             op_stack: Vec::new(),
         }
     }
+}
 
+impl<'a, T> Evaluator<'a, T>
+where T: Iterator<Item = ValuePart<'a>>
+{
     pub fn evaluate(&mut self) -> ValuePart<'a> {
-        let mut vt = ValueTokenizer::new(self.original);
         let mut last_was_an_operator = true;
 
-        while let Some(part) = vt.next() {
+        while let Some(part) = self.value_tokens.next() {
             match part {
                 ValuePart::Variable(name) => {
                     match (*self.variables).get(&(*name).to_string()) {
