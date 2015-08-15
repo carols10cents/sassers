@@ -1,4 +1,5 @@
 use sass::value_part::ValuePart;
+use sass::op::Op;
 
 use std::borrow::Cow::Borrowed;
 
@@ -25,9 +26,11 @@ impl<'a> ValueTokenizer<'a> {
         let mut i = self.offset;
         let limit = self.value_str.len();
 
-        if is_operator(self.bytes[start]) {
+        if start == limit {
+            None
+        } else if is_operator(self.bytes[start]) {
             self.offset = start + 1;
-            Some(ValuePart::Operator(self.value_str[start..start + 1].parse().unwrap()))
+            Some(ValuePart::Operator(self.value_str[start..start + 1].parse().unwrap_or(Op::Plus)))
         } else if is_number(self.bytes[start]) {
             i += self.scan_while(&self.value_str[i..limit], is_number);
             self.offset = i;
@@ -36,12 +39,12 @@ impl<'a> ValueTokenizer<'a> {
                 i += self.scan_while(&self.value_str[i..limit], isnt_space);
                 self.offset = i;
                 Some(ValuePart::NumberUnits(
-                    self.value_str[start..unit_start].parse().unwrap(),
+                    self.value_str[start..unit_start].parse().unwrap_or(0.0),
                     Borrowed(&self.value_str[unit_start..i])
                 ))
             }
             else {
-                Some(ValuePart::Number(self.value_str[start..i].parse().unwrap()))
+                Some(ValuePart::Number(self.value_str[start..i].parse().unwrap_or(0.0)))
             }
         } else if self.bytes[start] == b'$' {
             i += self.scan_while(&self.value_str[i..limit], isnt_space);

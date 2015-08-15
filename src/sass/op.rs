@@ -48,14 +48,14 @@ impl Op {
                 ve.append(&mut l);
                 ValuePart::List(ve)
             },
-            (f, s) => panic!("Invalid arguments for concatenating with list {:?} {:?}", f, s),
+            (_, _) => ValuePart::List(vec![]),
         }
     }
 
     fn apply_math<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
         let (first_num, second_num) = match (first, second) {
             (ValuePart::Number(f), ValuePart::Number(s)) => (f, s),
-            (f, s) => panic!("Invalid arguments {:?} {:?}", f, s),
+            (f, s) => return ValuePart::String(format!("Invalid arguments {:?} {:?}", f, s).into()),
         };
         let result = match *self {
             Op::Plus => first_num + second_num,
@@ -63,7 +63,7 @@ impl Op {
             Op::Star => first_num * second_num,
             Op::Slash => first_num / second_num,
             Op::Percent => first_num % second_num,
-            ref o => panic!("Invalid binary operator {:?}", o),
+            _ => 0.0,
         };
         ValuePart::Number(result)
     }

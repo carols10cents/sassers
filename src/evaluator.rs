@@ -61,10 +61,10 @@ impl<'a> Evaluator<'a> {
                 },
                 ValuePart::Operator(ref o) => {
                     if *o == Op::RightParen {
-                        let mut last_operator = self.op_stack.last().expect("Ran out of operators looking for a left paren!").clone();
+                        let mut last_operator = self.op_stack.last().unwrap_or(&Op::LeftParen).clone();
                         while last_operator != Op::LeftParen {
                             self.math_machine();
-                            last_operator = self.op_stack.last().expect("Ran out of operators looking for a left paren!").clone();
+                            last_operator = self.op_stack.last().unwrap_or(&Op::LeftParen).clone();
                         }
                         self.op_stack.pop();
                         last_was_an_operator = false;
@@ -95,9 +95,9 @@ impl<'a> Evaluator<'a> {
     }
 
     fn math_machine(&mut self) {
-        let op = self.op_stack.pop().expect("No operator on the operator stack!");
-        let second = self.value_stack.pop().expect("No second operand on the value stack!");
-        let first  = self.value_stack.pop().expect("No first operand on the value stack!");
+        let op = self.op_stack.pop().unwrap_or(Op::Plus);
+        let second = self.value_stack.pop().unwrap_or(ValuePart::Number(0.0));
+        let first  = self.value_stack.pop().unwrap_or(ValuePart::Number(0.0));
         self.value_stack.push(op.apply(first, second));
     }
 }
