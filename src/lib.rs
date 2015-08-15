@@ -1,4 +1,5 @@
 #![feature(append)]
+#![feature(collections)]
 
 extern crate regex;
 use std::path::PathBuf;

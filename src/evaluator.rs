@@ -4,22 +4,36 @@ use value_tokenizer::ValueTokenizer;
 
 use std::borrow::Cow::Borrowed;
 use std::collections::HashMap;
+extern crate collections;
 
 #[derive(Debug)]
 pub struct Evaluator<'a, T> {
     value_tokens: T,
-    variables: &'a HashMap<String, String>,
+    variables: Option<&'a HashMap<String, String>>,
     value_stack: Vec<ValuePart<'a>>,
     op_stack: Vec<Op>,
     paren_level: i32,
 }
 
 impl<'a> Evaluator<'a, ValueTokenizer<'a>> {
-    pub fn new(original: &'a str, variables: &'a HashMap<String, String>) -> Evaluator<'a, ValueTokenizer<'a>>
+    pub fn new_from_string(original: &'a str, variables: &'a HashMap<String, String>) -> Evaluator<'a, ValueTokenizer<'a>>
     {
         Evaluator {
             value_tokens: ValueTokenizer::new(&original),
-            variables: &variables,
+            variables: Some(&variables),
+            value_stack: Vec::new(),
+            op_stack: Vec::new(),
+            paren_level: 0,
+        }
+    }
+}
+
+impl<'a> Evaluator<'a, collections::vec::IntoIter<ValuePart<'a>>> {
+    pub fn new(value_tokens: Vec<ValuePart<'a>>) -> Evaluator<'a, collections::vec::IntoIter<ValuePart<'a>>>
+    {
+        Evaluator {
+            value_tokens: value_tokens.into_iter(),
+            variables: None,
             value_stack: Vec::new(),
             op_stack: Vec::new(),
             paren_level: 0,
@@ -36,10 +50,15 @@ where T: Iterator<Item = ValuePart<'a>>
         while let Some(part) = self.value_tokens.next() {
             match part {
                 ValuePart::Variable(name) => {
-                    match (*self.variables).get(&(*name).to_string()) {
-                        Some(ref v) => self.value_stack.push(ValuePart::String(Borrowed(v))),
+                    match self.variables {
+                        Some(vars) => {
+                            match vars.get(&(*name).to_string()) {
+                                Some(ref v) => self.value_stack.push(ValuePart::String(Borrowed(v))),
+                                None => self.value_stack.push(ValuePart::String(name)),
+                            }
+                        },
                         None => self.value_stack.push(ValuePart::String(name)),
-                    };
+                    }
                     last_was_an_operator = false;
                 },
                 s @ ValuePart::String(..) => {
@@ -117,6 +136,7 @@ where T: Iterator<Item = ValuePart<'a>>
 mod tests {
     use super::*;
     use sass::value_part::ValuePart;
+    use sass::op::Op;
     use std::collections::HashMap;
     use std::borrow::Cow::Borrowed;
 
@@ -126,7 +146,7 @@ mod tests {
         vars.insert("$bar".to_string(), "4".to_string());
         vars.insert("$quux".to_string(), "3px 10px".to_string());
 
-        let answer = Evaluator::new("foo $bar 199.82 baz $quux", &vars).evaluate();
+        let answer = Evaluator::new_from_string("foo $bar 199.82 baz $quux", &vars).evaluate();
 
         assert_eq!(
             ValuePart::List(vec![
@@ -143,64 +163,116 @@ mod tests {
     }
 
     #[test]
-    fn it_handles_units() {
-        let vars = HashMap::new();
-        let answer = Evaluator::new("0px", &vars).evaluate();
-        assert_eq!(ValuePart::NumberUnits(0.0, Borrowed("px")), answer);
-    }
-
-    #[test]
     fn it_adds() {
-        let vars = HashMap::new();
-        let answer = Evaluator::new("1 + 2", &vars).evaluate();
+        let answer = Evaluator::new(vec![
+            ValuePart::Number(1.0),
+            ValuePart::Operator(Op::Plus),
+            ValuePart::Number(2.0),
+        ]).evaluate();
         assert_eq!(ValuePart::Number(3.0), answer);
     }
 
     #[test]
-    fn it_doesnt_need_space_around_operators() {
-        let vars = HashMap::new();
-        let answer = Evaluator::new("12*4", &vars).evaluate();
-        assert_eq!(ValuePart::Number(48.0), answer);
-    }
-
-    #[test]
     fn it_divides_and_adds_with_the_right_precedence() {
-        let vars = HashMap::new();
-        let answer = Evaluator::new("3 + 3/4", &vars).evaluate();
+        let answer = Evaluator::new(vec![
+            ValuePart::Number(3.0),
+            ValuePart::Operator(Op::Plus),
+            ValuePart::Number(3.0),
+            ValuePart::Operator(Op::Slash),
+            ValuePart::Number(4.0),
+        ]).evaluate();
         assert_eq!(ValuePart::Number(3.75), answer);
     }
 
     #[test]
     fn it_gets_the_right_precedence_with_parens() {
-        let vars = HashMap::new();
-        let answer = Evaluator::new("(3 + 3)/4", &vars).evaluate();
+        let answer = Evaluator::new(vec![
+            ValuePart::Operator(Op::LeftParen),
+            ValuePart::Number(3.0),
+            ValuePart::Operator(Op::Plus),
+            ValuePart::Number(3.0),
+            ValuePart::Operator(Op::RightParen),
+            ValuePart::Operator(Op::Slash),
+            ValuePart::Number(4.0),
+        ]).evaluate();
         assert_eq!(ValuePart::Number(1.5), answer);
     }
 
     #[test]
     fn it_does_string_concat_when_adding_to_list() {
-        let vars = HashMap::new();
-        let answer = Evaluator::new("2+(3 4)", &vars).evaluate();
-        assert_eq!(ValuePart::List(vec![ValuePart::String(Borrowed("23")), ValuePart::Number(4.0)]), answer);
+        let answer = Evaluator::new(vec![
+            ValuePart::Number(2.0),
+            ValuePart::Operator(Op::Plus),
+            ValuePart::Operator(Op::LeftParen),
+            ValuePart::Number(3.0),
+            ValuePart::Number(4.0),
+            ValuePart::Operator(Op::RightParen),
+        ]).evaluate();
+
+        assert_eq!(ValuePart::List(vec![
+            ValuePart::String(Borrowed("23")),
+            ValuePart::Number(4.0)
+        ]), answer);
     }
 
     #[test]
     fn it_does_string_concat_when_adding_to_list_in_a_list() {
-        let vars = HashMap::new();
-        let answer = Evaluator::new("(2+(3 4) 5)", &vars).evaluate();
-        assert_eq!(ValuePart::List(vec![ValuePart::String(Borrowed("23")), ValuePart::Number(4.0), ValuePart::Number(5.0)]), answer);
+        let answer = Evaluator::new(vec![
+            ValuePart::Operator(Op::LeftParen),
+            ValuePart::Number(2.0),
+            ValuePart::Operator(Op::Plus),
+            ValuePart::Operator(Op::LeftParen),
+            ValuePart::Number(3.0),
+            ValuePart::Number(4.0),
+            ValuePart::Operator(Op::RightParen),
+            ValuePart::Number(5.0),
+            ValuePart::Operator(Op::RightParen),
+        ]).evaluate();
+
+        assert_eq!(ValuePart::List(vec![
+            ValuePart::String(Borrowed("23")),
+            ValuePart::Number(4.0),
+            ValuePart::Number(5.0)
+        ]), answer);
     }
 
     #[test]
     fn it_divides_because_parens_and_string_concats_because_list() {
-        let vars = HashMap::new();
-        let answer = Evaluator::new("1 + (5/10 2 3)", &vars).evaluate();
-        assert_eq!(ValuePart::List(vec![ValuePart::String(Borrowed("10.5")), ValuePart::Number(2.0), ValuePart::Number(3.0)]), answer);
+        let answer = Evaluator::new(vec![
+            ValuePart::Number(1.0),
+            ValuePart::Operator(Op::Plus),
+            ValuePart::Operator(Op::LeftParen),
+            ValuePart::Number(5.0),
+            ValuePart::Operator(Op::Slash),
+            ValuePart::Number(10.0),
+            ValuePart::Number(2.0),
+            ValuePart::Number(3.0),
+            ValuePart::Operator(Op::RightParen),
+        ]).evaluate();
+
+        assert_eq!(ValuePart::List(vec![
+            ValuePart::String(Borrowed("10.5")),
+            ValuePart::Number(2.0),
+            ValuePart::Number(3.0)
+        ]), answer);
     }
 
     #[test]
     fn it_does_not_divide_when_slash_is_separating() {
-        let answer = Evaluator::new("15 / 3 / 5", &HashMap::new()).evaluate();
-        assert_eq!("15 / 3 / 5", answer);
+        let answer = Evaluator::new(vec![
+            ValuePart::Number(15.0),
+            ValuePart::Operator(Op::Slash),
+            ValuePart::Number(3.0),
+            ValuePart::Operator(Op::Slash),
+            ValuePart::Number(5.0),
+        ]).evaluate();
+
+        assert_eq!(ValuePart::List(vec![
+            ValuePart::Number(15.0),
+            ValuePart::Operator(Op::Slash),
+            ValuePart::Number(3.0),
+            ValuePart::Operator(Op::Slash),
+            ValuePart::Number(5.0),
+        ]), answer);
     }
 }

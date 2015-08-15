@@ -194,6 +194,15 @@ mod tests {
     }
 
     #[test]
+    fn it_returns_numbers_and_operators_without_spaces() {
+        let mut vt = ValueTokenizer::new("6+75.2");
+        assert_eq!(Some(ValuePart::Number(6.0)), vt.next());
+        assert_eq!(Some(ValuePart::Operator(Op::Plus)), vt.next());
+        assert_eq!(Some(ValuePart::Number(75.2)), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
     fn it_does_stuff_with_parens() {
         let mut vt = ValueTokenizer::new("2+(3 4)");
         assert_eq!(Some(ValuePart::Number(2.0)), vt.next());

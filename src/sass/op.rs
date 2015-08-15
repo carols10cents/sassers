@@ -1,4 +1,5 @@
 use sass::value_part::ValuePart;
+use evaluator::Evaluator;
 
 use std::str::FromStr;
 
@@ -41,13 +42,20 @@ impl Op {
     }
 
     fn apply_list<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
-        match (first, second) {
-            (ValuePart::Number(f), ValuePart::List(mut l)) => {
-                let new_first_item_value = format!("{}{}", f, l.remove(0));
-                let v = ValuePart::String(new_first_item_value.into());
-                let mut ve = vec![v];
-                ve.append(&mut l);
-                ValuePart::List(ve)
+        match (&first, second) {
+            (&ValuePart::Number(f), ValuePart::List(mut l)) => {
+                if l.iter().any(|item| *item == ValuePart::Operator(Op::Slash)) {
+                    let mut ve = vec![ValuePart::Operator(Op::LeftParen)];
+                    l.push(ValuePart::Operator(Op::RightParen));
+                    ve.append(&mut l);
+                    self.apply_math(first, Evaluator::new(ve).evaluate())
+                } else {
+                    let new_first_item_value = format!("{}{}", f, l.remove(0));
+                    let v = ValuePart::String(new_first_item_value.into());
+                    let mut ve = vec![v];
+                    ve.append(&mut l);
+                    ValuePart::List(ve)
+                }
             },
             (_, _) => ValuePart::List(vec![]),
         }
@@ -55,7 +63,14 @@ impl Op {
 
     fn apply_slash<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>, paren_level: i32) -> ValuePart<'a> {
         if paren_level == 0 {
-            ValuePart::List(vec![first, ValuePart::Operator(*self), second])
+            match first {
+                ValuePart::List(mut f) => {
+                    let mut ve = vec![ValuePart::Operator(*self), second];
+                    f.append(&mut ve);
+                    ValuePart::List(f)
+                },
+                _ => ValuePart::List(vec![first, ValuePart::Operator(*self), second]),
+            }
         } else {
             self.apply_math(first, second)
         }
