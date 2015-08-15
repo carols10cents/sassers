@@ -5,4 +5,4 @@ install:
   - cd sass-spec
   - bundle install
   - cd .. 
-script: cargo build && cd sass-spec && ./sass-spec.rb -c '../target/debug/sassers'
+script: cargo build && cargo test && cd sass-spec && ./sass-spec.rb -c '../target/debug/sassers'
