@@ -23,7 +23,7 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    pub fn evaluate(&mut self) -> String {
+    pub fn evaluate(&mut self) -> ValuePart<'a> {
         let mut vt = ValueTokenizer::new(self.original);
         let mut last_was_an_operator = true;
 
@@ -89,9 +89,12 @@ impl<'a> Evaluator<'a> {
             self.math_machine();
         }
 
-        // TODO: figure out how to make borrowck like not cloning this, it's cool i swear
-        let vs = self.value_stack.clone().into_iter();
-        vs.map(|v| v.to_string()).collect::<Vec<_>>().join(" ")
+        if self.value_stack.len() > 1 {
+            // TODO: figure out how to make borrowck like not cloning this, it's cool i swear
+            ValuePart::List(self.value_stack.clone())
+        } else {
+            self.value_stack.pop().unwrap_or(ValuePart::Number(0.0))
+        }
     }
 
     fn math_machine(&mut self) {
@@ -105,7 +108,9 @@ impl<'a> Evaluator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sass::value_part::ValuePart;
     use std::collections::HashMap;
+    use std::borrow::Cow::Borrowed;
 
     #[test]
     fn it_subtitutes_variable_values() {
@@ -114,54 +119,74 @@ mod tests {
         vars.insert("$quux".to_string(), "3px 10px".to_string());
 
         let answer = Evaluator::new("foo $bar 199.82 baz $quux", &vars).evaluate();
-        assert_eq!("foo 4 199.82 baz 3px 10px", answer);
+
+        assert_eq!(
+            ValuePart::List(vec![
+                ValuePart::String(Borrowed("foo")),
+                ValuePart::List(vec![
+                    ValuePart::String(Borrowed("4")),
+                    ValuePart::Number(199.82)
+                ]),
+                ValuePart::String(Borrowed("baz")),
+                ValuePart::String(Borrowed("3px 10px"))
+            ]),
+            answer
+        );
     }
 
     #[test]
     fn it_handles_units() {
-        let answer = Evaluator::new("0px", &HashMap::new()).evaluate();
-        assert_eq!("0px", answer);
+        let vars = HashMap::new();
+        let answer = Evaluator::new("0px", &vars).evaluate();
+        assert_eq!(ValuePart::NumberUnits(0.0, Borrowed("px")), answer);
     }
 
     #[test]
     fn it_adds() {
-        let answer = Evaluator::new("1 + 2", &HashMap::new()).evaluate();
-        assert_eq!("3", answer);
+        let vars = HashMap::new();
+        let answer = Evaluator::new("1 + 2", &vars).evaluate();
+        assert_eq!(ValuePart::Number(3.0), answer);
     }
 
     #[test]
     fn it_doesnt_need_space_around_operators() {
-        let answer = Evaluator::new("12*4", &HashMap::new()).evaluate();
-        assert_eq!("48", answer);
+        let vars = HashMap::new();
+        let answer = Evaluator::new("12*4", &vars).evaluate();
+        assert_eq!(ValuePart::Number(48.0), answer);
     }
 
     #[test]
     fn it_divides_and_adds_with_the_right_precedence() {
-        let answer = Evaluator::new("3 + 3/4", &HashMap::new()).evaluate();
-        assert_eq!("3.75", answer);
+        let vars = HashMap::new();
+        let answer = Evaluator::new("3 + 3/4", &vars).evaluate();
+        assert_eq!(ValuePart::Number(3.75), answer);
     }
 
     #[test]
     fn it_gets_the_right_precedence_with_parens() {
-        let answer = Evaluator::new("(3 + 3)/4", &HashMap::new()).evaluate();
-        assert_eq!("1.5", answer);
+        let vars = HashMap::new();
+        let answer = Evaluator::new("(3 + 3)/4", &vars).evaluate();
+        assert_eq!(ValuePart::Number(1.5), answer);
     }
 
     #[test]
     fn it_does_string_concat_when_adding_to_list() {
-        let answer = Evaluator::new("2+(3 4)", &HashMap::new()).evaluate();
-        assert_eq!("23 4", answer);
+        let vars = HashMap::new();
+        let answer = Evaluator::new("2+(3 4)", &vars).evaluate();
+        assert_eq!(ValuePart::List(vec![ValuePart::String(Borrowed("23")), ValuePart::Number(4.0)]), answer);
     }
 
     #[test]
     fn it_does_string_concat_when_adding_to_list_in_a_list() {
-        let answer = Evaluator::new("(2+(3 4) 5)", &HashMap::new()).evaluate();
-        assert_eq!("23 4 5", answer);
+        let vars = HashMap::new();
+        let answer = Evaluator::new("(2+(3 4) 5)", &vars).evaluate();
+        assert_eq!(ValuePart::List(vec![ValuePart::String(Borrowed("23")), ValuePart::Number(4.0), ValuePart::Number(5.0)]), answer);
     }
 
     #[test]
     fn it_divides_because_parens_and_string_concats_because_list() {
-        let answer = Evaluator::new("1 + (5/10 2 3)", &HashMap::new()).evaluate();
-        assert_eq!("10.5 2 3", answer);
+        let vars = HashMap::new();
+        let answer = Evaluator::new("1 + (5/10 2 3)", &vars).evaluate();
+        assert_eq!(ValuePart::List(vec![ValuePart::String(Borrowed("10.5")), ValuePart::Number(2.0), ValuePart::Number(3.0)]), answer);
     }
 }
