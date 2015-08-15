@@ -10,7 +10,7 @@ A Sass compiler written natively in Rust.
 * Clone [sass-spec](https://github.com/sass/sass-spec/) and get ruby and all that good stuff
 * In sass-spec, run `./sass-spec.rb -c '/path/to/your/sassers/executable'
 
-Last run I did was 299 passing and 4200 failing out of 4499 tests. So yeah, REALLY NOT DONE YET.
+Last run I did was 283 passing and 4216 failing out of 4499 tests. So yeah, REALLY NOT DONE YET.
 
 Progress bar: [=-------------------]
 
@@ -26,7 +26,5 @@ MIT. See LICENSE.
 
 ## TODO
 
-* Travis running sass-spec
 * Compare speed/memory usage to libsass
 * Profile if it's significantly worse than libsass and fix
-* Shell script for running sets of sass-specs
