@@ -69,6 +69,9 @@ impl Op {
                     f.append(&mut ve);
                     ValuePart::List(f)
                 },
+                ValuePart::Computed(..) => {
+                    self.apply_math(first, second)
+                },
                 _ => ValuePart::List(vec![first, ValuePart::Operator(*self), second]),
             }
         } else {
@@ -79,6 +82,9 @@ impl Op {
     fn apply_math<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
         let (first_num, second_num) = match (first, second) {
             (ValuePart::Number(f), ValuePart::Number(s)) => (f, s),
+            (ValuePart::Number(f), ValuePart::Computed(s)) => (f, s),
+            (ValuePart::Computed(f), ValuePart::Number(s)) => (f, s),
+            (ValuePart::Computed(f), ValuePart::Computed(s)) => (f, s),
             (f, s) => return ValuePart::String(format!("Invalid arguments {:?} {:?}", f, s).into()),
         };
         let result = match *self {
@@ -89,7 +95,7 @@ impl Op {
             Op::Percent => first_num % second_num,
             _ => 0.0,
         };
-        ValuePart::Number(result)
+        ValuePart::Computed(result)
     }
 
     pub fn same_or_greater_precedence(self, other: Op) -> bool {

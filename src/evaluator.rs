@@ -169,7 +169,7 @@ mod tests {
             ValuePart::Operator(Op::Plus),
             ValuePart::Number(2.0),
         ]).evaluate();
-        assert_eq!(ValuePart::Number(3.0), answer);
+        assert_eq!(ValuePart::Computed(3.0), answer);
     }
 
     #[test]
@@ -181,7 +181,7 @@ mod tests {
             ValuePart::Operator(Op::Slash),
             ValuePart::Number(4.0),
         ]).evaluate();
-        assert_eq!(ValuePart::Number(3.75), answer);
+        assert_eq!(ValuePart::Computed(3.75), answer);
     }
 
     #[test]
@@ -195,7 +195,7 @@ mod tests {
             ValuePart::Operator(Op::Slash),
             ValuePart::Number(4.0),
         ]).evaluate();
-        assert_eq!(ValuePart::Number(1.5), answer);
+        assert_eq!(ValuePart::Computed(1.5), answer);
     }
 
     #[test]
