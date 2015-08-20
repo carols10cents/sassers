@@ -275,4 +275,19 @@ mod tests {
             ValuePart::Number(5.0),
         ]), answer);
     }
+
+    #[test]
+    fn it_does_divide_when_other_math_is_involved() {
+        let answer = Evaluator::new(vec![
+            ValuePart::Number(1.0),
+            ValuePart::Operator(Op::Slash),
+            ValuePart::Number(2.0),
+            ValuePart::Operator(Op::Plus),
+            ValuePart::Number(1.0),
+            ValuePart::Operator(Op::Slash),
+            ValuePart::Number(2.0),
+        ]).evaluate();
+
+        assert_eq!(ValuePart::Number(1.0), answer);
+    }
 }
