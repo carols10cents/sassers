@@ -41,14 +41,18 @@ impl Op {
         }
     }
 
-    fn apply_list<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
-        match (&first, second) {
-            (&ValuePart::Number(f), ValuePart::List(mut l)) => {
+    fn apply_list<'a>(&self, mut first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
+        let mut l = match second {
+            ValuePart::List(contents) => contents,
+            _ => unreachable!(), // only calling this on lists i swear
+        };
+        match first {
+            ValuePart::Number(f) => {
                 if l.iter().any(|item| *item == ValuePart::Operator(Op::Slash)) {
                     let mut ve = vec![ValuePart::Operator(Op::LeftParen)];
                     l.push(ValuePart::Operator(Op::RightParen));
                     ve.append(&mut l);
-                    self.apply_math(first, Evaluator::new(ve).evaluate())
+                    self.apply_math(ValuePart::Number(f), Evaluator::new(ve).evaluate())
                 } else {
                     let new_first_item_value = format!("{}{}", f, l.remove(0));
                     let v = ValuePart::String(new_first_item_value.into());
@@ -57,7 +61,11 @@ impl Op {
                     ValuePart::List(ve)
                 }
             },
-            (_, _) => ValuePart::List(vec![]),
+            ValuePart::List(ref mut f) => {
+                f.extend(l);
+                ValuePart::List(f.clone())
+            },
+            _ => ValuePart::List(vec![]),
         }
     }
 
