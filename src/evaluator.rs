@@ -290,6 +290,6 @@ mod tests {
             ValuePart::Number(2.0),
         ]).evaluate();
 
-        assert_eq!(ValuePart::Number(1.0), answer);
+        assert_eq!(ValuePart::Computed(1.0), answer);
     }
 }

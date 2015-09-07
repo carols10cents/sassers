@@ -1,6 +1,7 @@
 use sass::value_part::ValuePart;
 use evaluator::Evaluator;
 
+use std::borrow::Cow::Borrowed;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -41,31 +42,61 @@ impl Op {
         }
     }
 
-    fn apply_list<'a>(&self, mut first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
-        let mut l = match second {
-            ValuePart::List(contents) => contents,
-            _ => unreachable!(), // only calling this on lists i swear
+    fn apply_list<'a>(&self, mut first: ValuePart<'a>, mut second: ValuePart<'a>) -> ValuePart<'a> {
+        let first_collapsed = match first {
+            ValuePart::List(ref mut l) => {
+                let mut ve = vec![ValuePart::Operator(Op::LeftParen)];
+                l.push(ValuePart::Operator(Op::RightParen));
+                ve.append(l);
+                Evaluator::new(ve).evaluate()
+            },
+            _ => first,
         };
-        match first {
-            ValuePart::Number(f) => {
-                if l.iter().any(|item| *item == ValuePart::Operator(Op::Slash)) {
-                    let mut ve = vec![ValuePart::Operator(Op::LeftParen)];
-                    l.push(ValuePart::Operator(Op::RightParen));
-                    ve.append(&mut l);
-                    self.apply_math(ValuePart::Number(f), Evaluator::new(ve).evaluate())
-                } else {
-                    let new_first_item_value = format!("{}{}", f, l.remove(0));
-                    let v = ValuePart::String(new_first_item_value.into());
-                    let mut ve = vec![v];
-                    ve.append(&mut l);
-                    ValuePart::List(ve)
-                }
+
+        let second_collapsed = match second {
+            ValuePart::List(ref mut l) => {
+                let mut ve = vec![ValuePart::Operator(Op::LeftParen)];
+                l.push(ValuePart::Operator(Op::RightParen));
+                ve.append(l);
+                Evaluator::new(ve).evaluate()
             },
-            ValuePart::List(ref mut f) => {
-                f.extend(l);
-                ValuePart::List(f.clone())
+            _ => second,
+        };
+
+        match (first_collapsed, second_collapsed) {
+            (ValuePart::Computed(fnum), ValuePart::List(mut slist)) |
+            (ValuePart::Number(fnum), ValuePart::List(mut slist)) => {
+                let new_first_item_value = format!("{}{}", fnum, slist.remove(0));
+                let v = ValuePart::String(new_first_item_value.into());
+                let mut ve = vec![v];
+                ve.append(&mut slist);
+                ValuePart::List(ve)
             },
-            _ => ValuePart::List(vec![]),
+            (ValuePart::List(mut flist), ValuePart::Computed(snum)) |
+            (ValuePart::List(mut flist), ValuePart::Number(snum)) => {
+                let new_last_item_value = format!("{}{}",
+                    flist.pop().unwrap_or(ValuePart::String(Borrowed(""))),
+                    snum
+                );
+                let v = ValuePart::String(new_last_item_value.into());
+                flist.push(v);
+                ValuePart::List(flist)
+            },
+            (ValuePart::List(mut flist), ValuePart::List(slist)) => {
+                flist.extend(slist);
+                ValuePart::List(flist.clone())
+            },
+            (f @ ValuePart::Computed(..), s @ ValuePart::Computed(..)) |
+            (f @ ValuePart::Computed(..), s @ ValuePart::Number(..)) |
+            (f @ ValuePart::Number(..), s @ ValuePart::Computed(..)) => {
+                self.apply_math(f, s)
+            },
+            (unk_first, unk_second) => {
+                panic!(
+                    "Unknown apply_list match:\n  first: {:?}\n  second: {:?}",
+                    unk_first, unk_second
+                )
+            },
         }
     }
 
