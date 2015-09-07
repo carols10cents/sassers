@@ -65,7 +65,9 @@ where T: Iterator<Item = ValuePart<'a>>
                     self.value_stack.push(s);
                     last_was_an_operator = false;
                 },
-                n @ ValuePart::Number(..) | n @ ValuePart::NumberUnits(..) => {
+                n @ ValuePart::Number(..) |
+                n @ ValuePart::NumberUnits(..) |
+                n @ ValuePart::Computed(..) => {
                     if last_was_an_operator {
                         self.value_stack.push(n);
                     } else {
@@ -108,7 +110,7 @@ where T: Iterator<Item = ValuePart<'a>>
                         last_was_an_operator = true;
                     }
                 },
-                _ => unreachable!(),
+                other => panic!("Got unexpected ValuePart {:?}", other),
             }
         }
 
