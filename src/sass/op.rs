@@ -1,4 +1,5 @@
 use sass::value_part::ValuePart;
+use sass::number_value::NumberValue;
 use evaluator::Evaluator;
 
 use std::borrow::Cow::Borrowed;
@@ -59,7 +60,6 @@ impl Op {
         let second_collapsed = self.force_list_collapse(second);
 
         match (first_collapsed, second_collapsed) {
-            (ValuePart::Computed(fnum), ValuePart::List(mut slist)) |
             (ValuePart::Number(fnum), ValuePart::List(mut slist)) => {
                 let new_first_item_value = format!("{}{}", fnum, slist.remove(0));
                 let v = ValuePart::String(new_first_item_value.into());
@@ -67,7 +67,6 @@ impl Op {
                 ve.append(&mut slist);
                 ValuePart::List(ve)
             },
-            (ValuePart::List(mut flist), ValuePart::Computed(snum)) |
             (ValuePart::List(mut flist), ValuePart::Number(snum)) => {
                 let new_last_item_value = format!("{}{}",
                     flist.pop().unwrap_or(ValuePart::String(Borrowed(""))),
@@ -81,9 +80,7 @@ impl Op {
                 flist.extend(slist);
                 ValuePart::List(flist.clone())
             },
-            (f @ ValuePart::Computed(..), s @ ValuePart::Computed(..)) |
-            (f @ ValuePart::Computed(..), s @ ValuePart::Number(..)) |
-            (f @ ValuePart::Number(..), s @ ValuePart::Computed(..)) => {
+            (f @ ValuePart::Number(..), s @ ValuePart::Number(..)) => {
                 self.apply_math(f, s)
             },
             (unk_first, unk_second) => {
@@ -103,8 +100,8 @@ impl Op {
                     f.append(&mut ve);
                     ValuePart::List(f)
                 },
-                ValuePart::Computed(..) => {
-                    self.apply_math(first, second)
+                ValuePart::Number(ref n) if n.computed => {
+                    self.apply_math(ValuePart::Number(n.clone()), second)
                 },
                 _ => ValuePart::List(vec![first, ValuePart::Operator(*self), second]),
             }
@@ -115,10 +112,7 @@ impl Op {
 
     fn apply_math<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
         let (first_num, second_num) = match (first, second) {
-            (ValuePart::Number(f), ValuePart::Number(s)) => (f, s),
-            (ValuePart::Number(f), ValuePart::Computed(s)) => (f, s),
-            (ValuePart::Computed(f), ValuePart::Number(s)) => (f, s),
-            (ValuePart::Computed(f), ValuePart::Computed(s)) => (f, s),
+            (ValuePart::Number(f), ValuePart::Number(s)) => (f.scalar, s.scalar),
             (f, s) => return ValuePart::String(format!("Invalid arguments {:?} {:?}", f, s).into()),
         };
         let result = match *self {
@@ -129,7 +123,7 @@ impl Op {
             Op::Percent => first_num % second_num,
             _ => 0.0,
         };
-        ValuePart::Computed(result)
+        ValuePart::Number(NumberValue::computed(result))
     }
 
     pub fn same_or_greater_precedence(self, other: Op) -> bool {

@@ -1,4 +1,5 @@
 use sass::value_part::ValuePart;
+use sass::number_value::NumberValue;
 use sass::op::Op;
 use value_tokenizer::ValueTokenizer;
 
@@ -65,9 +66,7 @@ where T: Iterator<Item = ValuePart<'a>>
                     self.value_stack.push(s);
                     last_was_an_operator = false;
                 },
-                n @ ValuePart::Number(..) |
-                n @ ValuePart::NumberUnits(..) |
-                n @ ValuePart::Computed(..) => {
+                n @ ValuePart::Number(..) => {
                     if last_was_an_operator {
                         self.value_stack.push(n);
                     } else {
@@ -122,14 +121,14 @@ where T: Iterator<Item = ValuePart<'a>>
             // TODO: figure out how to make borrowck like not cloning this, it's cool i swear
             ValuePart::List(self.value_stack.clone())
         } else {
-            self.value_stack.pop().unwrap_or(ValuePart::Number(0.0))
+            self.value_stack.pop().unwrap_or(ValuePart::Number(NumberValue::from_scalar(0.0)))
         }
     }
 
     fn math_machine(&mut self) {
         let op = self.op_stack.pop().unwrap_or(Op::Plus);
-        let second = self.value_stack.pop().unwrap_or(ValuePart::Number(0.0));
-        let first  = self.value_stack.pop().unwrap_or(ValuePart::Number(0.0));
+        let second = self.value_stack.pop().unwrap_or(ValuePart::Number(NumberValue::from_scalar(0.0)));
+        let first  = self.value_stack.pop().unwrap_or(ValuePart::Number(NumberValue::from_scalar(0.0)));
         self.value_stack.push(op.apply(first, second, self.paren_level));
     }
 }
@@ -138,6 +137,7 @@ where T: Iterator<Item = ValuePart<'a>>
 mod tests {
     use super::*;
     use sass::value_part::ValuePart;
+    use sass::number_value::NumberValue;
     use sass::op::Op;
     use std::collections::HashMap;
     use std::borrow::Cow::Borrowed;
@@ -155,7 +155,7 @@ mod tests {
                 ValuePart::String(Borrowed("foo")),
                 ValuePart::List(vec![
                     ValuePart::String(Borrowed("4")),
-                    ValuePart::Number(199.82)
+                    ValuePart::Number(NumberValue::from_scalar(199.82))
                 ]),
                 ValuePart::String(Borrowed("baz")),
                 ValuePart::String(Borrowed("3px 10px"))
@@ -167,53 +167,53 @@ mod tests {
     #[test]
     fn it_adds() {
         let answer = Evaluator::new(vec![
-            ValuePart::Number(1.0),
+            ValuePart::Number(NumberValue::from_scalar(1.0)),
             ValuePart::Operator(Op::Plus),
-            ValuePart::Number(2.0),
+            ValuePart::Number(NumberValue::from_scalar(2.0)),
         ]).evaluate();
-        assert_eq!(ValuePart::Computed(3.0), answer);
+        assert_eq!(ValuePart::Number(NumberValue::computed(3.0)), answer);
     }
 
     #[test]
     fn it_divides_and_adds_with_the_right_precedence() {
         let answer = Evaluator::new(vec![
-            ValuePart::Number(3.0),
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
             ValuePart::Operator(Op::Plus),
-            ValuePart::Number(3.0),
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
             ValuePart::Operator(Op::Slash),
-            ValuePart::Number(4.0),
+            ValuePart::Number(NumberValue::from_scalar(4.0)),
         ]).evaluate();
-        assert_eq!(ValuePart::Computed(3.75), answer);
+        assert_eq!(ValuePart::Number(NumberValue::computed(3.75)), answer);
     }
 
     #[test]
     fn it_gets_the_right_precedence_with_parens() {
         let answer = Evaluator::new(vec![
             ValuePart::Operator(Op::LeftParen),
-            ValuePart::Number(3.0),
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
             ValuePart::Operator(Op::Plus),
-            ValuePart::Number(3.0),
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
             ValuePart::Operator(Op::RightParen),
             ValuePart::Operator(Op::Slash),
-            ValuePart::Number(4.0),
+            ValuePart::Number(NumberValue::from_scalar(4.0)),
         ]).evaluate();
-        assert_eq!(ValuePart::Computed(1.5), answer);
+        assert_eq!(ValuePart::Number(NumberValue::computed(1.5)), answer);
     }
 
     #[test]
     fn it_does_string_concat_when_adding_to_list() {
         let answer = Evaluator::new(vec![
-            ValuePart::Number(2.0),
+            ValuePart::Number(NumberValue::from_scalar(2.0)),
             ValuePart::Operator(Op::Plus),
             ValuePart::Operator(Op::LeftParen),
-            ValuePart::Number(3.0),
-            ValuePart::Number(4.0),
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
+            ValuePart::Number(NumberValue::from_scalar(4.0)),
             ValuePart::Operator(Op::RightParen),
         ]).evaluate();
 
         assert_eq!(ValuePart::List(vec![
             ValuePart::String(Borrowed("23")),
-            ValuePart::Number(4.0)
+            ValuePart::Number(NumberValue::from_scalar(4.0))
         ]), answer);
     }
 
@@ -221,75 +221,75 @@ mod tests {
     fn it_does_string_concat_when_adding_to_list_in_a_list() {
         let answer = Evaluator::new(vec![
             ValuePart::Operator(Op::LeftParen),
-            ValuePart::Number(2.0),
+            ValuePart::Number(NumberValue::from_scalar(2.0)),
             ValuePart::Operator(Op::Plus),
             ValuePart::Operator(Op::LeftParen),
-            ValuePart::Number(3.0),
-            ValuePart::Number(4.0),
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
+            ValuePart::Number(NumberValue::from_scalar(4.0)),
             ValuePart::Operator(Op::RightParen),
-            ValuePart::Number(5.0),
+            ValuePart::Number(NumberValue::from_scalar(5.0)),
             ValuePart::Operator(Op::RightParen),
         ]).evaluate();
 
         assert_eq!(ValuePart::List(vec![
             ValuePart::String(Borrowed("23")),
-            ValuePart::Number(4.0),
-            ValuePart::Number(5.0)
+            ValuePart::Number(NumberValue::from_scalar(4.0)),
+            ValuePart::Number(NumberValue::from_scalar(5.0)),
         ]), answer);
     }
 
     #[test]
     fn it_divides_because_parens_and_string_concats_because_list() {
         let answer = Evaluator::new(vec![
-            ValuePart::Number(1.0),
+            ValuePart::Number(NumberValue::from_scalar(1.0)),
             ValuePart::Operator(Op::Plus),
             ValuePart::Operator(Op::LeftParen),
-            ValuePart::Number(5.0),
+            ValuePart::Number(NumberValue::from_scalar(5.0)),
             ValuePart::Operator(Op::Slash),
-            ValuePart::Number(10.0),
-            ValuePart::Number(2.0),
-            ValuePart::Number(3.0),
+            ValuePart::Number(NumberValue::from_scalar(10.0)),
+            ValuePart::Number(NumberValue::from_scalar(2.0)),
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
             ValuePart::Operator(Op::RightParen),
         ]).evaluate();
 
         assert_eq!(ValuePart::List(vec![
             ValuePart::String(Borrowed("10.5")),
-            ValuePart::Number(2.0),
-            ValuePart::Number(3.0)
+            ValuePart::Number(NumberValue::from_scalar(2.0)),
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
         ]), answer);
     }
 
     #[test]
     fn it_does_not_divide_when_slash_is_separating() {
         let answer = Evaluator::new(vec![
-            ValuePart::Number(15.0),
+            ValuePart::Number(NumberValue::from_scalar(15.0)),
             ValuePart::Operator(Op::Slash),
-            ValuePart::Number(3.0),
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
             ValuePart::Operator(Op::Slash),
-            ValuePart::Number(5.0),
+            ValuePart::Number(NumberValue::from_scalar(5.0)),
         ]).evaluate();
 
         assert_eq!(ValuePart::List(vec![
-            ValuePart::Number(15.0),
+            ValuePart::Number(NumberValue::from_scalar(15.0)),
             ValuePart::Operator(Op::Slash),
-            ValuePart::Number(3.0),
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
             ValuePart::Operator(Op::Slash),
-            ValuePart::Number(5.0),
+            ValuePart::Number(NumberValue::from_scalar(5.0)),
         ]), answer);
     }
 
     #[test]
     fn it_does_divide_when_other_math_is_involved() {
         let answer = Evaluator::new(vec![
-            ValuePart::Number(1.0),
+            ValuePart::Number(NumberValue::from_scalar(1.0)),
             ValuePart::Operator(Op::Slash),
-            ValuePart::Number(2.0),
+            ValuePart::Number(NumberValue::from_scalar(2.0)),
             ValuePart::Operator(Op::Plus),
-            ValuePart::Number(1.0),
+            ValuePart::Number(NumberValue::from_scalar(1.0)),
             ValuePart::Operator(Op::Slash),
-            ValuePart::Number(2.0),
+            ValuePart::Number(NumberValue::from_scalar(2.0)),
         ]).evaluate();
 
-        assert_eq!(ValuePart::Computed(1.0), answer);
+        assert_eq!(ValuePart::Number(NumberValue::computed(1.0)), answer);
     }
 }

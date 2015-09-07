@@ -1,3 +1,4 @@
+use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
 use sass::op::Op;
 
@@ -38,13 +39,15 @@ impl<'a> ValueTokenizer<'a> {
                 let unit_start = i;
                 i += self.scan_while(&self.value_str[i..limit], isnt_space);
                 self.offset = i;
-                Some(ValuePart::NumberUnits(
+                Some(ValuePart::Number(NumberValue::with_units(
                     self.value_str[start..unit_start].parse().unwrap_or(0.0),
-                    Borrowed(&self.value_str[unit_start..i])
-                ))
+                    Borrowed(&self.value_str[unit_start..i]),
+                )))
             }
             else {
-                Some(ValuePart::Number(self.value_str[start..i].parse().unwrap_or(0.0)))
+                Some(ValuePart::Number(NumberValue::from_scalar(
+                    self.value_str[start..i].parse().unwrap_or(0.0)
+                )))
             }
         } else if self.bytes[start] == b'$' {
             i += self.scan_while(&self.value_str[i..limit], isnt_space);
@@ -120,6 +123,7 @@ fn is_operator(c: u8) -> bool {
 mod tests {
     use super::*;
     use sass::value_part::ValuePart;
+    use sass::number_value::NumberValue;
     use sass::op::Op;
     use std::borrow::Cow::Borrowed;
 
@@ -158,22 +162,25 @@ mod tests {
     #[test]
     fn it_returns_number() {
         let mut vt = ValueTokenizer::new("3");
-        assert_eq!(Some(ValuePart::Number(3.0)), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(3.0))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_two_numbers() {
         let mut vt = ValueTokenizer::new("3 8.9");
-        assert_eq!(Some(ValuePart::Number(3.0)), vt.next());
-        assert_eq!(Some(ValuePart::Number(8.9)), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(3.0))), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(8.9))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_numbers_with_units() {
         let mut vt = ValueTokenizer::new("3px");
-        assert_eq!(Some(ValuePart::NumberUnits(3.0, Borrowed(&"px"))), vt.next());
+        assert_eq!(
+            Some(ValuePart::Number(NumberValue::with_units(3.0, Borrowed(&"px")))),
+            vt.next()
+        );
         assert_eq!(None, vt.next());
     }
 
@@ -187,29 +194,29 @@ mod tests {
     #[test]
     fn it_returns_numbers_and_operators() {
         let mut vt = ValueTokenizer::new("6 + 75.2");
-        assert_eq!(Some(ValuePart::Number(6.0)), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(6.0))), vt.next());
         assert_eq!(Some(ValuePart::Operator(Op::Plus)), vt.next());
-        assert_eq!(Some(ValuePart::Number(75.2)), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(75.2))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_numbers_and_operators_without_spaces() {
         let mut vt = ValueTokenizer::new("6+75.2");
-        assert_eq!(Some(ValuePart::Number(6.0)), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(6.0))), vt.next());
         assert_eq!(Some(ValuePart::Operator(Op::Plus)), vt.next());
-        assert_eq!(Some(ValuePart::Number(75.2)), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(75.2))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_does_stuff_with_parens() {
         let mut vt = ValueTokenizer::new("2+(3 4)");
-        assert_eq!(Some(ValuePart::Number(2.0)), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(2.0))), vt.next());
         assert_eq!(Some(ValuePart::Operator(Op::Plus)), vt.next());
         assert_eq!(Some(ValuePart::Operator(Op::LeftParen)), vt.next());
-        assert_eq!(Some(ValuePart::Number(3.0)), vt.next());
-        assert_eq!(Some(ValuePart::Number(4.0)), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(3.0))), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(4.0))), vt.next());
         assert_eq!(Some(ValuePart::Operator(Op::RightParen)), vt.next());
         assert_eq!(None, vt.next());
     }
@@ -217,11 +224,11 @@ mod tests {
     #[test]
     fn it_does_stuff_with_slash_separators() {
         let mut vt = ValueTokenizer::new("15 / 3 / 5");
-        assert_eq!(Some(ValuePart::Number(15.0)), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(15.0))), vt.next());
         assert_eq!(Some(ValuePart::Operator(Op::Slash)), vt.next());
-        assert_eq!(Some(ValuePart::Number(3.0)), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(3.0))), vt.next());
         assert_eq!(Some(ValuePart::Operator(Op::Slash)), vt.next());
-        assert_eq!(Some(ValuePart::Number(5.0)), vt.next());
+        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(5.0))), vt.next());
         assert_eq!(None, vt.next());
     }
 }

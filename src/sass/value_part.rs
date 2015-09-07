@@ -1,4 +1,5 @@
 use sass::op::Op;
+use sass::number_value::NumberValue;
 
 use std::fmt;
 use std::borrow::Cow;
@@ -7,11 +8,9 @@ use std::borrow::Cow;
 pub enum ValuePart<'a> {
     Variable(Cow<'a, str>),
     String(Cow<'a, str>),
-    Number(f32),
-    NumberUnits(f32, Cow<'a, str>),
+    Number(NumberValue<'a>),
     Operator(Op),
     List(Vec<ValuePart<'a>>),
-    Computed(f32),
 }
 
 impl<'a> fmt::Display for ValuePart<'a> {
@@ -20,11 +19,9 @@ impl<'a> fmt::Display for ValuePart<'a> {
             ValuePart::Variable(ref name) => write!(f, "{}", name),
             ValuePart::String(ref str) => write!(f, "{}", str),
             ValuePart::Number(ref num) => write!(f, "{}", num),
-            ValuePart::NumberUnits(ref num, ref units) => write!(f, "{}{}", num, units),
             ValuePart::List(ref list) => {
                 write!(f, "{}", list.iter().map( |l| l.to_string() ).collect::<Vec<_>>().join(" "))
             },
-            ValuePart::Computed(ref vp) => write!(f, "{}", vp),
             ValuePart::Operator(Op::Slash) => write!(f, "/"),
             ValuePart::Operator(..) => unreachable!(),
         }
