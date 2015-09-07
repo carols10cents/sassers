@@ -18,22 +18,29 @@ impl<I> VariableMapper<I> {
         }
     }
 
-    fn replace_children_in_scope<'b>(&self, children: Vec<Event<'b>>, starting_variables: &HashMap<String, String>) -> Vec<Event<'b>> {
-        let mut local_variables = starting_variables.clone();
-
+    fn replace_children_in_scope<'b>(&self, children: Vec<Event<'b>>, mut local_variables: HashMap<String, String>) -> Vec<Event<'b>> {
         children.into_iter().filter_map(|c|
             match c {
                 Event::Variable(SassVariable { name, value }) => {
-                    let val = Evaluator::new_from_string(&value, &local_variables).evaluate().to_string();
+                    let val = Evaluator::new_from_string(
+                        &value, &local_variables
+                    ).evaluate().to_string();
                     local_variables.insert((*name).to_string(), val);
                     None
                 },
                 Event::Property(name, value) => {
-                    Some(Event::Property(name, Evaluator::new_from_string(&value, &local_variables).evaluate().to_string().into()))
+                    Some(Event::Property(
+                        name,
+                        Evaluator::new_from_string(
+                            &value, &local_variables
+                        ).evaluate().to_string().into()
+                    ))
                 },
                 Event::ChildRule(rule) => {
                     Some(Event::ChildRule(SassRule {
-                        children: self.replace_children_in_scope(rule.children, &local_variables), ..rule
+                        children: self.replace_children_in_scope(
+                            rule.children, local_variables.clone()
+                        ), ..rule
                     }))
                 },
                 other => Some(other)
@@ -50,13 +57,17 @@ impl<'a, I> Iterator for VariableMapper<I>
     fn next(&mut self) -> Option<TopLevelEvent<'a>> {
         match self.tokenizer.next() {
             Some(TopLevelEvent::Variable(SassVariable { name, value })) => {
-                let val = Evaluator::new_from_string(&value, &self.variables).evaluate().to_string();
+                let val = Evaluator::new_from_string(
+                    &value, &self.variables
+                ).evaluate().to_string();
                 self.variables.insert((*name).to_string(), val);
                 self.next()
             },
             Some(TopLevelEvent::Rule(sass_rule)) => {
                 Some(TopLevelEvent::Rule(SassRule {
-                    children: self.replace_children_in_scope(sass_rule.children, &self.variables), ..sass_rule
+                    children: self.replace_children_in_scope(
+                        sass_rule.children, self.variables.clone()
+                    ), ..sass_rule
                 }))
             },
             other => other,
