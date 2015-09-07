@@ -42,26 +42,21 @@ impl Op {
         }
     }
 
-    fn apply_list<'a>(&self, mut first: ValuePart<'a>, mut second: ValuePart<'a>) -> ValuePart<'a> {
-        let first_collapsed = match first {
+    fn force_list_collapse<'a>(&self, mut vp: ValuePart<'a>) -> ValuePart<'a> {
+        match vp {
             ValuePart::List(ref mut l) => {
                 let mut ve = vec![ValuePart::Operator(Op::LeftParen)];
                 l.push(ValuePart::Operator(Op::RightParen));
                 ve.append(l);
                 Evaluator::new(ve).evaluate()
             },
-            _ => first,
-        };
+            _ => vp,
+        }
+    }
 
-        let second_collapsed = match second {
-            ValuePart::List(ref mut l) => {
-                let mut ve = vec![ValuePart::Operator(Op::LeftParen)];
-                l.push(ValuePart::Operator(Op::RightParen));
-                ve.append(l);
-                Evaluator::new(ve).evaluate()
-            },
-            _ => second,
-        };
+    fn apply_list<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
+        let first_collapsed  = self.force_list_collapse(first);
+        let second_collapsed = self.force_list_collapse(second);
 
         match (first_collapsed, second_collapsed) {
             (ValuePart::Computed(fnum), ValuePart::List(mut slist)) |
