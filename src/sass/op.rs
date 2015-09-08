@@ -4,6 +4,7 @@ use evaluator::Evaluator;
 
 use std::borrow::Cow::Borrowed;
 use std::str::FromStr;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Op {
@@ -49,7 +50,7 @@ impl Op {
                 let mut ve = vec![ValuePart::Operator(Op::LeftParen)];
                 l.push(ValuePart::Operator(Op::RightParen));
                 ve.append(l);
-                Evaluator::new(ve).evaluate()
+                Evaluator::new(ve).evaluate(&HashMap::new())
             },
             _ => vp,
         }

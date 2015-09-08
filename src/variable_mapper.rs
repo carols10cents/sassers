@@ -23,9 +23,7 @@ impl<'vm, I> VariableMapper<'vm, I> {
         children.into_iter().filter_map(|c|
             match c {
                 Event::Variable(SassVariable { name, value }) => {
-                    let val = Evaluator::new_from_string(
-                        &value, &local_variables
-                    ).evaluate();
+                    let val = Evaluator::new_from_string(&value).evaluate(&local_variables);
                     local_variables.insert((*name).to_string(), val);
                     None
                 },
@@ -33,8 +31,8 @@ impl<'vm, I> VariableMapper<'vm, I> {
                     Some(Event::Property(
                         name,
                         Evaluator::new_from_string(
-                            &value, &local_variables
-                        ).evaluate().to_string().into()
+                            &value
+                        ).evaluate(&local_variables).to_string().into()
                     ))
                 },
                 Event::ChildRule(rule) => {
@@ -59,8 +57,8 @@ impl<'a, I> Iterator for VariableMapper<'a, I>
         match self.tokenizer.next() {
             Some(TopLevelEvent::Variable(SassVariable { name, value })) => {
                 let val = Evaluator::new_from_string(
-                    &value, &self.variables
-                ).evaluate();
+                    &value
+                ).evaluate(&self.variables);
                 self.variables.insert((*name).to_string(), val);
                 self.next()
             },

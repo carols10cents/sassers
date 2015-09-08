@@ -10,18 +10,16 @@ extern crate collections;
 #[derive(Debug)]
 pub struct Evaluator<'a, T> {
     value_tokens: T,
-    variables: Option<&'a HashMap<String, ValuePart<'a>>>,
     value_stack: Vec<ValuePart<'a>>,
     op_stack: Vec<Op>,
     paren_level: i32,
 }
 
 impl<'a> Evaluator<'a, ValueTokenizer<'a>> {
-    pub fn new_from_string(original: &'a str, variables: &'a HashMap<String, ValuePart<'a>>) -> Evaluator<'a, ValueTokenizer<'a>>
+    pub fn new_from_string(original: &'a str) -> Evaluator<'a, ValueTokenizer<'a>>
     {
         Evaluator {
             value_tokens: ValueTokenizer::new(&original),
-            variables: Some(&variables),
             value_stack: Vec::new(),
             op_stack: Vec::new(),
             paren_level: 0,
@@ -34,7 +32,6 @@ impl<'a> Evaluator<'a, collections::vec::IntoIter<ValuePart<'a>>> {
     {
         Evaluator {
             value_tokens: value_tokens.into_iter(),
-            variables: None,
             value_stack: Vec::new(),
             op_stack: Vec::new(),
             paren_level: 0,
@@ -45,19 +42,14 @@ impl<'a> Evaluator<'a, collections::vec::IntoIter<ValuePart<'a>>> {
 impl<'a, T> Evaluator<'a, T>
 where T: Iterator<Item = ValuePart<'a>>
 {
-    pub fn evaluate(&mut self) -> ValuePart<'a> {
+    pub fn evaluate(&mut self, variables: &HashMap<String, ValuePart<'a>>) -> ValuePart<'a> {
         let mut last_was_an_operator = true;
 
         while let Some(part) = self.value_tokens.next() {
             match part {
                 ValuePart::Variable(name) => {
-                    match self.variables {
-                        Some(ref vars) => {
-                            match vars.get(&(*name).to_string()) {
-                                Some(v) => self.value_stack.push(v.clone()),
-                                None => self.value_stack.push(ValuePart::String(name)),
-                            }
-                        },
+                    match variables.get(&(*name).to_string()) {
+                        Some(v) => self.value_stack.push(v.clone()),
                         None => self.value_stack.push(ValuePart::String(name)),
                     }
                     last_was_an_operator = false;
@@ -151,7 +143,7 @@ mod tests {
             ValuePart::Number(NumberValue::with_units(10.0, Borrowed("px"))),
         ]));
 
-        let answer = Evaluator::new_from_string("foo $bar 199.82 baz $quux", &vars).evaluate();
+        let answer = Evaluator::new_from_string("foo $bar 199.82 baz $quux").evaluate(&vars);
 
         assert_eq!(
             ValuePart::List(vec![
@@ -172,7 +164,7 @@ mod tests {
         let mut vars = HashMap::new();
         vars.insert("$three".to_string(), ValuePart::Number(NumberValue::from_scalar(3.0)));
 
-        let answer = Evaluator::new_from_string("15 / $three", &vars).evaluate();
+        let answer = Evaluator::new_from_string("15 / $three").evaluate(&vars);
 
         assert_eq!(
             ValuePart::Number(NumberValue::from_scalar(5.0)),
@@ -186,7 +178,7 @@ mod tests {
             ValuePart::Number(NumberValue::from_scalar(1.0)),
             ValuePart::Operator(Op::Plus),
             ValuePart::Number(NumberValue::from_scalar(2.0)),
-        ]).evaluate();
+        ]).evaluate(&HashMap::new());
         assert_eq!(ValuePart::Number(NumberValue::computed(3.0)), answer);
     }
 
@@ -198,7 +190,7 @@ mod tests {
             ValuePart::Number(NumberValue::from_scalar(3.0)),
             ValuePart::Operator(Op::Slash),
             ValuePart::Number(NumberValue::from_scalar(4.0)),
-        ]).evaluate();
+        ]).evaluate(&HashMap::new());
         assert_eq!(ValuePart::Number(NumberValue::computed(3.75)), answer);
     }
 
@@ -212,7 +204,7 @@ mod tests {
             ValuePart::Operator(Op::RightParen),
             ValuePart::Operator(Op::Slash),
             ValuePart::Number(NumberValue::from_scalar(4.0)),
-        ]).evaluate();
+        ]).evaluate(&HashMap::new());
         assert_eq!(ValuePart::Number(NumberValue::computed(1.5)), answer);
     }
 
@@ -225,7 +217,7 @@ mod tests {
             ValuePart::Number(NumberValue::from_scalar(3.0)),
             ValuePart::Number(NumberValue::from_scalar(4.0)),
             ValuePart::Operator(Op::RightParen),
-        ]).evaluate();
+        ]).evaluate(&HashMap::new());
 
         assert_eq!(ValuePart::List(vec![
             ValuePart::String(Borrowed("23")),
@@ -245,7 +237,7 @@ mod tests {
             ValuePart::Operator(Op::RightParen),
             ValuePart::Number(NumberValue::from_scalar(5.0)),
             ValuePart::Operator(Op::RightParen),
-        ]).evaluate();
+        ]).evaluate(&HashMap::new());
 
         assert_eq!(ValuePart::List(vec![
             ValuePart::String(Borrowed("23")),
@@ -266,7 +258,7 @@ mod tests {
             ValuePart::Number(NumberValue::from_scalar(2.0)),
             ValuePart::Number(NumberValue::from_scalar(3.0)),
             ValuePart::Operator(Op::RightParen),
-        ]).evaluate();
+        ]).evaluate(&HashMap::new());
 
         assert_eq!(ValuePart::List(vec![
             ValuePart::String(Borrowed("10.5")),
@@ -283,7 +275,7 @@ mod tests {
             ValuePart::Number(NumberValue::from_scalar(3.0)),
             ValuePart::Operator(Op::Slash),
             ValuePart::Number(NumberValue::from_scalar(5.0)),
-        ]).evaluate();
+        ]).evaluate(&HashMap::new());
 
         assert_eq!(ValuePart::List(vec![
             ValuePart::Number(NumberValue::from_scalar(15.0)),
@@ -304,7 +296,7 @@ mod tests {
             ValuePart::Number(NumberValue::from_scalar(1.0)),
             ValuePart::Operator(Op::Slash),
             ValuePart::Number(NumberValue::from_scalar(2.0)),
-        ]).evaluate();
+        ]).evaluate(&HashMap::new());
 
         assert_eq!(ValuePart::Number(NumberValue::computed(1.0)), answer);
     }
