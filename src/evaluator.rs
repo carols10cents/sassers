@@ -10,14 +10,14 @@ extern crate collections;
 #[derive(Debug)]
 pub struct Evaluator<'a, T> {
     value_tokens: T,
-    variables: Option<&'a HashMap<String, String>>,
+    variables: Option<&'a HashMap<String, ValuePart<'a>>>,
     value_stack: Vec<ValuePart<'a>>,
     op_stack: Vec<Op>,
     paren_level: i32,
 }
 
 impl<'a> Evaluator<'a, ValueTokenizer<'a>> {
-    pub fn new_from_string(original: &'a str, variables: &'a HashMap<String, String>) -> Evaluator<'a, ValueTokenizer<'a>>
+    pub fn new_from_string(original: &'a str, variables: &'a HashMap<String, ValuePart<'a>>) -> Evaluator<'a, ValueTokenizer<'a>>
     {
         Evaluator {
             value_tokens: ValueTokenizer::new(&original),
@@ -52,9 +52,9 @@ where T: Iterator<Item = ValuePart<'a>>
             match part {
                 ValuePart::Variable(name) => {
                     match self.variables {
-                        Some(vars) => {
+                        Some(ref vars) => {
                             match vars.get(&(*name).to_string()) {
-                                Some(ref v) => self.value_stack.push(ValuePart::String(Borrowed(v))),
+                                Some(v) => self.value_stack.push(v.clone()),
                                 None => self.value_stack.push(ValuePart::String(name)),
                             }
                         },
@@ -145,8 +145,11 @@ mod tests {
     #[test]
     fn it_subtitutes_variable_values() {
         let mut vars = HashMap::new();
-        vars.insert("$bar".to_string(), "4".to_string());
-        vars.insert("$quux".to_string(), "3px 10px".to_string());
+        vars.insert("$bar".to_string(), ValuePart::Number(NumberValue::from_scalar(4.0)));
+        vars.insert("$quux".to_string(), ValuePart::List(vec![
+            ValuePart::Number(NumberValue::with_units(3.0, Borrowed("px"))),
+            ValuePart::Number(NumberValue::with_units(10.0, Borrowed("px"))),
+        ]));
 
         let answer = Evaluator::new_from_string("foo $bar 199.82 baz $quux", &vars).evaluate();
 
@@ -167,7 +170,7 @@ mod tests {
     #[test]
     fn it_divides_if_value_came_from_a_variable() {
         let mut vars = HashMap::new();
-        vars.insert("$three".to_string(), "3".to_string());
+        vars.insert("$three".to_string(), ValuePart::Number(NumberValue::from_scalar(3.0)));
 
         let answer = Evaluator::new_from_string("15 / $three", &vars).evaluate();
 

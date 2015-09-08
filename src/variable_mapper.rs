@@ -3,28 +3,29 @@ use event::Event;
 use top_level_event::TopLevelEvent;
 use sass::rule::SassRule;
 use sass::variable::SassVariable;
+use sass::value_part::ValuePart;
 use std::collections::HashMap;
 
-pub struct VariableMapper<I> {
+pub struct VariableMapper<'vm, I> {
     tokenizer: I,
-    variables: HashMap<String, String>,
+    variables: HashMap<String, ValuePart<'vm>>,
 }
 
-impl<I> VariableMapper<I> {
-    pub fn new(tokenizer: I) -> VariableMapper<I> {
+impl<'vm, I> VariableMapper<'vm, I> {
+    pub fn new(tokenizer: I) -> VariableMapper<'vm, I> {
         VariableMapper {
             tokenizer: tokenizer,
             variables: HashMap::new(),
         }
     }
 
-    fn replace_children_in_scope<'b>(&self, children: Vec<Event<'b>>, mut local_variables: HashMap<String, String>) -> Vec<Event<'b>> {
+    fn replace_children_in_scope<'b>(&self, children: Vec<Event<'b>>, mut local_variables: HashMap<String, ValuePart<'b>>) -> Vec<Event<'b>> {
         children.into_iter().filter_map(|c|
             match c {
                 Event::Variable(SassVariable { name, value }) => {
                     let val = Evaluator::new_from_string(
                         &value, &local_variables
-                    ).evaluate().to_string();
+                    ).evaluate();
                     local_variables.insert((*name).to_string(), val);
                     None
                 },
@@ -49,7 +50,7 @@ impl<I> VariableMapper<I> {
     }
 }
 
-impl<'a, I> Iterator for VariableMapper<I>
+impl<'a, I> Iterator for VariableMapper<'a, I>
     where I: Iterator<Item = TopLevelEvent<'a>>
 {
     type Item = TopLevelEvent<'a>;
@@ -59,7 +60,7 @@ impl<'a, I> Iterator for VariableMapper<I>
             Some(TopLevelEvent::Variable(SassVariable { name, value })) => {
                 let val = Evaluator::new_from_string(
                     &value, &self.variables
-                ).evaluate().to_string();
+                ).evaluate();
                 self.variables.insert((*name).to_string(), val);
                 self.next()
             },
