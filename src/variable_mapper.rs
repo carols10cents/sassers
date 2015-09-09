@@ -5,6 +5,7 @@ use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::value_part::ValuePart;
 use std::collections::HashMap;
+use std::borrow::Cow;
 
 pub struct VariableMapper<'vm, I> {
     tokenizer: I,
@@ -23,9 +24,19 @@ impl<'vm, I> VariableMapper<'vm, I> {
         children.into_iter().filter_map(|c|
             match c {
                 Event::Variable(SassVariable { name, value }) => {
-                    let val = Evaluator::new_from_string(&value).evaluate(&local_variables);
-                    local_variables.insert((*name).to_string(), val);
-                    None
+                    match value {
+                        Cow::Borrowed(w) => {
+                            let val = Evaluator::new_from_string(&w).evaluate(&local_variables);
+                            local_variables.insert((*name).to_string(), val);
+                            None
+                        },
+                        Cow::Owned(poop) => {
+                            let val = Evaluator::new_from_string(&poop).evaluate(&local_variables);
+                            local_variables.insert((*name).to_string(), val.into_owned());
+                            None
+
+                        },
+                    }
                 },
                 Event::Property(name, value) => {
                     Some(Event::Property(
@@ -56,11 +67,18 @@ impl<'a, I> Iterator for VariableMapper<'a, I>
     fn next(&mut self) -> Option<TopLevelEvent<'a>> {
         match self.tokenizer.next() {
             Some(TopLevelEvent::Variable(SassVariable { name, value })) => {
-                let val = Evaluator::new_from_string(
-                    &value
-                ).evaluate(&self.variables);
-                self.variables.insert((*name).to_string(), val);
-                self.next()
+                match value {
+                    Cow::Borrowed(w) => {
+                        let val = Evaluator::new_from_string(&w).evaluate(&self.variables);
+                        self.variables.insert((*name).to_string(), val);
+                        self.next()
+                    },
+                    Cow::Owned(poop) => {
+                        let val = Evaluator::new_from_string(&poop).evaluate(&self.variables);
+                        self.variables.insert((*name).to_string(), val.into_owned());
+                        self.next()
+                    },
+                }
             },
             Some(TopLevelEvent::Rule(sass_rule)) => {
                 Some(TopLevelEvent::Rule(SassRule {

@@ -13,6 +13,18 @@ pub enum ValuePart<'a> {
     List(Vec<ValuePart<'a>>),
 }
 
+impl<'a> ValuePart<'a> {
+    pub fn into_owned(self) -> ValuePart<'static> {
+        match self {
+            ValuePart::Variable(name) => ValuePart::Variable(name.into_owned().into()),
+            ValuePart::String(str) => ValuePart::String(str.into_owned().into()),
+            ValuePart::Number(nv) => ValuePart::Number(nv.into_owned().into()),
+            ValuePart::List(v) => ValuePart::List(v.into_iter().map(|p| p.into_owned().into()).collect::<Vec<_>>()),
+            ValuePart::Operator(o) => ValuePart::Operator(o),
+        }
+    }
+}
+
 impl<'a> fmt::Display for ValuePart<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {

@@ -9,7 +9,7 @@ pub struct NumberValue<'a> {
     pub computed: bool,
 }
 
-impl<'a> NumberValue<'a> {
+impl<'a, 'b> NumberValue<'a> {
     pub fn from_scalar(num: f32) -> NumberValue<'a> {
         NumberValue {
             scalar:   num,
@@ -33,6 +33,18 @@ impl<'a> NumberValue<'a> {
             computed: false,
         }
     }
+
+    pub fn into_owned(self) -> NumberValue<'b> {
+        NumberValue {
+            scalar: self.scalar,
+            unit: match self.unit {
+                Some(u) => Some(u.into_owned().into()),
+                None => None,
+            },
+            computed: self.computed,
+        }
+    }
+
 }
 
 impl<'a> fmt::Display for NumberValue<'a> {
