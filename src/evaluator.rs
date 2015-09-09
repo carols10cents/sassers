@@ -149,11 +149,14 @@ mod tests {
             ValuePart::List(vec![
                 ValuePart::String(Borrowed("foo")),
                 ValuePart::List(vec![
-                    ValuePart::String(Borrowed("4")),
-                    ValuePart::Number(NumberValue::from_scalar(199.82))
+                    ValuePart::Number(NumberValue::from_scalar(4.0)),
+                    ValuePart::Number(NumberValue::from_scalar(199.82)),
                 ]),
                 ValuePart::String(Borrowed("baz")),
-                ValuePart::String(Borrowed("3px 10px"))
+                ValuePart::List(vec![
+                    ValuePart::Number(NumberValue::with_units(3.0, Borrowed("px"))),
+                    ValuePart::Number(NumberValue::with_units(10.0, Borrowed("px"))),
+                ]),
             ]),
             answer
         );
