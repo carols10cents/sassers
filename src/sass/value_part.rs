@@ -23,6 +23,13 @@ impl<'a> ValuePart<'a> {
             ValuePart::Operator(o) => ValuePart::Operator(o),
         }
     }
+
+    pub fn computed_number(&self) -> bool {
+        match *self {
+            ValuePart::Number(ref nv) => nv.computed,
+            _ => false,
+        }
+    }
 }
 
 impl<'a> fmt::Display for ValuePart<'a> {

@@ -3,7 +3,6 @@ use sass::number_value::NumberValue;
 use sass::op::Op;
 use value_tokenizer::ValueTokenizer;
 
-use std::borrow::Cow::Borrowed;
 use std::collections::HashMap;
 extern crate collections;
 
@@ -165,12 +164,12 @@ mod tests {
     #[test]
     fn it_divides_if_value_came_from_a_variable() {
         let mut vars = HashMap::new();
-        vars.insert("$three".to_string(), ValuePart::Number(NumberValue::from_scalar(3.0)));
+        vars.insert("$three".to_string(), ValuePart::Number(NumberValue::computed(3.0)));
 
         let answer = Evaluator::new_from_string("15 / $three").evaluate(&vars);
 
         assert_eq!(
-            ValuePart::Number(NumberValue::from_scalar(5.0)),
+            ValuePart::Number(NumberValue::computed(5.0)),
             answer
         );
     }

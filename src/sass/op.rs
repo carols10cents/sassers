@@ -95,16 +95,19 @@ impl Op {
 
     fn apply_slash<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>, paren_level: i32) -> ValuePart<'a> {
         if paren_level == 0 {
-            match first {
-                ValuePart::List(mut f) => {
-                    let mut ve = vec![ValuePart::Operator(*self), second];
-                    f.append(&mut ve);
-                    ValuePart::List(f)
-                },
-                ValuePart::Number(ref n) if n.computed => {
-                    self.apply_math(ValuePart::Number(n.clone()), second)
-                },
-                _ => ValuePart::List(vec![first, ValuePart::Operator(*self), second]),
+            if first.computed_number() || second.computed_number() {
+                self.apply_math(first, second)
+            } else {
+                match first {
+                    ValuePart::List(mut f) => {
+                        let mut ve = vec![ValuePart::Operator(*self), second];
+                        f.append(&mut ve);
+                        ValuePart::List(f)
+                    },
+                    _ => {
+                        ValuePart::List(vec![first, ValuePart::Operator(*self), second])
+                    },
+                }
             }
         } else {
             self.apply_math(first, second)
