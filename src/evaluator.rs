@@ -268,6 +268,21 @@ mod tests {
     }
 
     #[test]
+    fn it_adds_with_units() {
+        let answer = Evaluator::new(vec![
+            ValuePart::Number(NumberValue::with_units(1.0, Borrowed("px"))),
+            ValuePart::Operator(Op::Plus),
+            ValuePart::Number(NumberValue::with_units(2.0, Borrowed("px"))),
+        ]).evaluate(&HashMap::new());
+        assert_eq!(
+            ValuePart::Number(
+                NumberValue { scalar: 3.0, unit: Some(Borrowed("px")), computed: true }
+            ),
+            answer
+        );
+    }
+
+    #[test]
     fn it_divides_and_adds_with_the_right_precedence() {
         let answer = Evaluator::new(vec![
             ValuePart::Number(NumberValue::from_scalar(3.0)),

@@ -2,6 +2,7 @@ use sass::value_part::ValuePart;
 use sass::number_value::NumberValue;
 use evaluator::Evaluator;
 
+use std::borrow::Cow;
 use std::borrow::Cow::Borrowed;
 use std::str::FromStr;
 use std::collections::HashMap;
@@ -127,9 +128,20 @@ impl Op {
     }
 
     fn apply_math<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
-        let (first_num, second_num) = match (first, second) {
-            (ValuePart::Number(f), ValuePart::Number(s)) => (f.scalar, s.scalar),
+        let (f, s) = match (first, second) {
+            (ValuePart::Number(f), ValuePart::Number(s)) => (f, s),
             (f, s) => return ValuePart::String(format!("Invalid apply math arguments:\n  first: {:?}\n  second: {:?}\n", f, s).into()),
+        };
+        let first_num = f.scalar;
+        let second_num = s.scalar;
+        let result_units: Option<Cow<'a, str>> = match (f.unit, s.unit) {
+            (Some(u), None) => Some(u.into_owned().into()),
+            (None, Some(u)) => Some(u.into_owned().into()),
+            (Some(ref u1), Some(ref u2)) if u1 == u2 => Some(u1.clone().into_owned().into()),
+            (None, None) => None,
+            (other1, other2) => return ValuePart::String(
+                format!("Incompatible units: {:?} and {:?}", other1, other2).into()
+            ),
         };
         let result = match *self {
             Op::Plus => first_num + second_num,
@@ -139,7 +151,11 @@ impl Op {
             Op::Percent => first_num % second_num,
             _ => 0.0,
         };
-        ValuePart::Number(NumberValue::computed(result))
+        ValuePart::Number(NumberValue {
+            scalar: result,
+            unit: result_units,
+            computed: true,
+        })
     }
 
     pub fn same_or_greater_precedence(self, other: Op) -> bool {
