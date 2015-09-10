@@ -48,7 +48,14 @@ where T: Iterator<Item = ValuePart<'a>>
             match part {
                 ValuePart::Variable(name) => {
                     match variables.get(&(*name).to_string()) {
-                        Some(v) => self.value_stack.push(v.clone()),
+                        Some(v) => {
+                            self.value_stack.push(match v.clone() {
+                                ValuePart::Number(nv) => {
+                                    ValuePart::Number(NumberValue { computed: true, ..nv })
+                                },
+                                other => other,
+                            })
+                        },
                         None => self.value_stack.push(ValuePart::String(name)),
                     }
                     last_was_an_operator = false;
@@ -157,7 +164,7 @@ mod tests {
             ValuePart::List(vec![
                 ValuePart::String(Borrowed("foo")),
                 ValuePart::List(vec![
-                    ValuePart::Number(NumberValue::from_scalar(4.0)),
+                    ValuePart::Number(NumberValue::computed(4.0)),
                     ValuePart::Number(NumberValue::from_scalar(199.82)),
                     ValuePart::String(Borrowed("baz")),
                 ]),
@@ -192,6 +199,22 @@ mod tests {
 
         assert_eq!(
             ValuePart::Number(NumberValue::computed(1.0)),
+            answer
+        );
+    }
+
+    #[test]
+    fn it_divides_out_units() {
+        let mut vars = HashMap::new();
+        vars.insert(
+            "$three".to_string(),
+            ValuePart::Number(NumberValue::with_units(3.0, Borrowed("px")))
+        );
+
+        let answer = Evaluator::new_from_string("15px / $three").evaluate(&vars);
+
+        assert_eq!(
+            ValuePart::Number(NumberValue::computed(5.0)),
             answer
         );
     }

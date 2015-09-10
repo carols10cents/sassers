@@ -137,7 +137,12 @@ impl Op {
         let result_units: Option<Cow<'a, str>> = match (f.unit, s.unit) {
             (Some(u), None) => Some(u.into_owned().into()),
             (None, Some(u)) => Some(u.into_owned().into()),
-            (Some(ref u1), Some(ref u2)) if u1 == u2 => Some(u1.clone().into_owned().into()),
+            (Some(ref u1), Some(ref u2)) if u1 == u2 => {
+                match *self {
+                    Op::Slash => None,
+                    _         => Some(u1.clone().into_owned().into()),
+                }
+            },
             (None, None) => None,
             (other1, other2) => return ValuePart::String(
                 format!("Incompatible units: {:?} and {:?}", other1, other2).into()
