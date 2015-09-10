@@ -42,6 +42,7 @@ impl<'a> fmt::Display for ValuePart<'a> {
                 write!(f, "{}", list.iter().map( |l| l.to_string() ).collect::<Vec<_>>().join(" "))
             },
             ValuePart::Operator(Op::Slash) => write!(f, "/"),
+            ValuePart::Operator(Op::Comma) => write!(f, ","),
             ValuePart::Operator(..) => unreachable!(),
         }
 
