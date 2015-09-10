@@ -96,7 +96,7 @@ impl Op {
     fn apply_slash<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>, paren_level: i32) -> ValuePart<'a> {
         if paren_level == 0 {
             if first.computed_number() || second.computed_number() {
-                self.apply_math(first, second)
+                self.apply_math(self.force_list_collapse(first), self.force_list_collapse(second))
             } else {
                 match first {
                     ValuePart::List(mut f) => {
@@ -117,7 +117,7 @@ impl Op {
     fn apply_math<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
         let (first_num, second_num) = match (first, second) {
             (ValuePart::Number(f), ValuePart::Number(s)) => (f.scalar, s.scalar),
-            (f, s) => return ValuePart::String(format!("Invalid arguments {:?} {:?}", f, s).into()),
+            (f, s) => return ValuePart::String(format!("Invalid apply math arguments {:?} {:?}", f, s).into()),
         };
         let result = match *self {
             Op::Plus => first_num + second_num,

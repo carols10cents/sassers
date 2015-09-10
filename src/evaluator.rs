@@ -175,6 +175,19 @@ mod tests {
     }
 
     #[test]
+    fn it_divides_if_a_later_value_came_from_a_variable() {
+        let mut vars = HashMap::new();
+        vars.insert("$three".to_string(), ValuePart::Number(NumberValue::computed(3.0)));
+
+        let answer = Evaluator::new_from_string("15 / 5 / $three").evaluate(&vars);
+
+        assert_eq!(
+            ValuePart::Number(NumberValue::computed(1.0)),
+            answer
+        );
+    }
+
+    #[test]
     fn it_adds() {
         let answer = Evaluator::new(vec![
             ValuePart::Number(NumberValue::from_scalar(1.0)),
