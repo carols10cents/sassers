@@ -3,6 +3,7 @@ use event::Event;
 use top_level_event::TopLevelEvent;
 use sass::rule::SassRule;
 use sass::variable::SassVariable;
+use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
 use std::collections::HashMap;
 use std::borrow::Cow;
@@ -55,13 +56,17 @@ fn owned_evaluated_value<'a>(
     value: Cow<'a, str>,
     variables: &HashMap<String, ValuePart<'a>>) -> ValuePart<'a> {
 
-    match value {
+    let value_part = match value {
         Cow::Borrowed(v) => {
             Evaluator::new_from_string(&v).evaluate(variables)
         },
         Cow::Owned(v) => {
             Evaluator::new_from_string(&v).evaluate(variables).into_owned()
         },
+    };
+    match value_part {
+        ValuePart::Number(nv) => ValuePart::Number(NumberValue { computed: true, ..nv }),
+        other => other,
     }
 }
 
