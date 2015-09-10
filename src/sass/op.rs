@@ -40,7 +40,10 @@ impl Op {
         match (self, &second) {
             (&Op::Plus, &ValuePart::List(..)) => self.apply_list(first, second),
             (&Op::Slash, _) => self.apply_slash(first, second, paren_level),
-            (_, _) => self.apply_math(first, second),
+            (&Op::Comma, _) => ValuePart::List(vec![first, ValuePart::Operator(*self), second]),
+            (_, _) => {
+                self.apply_math(first, second)
+            },
         }
     }
 

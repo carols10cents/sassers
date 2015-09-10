@@ -54,25 +54,22 @@ where T: Iterator<Item = ValuePart<'a>>
                     last_was_an_operator = false;
                 },
                 s @ ValuePart::String(..) => {
-                    self.value_stack.push(s);
+                    if last_was_an_operator {
+                        self.value_stack.push(s);
+                    } else {
+                        self.push_on_list_on_value_stack(s);
+                    }
                     last_was_an_operator = false;
                 },
                 n @ ValuePart::Number(..) => {
                     if last_was_an_operator {
                         self.value_stack.push(n);
                     } else {
-                        while !self.op_stack.is_empty() && self.op_stack.last() != Some(&Op::LeftParen) {
+                        while !self.op_stack.is_empty() &&
+                              self.op_stack.last() != Some(&Op::LeftParen) {
                             self.math_machine();
                         }
-                        let list_starter = self.value_stack.pop().expect("No expected list starter on the value stack!");
-                        let list_parts = match list_starter {
-                            ValuePart::List(mut v) => {
-                                v.push(n);
-                                v
-                            },
-                            other => vec![other, n],
-                        };
-                        self.value_stack.push(ValuePart::List(list_parts));
+                        self.push_on_list_on_value_stack(n);
                     }
                     last_was_an_operator = false;
                 },
@@ -116,6 +113,18 @@ where T: Iterator<Item = ValuePart<'a>>
         }
     }
 
+    fn push_on_list_on_value_stack(&mut self, push_val: ValuePart<'a>) {
+        let list_starter = self.value_stack.pop().unwrap_or(ValuePart::List(vec![]));
+        let list_parts = match list_starter {
+            ValuePart::List(mut v) => {
+                v.push(push_val);
+                v
+            },
+            other => vec![other, push_val],
+        };
+        self.value_stack.push(ValuePart::List(list_parts));
+    }
+
     fn math_machine(&mut self) {
         let op = self.op_stack.pop().unwrap_or(Op::Plus);
         let second = self.value_stack.pop().unwrap_or(ValuePart::Number(NumberValue::from_scalar(0.0)));
@@ -150,8 +159,8 @@ mod tests {
                 ValuePart::List(vec![
                     ValuePart::Number(NumberValue::from_scalar(4.0)),
                     ValuePart::Number(NumberValue::from_scalar(199.82)),
+                    ValuePart::String(Borrowed("baz")),
                 ]),
-                ValuePart::String(Borrowed("baz")),
                 ValuePart::List(vec![
                     ValuePart::Number(NumberValue::with_units(3.0, Borrowed("px"))),
                     ValuePart::Number(NumberValue::with_units(10.0, Borrowed("px"))),
@@ -183,6 +192,37 @@ mod tests {
 
         assert_eq!(
             ValuePart::Number(NumberValue::computed(1.0)),
+            answer
+        );
+    }
+
+    #[test]
+    fn it_does_jacked_stuff() {
+        let mut vars = HashMap::new();
+        vars.insert("$stuff".to_string(), ValuePart::List(vec![
+            ValuePart::Number(NumberValue::computed(1.0)),
+            ValuePart::Number(NumberValue::computed(2.0)),
+            ValuePart::Number(NumberValue::computed(3.0)),
+        ]));
+        let answer = Evaluator::new_from_string("1/2, $stuff url(\"www.foo.com/blah.png\") blah blah").evaluate(&vars);
+
+        assert_eq!(
+            ValuePart::List(vec![
+                ValuePart::List(vec![
+                    ValuePart::Number(NumberValue::from_scalar(1.0)),
+                    ValuePart::Operator(Op::Slash),
+                    ValuePart::Number(NumberValue::from_scalar(2.0)),
+                ]),
+                ValuePart::Operator(Op::Comma),
+                ValuePart::List(vec![
+                    ValuePart::Number(NumberValue::computed(1.0)),
+                    ValuePart::Number(NumberValue::computed(2.0)),
+                    ValuePart::Number(NumberValue::computed(3.0)),
+                    ValuePart::String(Borrowed("url(\"www.foo.com/blah.png\")")),
+                    ValuePart::String(Borrowed("blah")),
+                    ValuePart::String(Borrowed("blah")),
+                ]),
+            ]),
             answer
         );
     }
