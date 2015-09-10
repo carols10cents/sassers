@@ -24,23 +24,15 @@ impl<'vm, I> VariableMapper<'vm, I> {
         children.into_iter().filter_map(|c|
             match c {
                 Event::Variable(SassVariable { name, value }) => {
-                    match value {
-                        Cow::Borrowed(w) => {
-                            let val = Evaluator::new_from_string(&w).evaluate(&local_variables);
-                            local_variables.insert((*name).to_string(), val);
-                            None
-                        },
-                        Cow::Owned(poop) => {
-                            let val = Evaluator::new_from_string(&poop).evaluate(&local_variables);
-                            local_variables.insert((*name).to_string(), val.into_owned());
-                            None
-
-                        },
-                    }
+                    let val = owned_evaluated_value(value, &local_variables);
+                    local_variables.insert((*name).to_string(), val);
+                    None
                 },
                 Event::Property(name, value) => {
                     Some(Event::Property(
                         name,
+                        // TODO: Is it ok that property values are strings or should they
+                        // be value parts ...?
                         Evaluator::new_from_string(
                             &value
                         ).evaluate(&local_variables).to_string().into()
@@ -59,6 +51,20 @@ impl<'vm, I> VariableMapper<'vm, I> {
     }
 }
 
+fn owned_evaluated_value<'a>(
+    value: Cow<'a, str>,
+    variables: &HashMap<String, ValuePart<'a>>) -> ValuePart<'a> {
+
+    match value {
+        Cow::Borrowed(v) => {
+            Evaluator::new_from_string(&v).evaluate(variables)
+        },
+        Cow::Owned(v) => {
+            Evaluator::new_from_string(&v).evaluate(variables).into_owned()
+        },
+    }
+}
+
 impl<'a, I> Iterator for VariableMapper<'a, I>
     where I: Iterator<Item = TopLevelEvent<'a>>
 {
@@ -67,18 +73,9 @@ impl<'a, I> Iterator for VariableMapper<'a, I>
     fn next(&mut self) -> Option<TopLevelEvent<'a>> {
         match self.tokenizer.next() {
             Some(TopLevelEvent::Variable(SassVariable { name, value })) => {
-                match value {
-                    Cow::Borrowed(w) => {
-                        let val = Evaluator::new_from_string(&w).evaluate(&self.variables);
-                        self.variables.insert((*name).to_string(), val);
-                        self.next()
-                    },
-                    Cow::Owned(poop) => {
-                        let val = Evaluator::new_from_string(&poop).evaluate(&self.variables);
-                        self.variables.insert((*name).to_string(), val.into_owned());
-                        self.next()
-                    },
-                }
+                let val = owned_evaluated_value(value, &self.variables);
+                self.variables.insert((*name).to_string(), val);
+                self.next()
             },
             Some(TopLevelEvent::Rule(sass_rule)) => {
                 Some(TopLevelEvent::Rule(SassRule {
