@@ -113,14 +113,23 @@ impl Op {
                 }
             }
         } else {
-            self.apply_math(first, second)
+            match first {
+                ValuePart::List(mut f) => {
+                    let mut ve = vec![ValuePart::Operator(*self), second];
+                    f.append(&mut ve);
+                    ValuePart::List(f)
+                },
+                _ => {
+                    self.apply_math(first, second)
+                },
+            }
         }
     }
 
     fn apply_math<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
         let (first_num, second_num) = match (first, second) {
             (ValuePart::Number(f), ValuePart::Number(s)) => (f.scalar, s.scalar),
-            (f, s) => return ValuePart::String(format!("Invalid apply math arguments {:?} {:?}", f, s).into()),
+            (f, s) => return ValuePart::String(format!("Invalid apply math arguments:\n  first: {:?}\n  second: {:?}\n", f, s).into()),
         };
         let result = match *self {
             Op::Plus => first_num + second_num,

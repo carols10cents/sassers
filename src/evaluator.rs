@@ -228,6 +228,36 @@ mod tests {
     }
 
     #[test]
+    fn it_handles_lots_of_parens_and_slashes() {
+        let answer = Evaluator::new_from_string(
+            "1 + (2 + (3/4 + (4/5 6/7)))"
+        ).evaluate(&HashMap::new());
+        assert_eq!(
+            ValuePart::List(vec![
+                ValuePart::String(Borrowed("120.750.8")),
+                ValuePart::Number(NumberValue::from_scalar(6.0)),
+                ValuePart::Operator(Op::Slash),
+                ValuePart::Number(NumberValue::from_scalar(7.0)),
+            ]),
+            answer
+        );
+    }
+
+    #[test]
+    fn it_handles_a_few_parens_and_slashes() {
+        let answer = Evaluator::new_from_string("(4/5 6/7)").evaluate(&HashMap::new());
+        assert_eq!(
+            ValuePart::List(vec![
+              ValuePart::Number(NumberValue::computed(0.8)),
+              ValuePart::Number(NumberValue::from_scalar(6.0)),
+              ValuePart::Operator(Op::Slash),
+              ValuePart::Number(NumberValue::from_scalar(7.0)),
+            ]),
+            answer
+        );
+    }
+
+    #[test]
     fn it_adds() {
         let answer = Evaluator::new(vec![
             ValuePart::Number(NumberValue::from_scalar(1.0)),
