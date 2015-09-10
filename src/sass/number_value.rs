@@ -18,6 +18,7 @@ impl<'a, 'b> NumberValue<'a> {
         }
     }
 
+    #[cfg(test)]
     pub fn computed(num: f32) -> NumberValue<'a> {
         NumberValue {
             scalar:   num,
