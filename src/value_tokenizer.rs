@@ -35,9 +35,9 @@ impl<'a> ValueTokenizer<'a> {
         } else if is_number(self.bytes[start]) {
             i += self.scan_while(&self.value_str[i..limit], is_number);
             self.offset = i;
-            if i < limit && (self.bytes[i] == b'%' || (!is_operator(self.bytes[i]) && isnt_space(self.bytes[i]))) {
+            if i < limit && valid_unit_char(self.bytes[i]) {
                 let unit_start = i;
-                i += self.scan_while(&self.value_str[i..limit], isnt_space);
+                i += self.scan_while(&self.value_str[i..limit], valid_unit_char);
                 self.offset = i;
                 Some(ValuePart::Number(NumberValue::with_units(
                     self.value_str[start..unit_start].parse().unwrap_or(0.0),
@@ -102,6 +102,10 @@ fn is_space(c: u8) -> bool {
 
 fn isnt_space(c: u8) -> bool {
     !is_space(c)
+}
+
+fn valid_unit_char(c: u8) -> bool {
+    c == b'%' || (!is_space(c) && !is_operator(c))
 }
 
 fn is_number(c: u8) -> bool {
@@ -179,6 +183,32 @@ mod tests {
         let mut vt = ValueTokenizer::new("3px");
         assert_eq!(
             Some(ValuePart::Number(NumberValue::with_units(3.0, Borrowed(&"px")))),
+            vt.next()
+        );
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_returns_numbers_with_units_but_not_parens() {
+        let mut vt = ValueTokenizer::new("(3px)");
+        assert_eq!(Some(ValuePart::Operator(Op::LeftParen)), vt.next());
+        assert_eq!(
+            Some(ValuePart::Number(NumberValue::with_units(3.0, Borrowed(&"px")))),
+            vt.next()
+        );
+        assert_eq!(Some(ValuePart::Operator(Op::RightParen)), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_returns_numbers_with_percents_as_units() {
+        let mut vt = ValueTokenizer::new("10px 8%");
+        assert_eq!(
+            Some(ValuePart::Number(NumberValue::with_units(10.0, Borrowed(&"px")))),
+            vt.next()
+        );
+        assert_eq!(
+            Some(ValuePart::Number(NumberValue::with_units(8.0, Borrowed(&"%")))),
             vt.next()
         );
         assert_eq!(None, vt.next());
