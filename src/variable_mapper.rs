@@ -30,14 +30,23 @@ impl<'vm, I> VariableMapper<'vm, I> {
                     None
                 },
                 Event::Property(name, value) => {
-                    Some(Event::Property(
+                    println!("Yup totes in here");
+                    let mut ev = Evaluator::new_from_string(&value);
+                    println!("ev is fine");
+                    let ev_res = ev.evaluate(&local_variables);
+                    println!("ev res is fine {:?}", ev_res);
+                    let ev_res_string = ev_res.to_string();
+                    println!("ev res string is fine");
+
+
+                    let res = Some(Event::Property(
                         name,
                         // TODO: Is it ok that property values are strings or should they
                         // be value parts ...?
-                        Evaluator::new_from_string(
-                            &value
-                        ).evaluate(&local_variables).to_string().into()
-                    ))
+                        ev_res_string.into()
+                    ));
+                    println!("Totes make it herez");
+                    res
                 },
                 Event::ChildRule(rule) => {
                     Some(Event::ChildRule(SassRule {

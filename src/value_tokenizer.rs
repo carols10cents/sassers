@@ -21,6 +21,7 @@ impl<'a> ValueTokenizer<'a> {
     }
 
     pub fn parse(&mut self) -> Option<ValuePart<'a>> {
+        // println!("parse");
         self.skip_leading_whitespace();
 
         let start = self.offset;
@@ -105,6 +106,7 @@ fn isnt_space(c: u8) -> bool {
 }
 
 fn valid_unit_char(c: u8) -> bool {
+    // println!("c = {:?}", c);
     c == b'%' || (!is_space(c) && !is_operator(c))
 }
 
