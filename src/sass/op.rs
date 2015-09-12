@@ -89,10 +89,10 @@ impl Op {
                 self.apply_math(f, s)
             },
             (unk_first, unk_second) => {
-                panic!(
+                return ValuePart::String(format!(
                     "Unknown apply_list match:\n  first: {:?}\n  second: {:?}",
                     unk_first, unk_second
-                )
+                ).into())
             },
         }
     }

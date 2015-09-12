@@ -104,7 +104,10 @@ where T: Iterator<Item = ValuePart<'a>>
                         last_was_an_operator = true;
                     }
                 },
-                other => panic!("Got unexpected ValuePart {:?}", other),
+                list @ ValuePart::List(..) => {
+                    self.value_stack.push(list);
+                    last_was_an_operator = false;
+                },
             }
         }
 
@@ -279,6 +282,33 @@ mod tests {
             answer
         );
     }
+
+    // Not sure what the correct behavior is here yet.
+    // #[test]
+    // fn it_handles_variables_and_parens() {
+    //     let mut vars = HashMap::new();
+    //     vars.insert("$foo".to_string(), ValuePart::List(vec![
+    //         ValuePart::List(vec![
+    //             ValuePart::Number(NumberValue::computed(4.0)),
+    //             ValuePart::Operator(Op::Comma),
+    //             ValuePart::Number(NumberValue::computed(5.0)),
+    //         ]),
+    //         ValuePart::Operator(Op::Comma),
+    //         ValuePart::Number(NumberValue::computed(6.0)),
+    //     ]));
+    //     let answer = Evaluator::new_from_string("3 + $foo").evaluate(&vars);
+    //
+    //     assert_eq!(
+    //         ValuePart::List(vec![
+    //             ValuePart::String(Borrowed("34")),
+    //             ValuePart::Operator(Op::Comma),
+    //             ValuePart::Number(NumberValue::computed(5.0)),
+    //             ValuePart::Operator(Op::Comma),
+    //             ValuePart::Number(NumberValue::computed(6.0)),
+    //         ]),
+    //         answer
+    //     );
+    // }
 
     #[test]
     fn it_adds() {
