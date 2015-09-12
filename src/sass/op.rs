@@ -38,12 +38,12 @@ impl FromStr for Op {
 
 impl Op {
     pub fn apply<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>, paren_level: i32) -> ValuePart<'a> {
-        match (self, &second) {
-            (&Op::Plus, &ValuePart::List(..)) => self.apply_list(first, second),
-            (&Op::Slash, _) => self.apply_slash(first, second, paren_level),
-            (&Op::Comma, _) => ValuePart::List(vec![first, ValuePart::Operator(*self), second]),
-            (_, _) => {
-                self.apply_math(first, second)
+        match (self, second) {
+            (&Op::Plus, s @ ValuePart::List(..)) => self.apply_list(first, s),
+            (&Op::Slash, s) => self.apply_slash(first, s, paren_level),
+            (&Op::Comma, s) => ValuePart::List(vec![first, ValuePart::Operator(*self), s]),
+            (_, s) => {
+                self.apply_math(first, s)
             },
         }
     }
