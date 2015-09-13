@@ -30,14 +30,9 @@ impl<'vm, I> VariableMapper<'vm, I> {
                     None
                 },
                 Event::Property(name, value) => {
-                    println!("Yup totes in here");
                     let mut ev = Evaluator::new_from_string(&value);
-                    println!("ev is fine");
                     let ev_res = ev.evaluate(&local_variables);
-                    println!("ev res is fine {:?}", ev_res);
                     let ev_res_string = ev_res.to_string();
-                    println!("ev res string is fine");
-
 
                     let res = Some(Event::Property(
                         name,
@@ -45,7 +40,6 @@ impl<'vm, I> VariableMapper<'vm, I> {
                         // be value parts ...?
                         ev_res_string.into()
                     ));
-                    println!("Totes make it herez");
                     res
                 },
                 Event::ChildRule(rule) => {
