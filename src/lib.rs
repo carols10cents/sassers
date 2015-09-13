@@ -1,6 +1,9 @@
 #![feature(append)]
 #![feature(collections)]
 
+#[macro_use]
+extern crate log;
+
 extern crate regex;
 use std::path::PathBuf;
 use std::fs::File;

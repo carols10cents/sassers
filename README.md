@@ -28,3 +28,7 @@ MIT. See LICENSE.
 
 * Compare speed/memory usage to libsass
 * Profile if it's significantly worse than libsass and fix
+
+```
+$ RUST_LOG=sassers=debug cargo test -- --nocapture evaluator::tests::it_subtitutes_variable_values
+```
