@@ -45,10 +45,12 @@ where T: Iterator<Item = ValuePart<'a>>
         let mut last_was_an_operator = true;
 
         while let Some(part) = self.value_tokens.next() {
+            debug!("evaluate processing {:?}", part);
             match part {
                 ValuePart::Variable(name) => {
                     let value = match variables.get(&(*name).to_string()) {
                         Some(v) => {
+                            debug!("evaluate substituting Variable {:?} with {:?}", name, v);
                             match v.clone() {
                                 ValuePart::Number(nv) => {
                                     ValuePart::Number(NumberValue { computed: true, ..nv })
@@ -116,6 +118,8 @@ where T: Iterator<Item = ValuePart<'a>>
             }
         }
 
+        debug!("evaluate value_tokens empty: value_stack: {:?} op_stack: {:?}", self.value_stack, self.op_stack);
+
         while !self.op_stack.is_empty() {
             self.math_machine();
         }
@@ -130,6 +134,7 @@ where T: Iterator<Item = ValuePart<'a>>
 
     fn push_on_list_on_value_stack(&mut self, push_val: ValuePart<'a>) {
         let list_starter = self.value_stack.pop().unwrap_or(ValuePart::List(vec![]));
+        debug!("evaluate push_on_list_on_value_stack list_starter: {:?} push_val: {:?}", list_starter, push_val);
 
         let list_parts = match (list_starter, push_val) {
             (ValuePart::List(mut starter), ValuePart::List(push)) => {
@@ -156,6 +161,9 @@ where T: Iterator<Item = ValuePart<'a>>
         let op = self.op_stack.pop().unwrap_or(Op::Plus);
         let second = self.value_stack.pop().unwrap_or(ValuePart::Number(NumberValue::from_scalar(0.0)));
         let first  = self.value_stack.pop().unwrap_or(ValuePart::Number(NumberValue::from_scalar(0.0)));
+
+        debug!("evaluate math_machine first: {:?} op: {:?} second: {:?}", first, op, second);
+
         self.value_stack.push(op.apply(first, second, self.paren_level));
     }
 }
