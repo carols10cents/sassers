@@ -47,6 +47,7 @@ impl Op {
                 self.apply_list(first, ValuePart::List(ve))
             },
             (&Op::Comma, s) => {
+
                 self.apply_list(first, ValuePart::List(vec![ValuePart::Operator(*self), s]))
             },
             (_, s) => {
@@ -84,9 +85,8 @@ impl Op {
             (ValuePart::Number(fnum), ValuePart::List(mut slist)) => {
                 let new_first_item_value = format!("{}{}", fnum, slist.remove(0));
                 let v = ValuePart::String(new_first_item_value.into());
-                let mut ve = vec![v];
-                ve.append(&mut slist);
-                ValuePart::List(ve)
+
+                ValuePart::concat_into_list(v, ValuePart::List(slist))
             },
             (ValuePart::List(mut flist), ValuePart::Number(snum)) => {
                 let new_last_item_value = format!("{}{}",
@@ -94,12 +94,10 @@ impl Op {
                     snum
                 );
                 let v = ValuePart::String(new_last_item_value.into());
-                flist.push(v);
-                ValuePart::List(flist)
+                ValuePart::concat_into_list(ValuePart::List(flist), v)
             },
-            (ValuePart::List(mut flist), ValuePart::List(slist)) => {
-                flist.extend(slist);
-                ValuePart::List(flist.clone())
+            (f @ ValuePart::List(..), s @ ValuePart::List(..)) => {
+                ValuePart::concat_into_list(f, s)
             },
             (f @ ValuePart::Number(..), s @ ValuePart::Number(..)) => {
                 self.apply_math(f, s)
@@ -118,23 +116,18 @@ impl Op {
             if first.computed_number() || second.computed_number() {
                 self.apply_math(self.force_list_collapse(first), self.force_list_collapse(second))
             } else {
-                match first {
-                    ValuePart::List(mut f) => {
-                        let mut ve = vec![ValuePart::Operator(*self), second];
-                        f.append(&mut ve);
-                        ValuePart::List(f)
-                    },
-                    _ => {
-                        ValuePart::List(vec![first, ValuePart::Operator(*self), second])
-                    },
-                }
+                ValuePart::concat_into_list(
+                    ValuePart::concat_into_list(first, ValuePart::Operator(*self)),
+                    second,
+                )
             }
         } else {
             match first {
-                ValuePart::List(mut f) => {
-                    let mut ve = vec![ValuePart::Operator(*self), second];
-                    f.append(&mut ve);
-                    ValuePart::List(f)
+                ValuePart::List(..) => {
+                    ValuePart::concat_into_list(
+                        ValuePart::concat_into_list(first, ValuePart::Operator(*self)),
+                        second,
+                    )
                 },
                 _ => {
                     self.apply_math(first, second)

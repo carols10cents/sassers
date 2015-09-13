@@ -14,6 +14,28 @@ pub enum ValuePart<'a> {
 }
 
 impl<'a> ValuePart<'a> {
+    pub fn concat_into_list(left: ValuePart<'a>, right: ValuePart<'a>) -> ValuePart<'static> {
+        let list_parts = match (left, right) {
+            (ValuePart::List(mut l), ValuePart::List(r)) => {
+                l.extend(r);
+                l
+            },
+            (l, ValuePart::List(r)) => {
+                let mut ve = vec![l];
+                ve.extend(r);
+                ve
+            },
+            (ValuePart::List(mut l), r) => {
+                l.push(r);
+                l
+            },
+            (l, r) => {
+                vec![l, r]
+            },
+        };
+        ValuePart::List(list_parts).into_owned().into()
+    }
+
     pub fn into_owned(self) -> ValuePart<'static> {
         match self {
             ValuePart::Variable(name) => ValuePart::Variable(name.into_owned().into()),

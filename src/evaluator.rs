@@ -1,4 +1,4 @@
-use sass::value_part::ValuePart;
+use sass::value_part::*;
 use sass::number_value::NumberValue;
 use sass::op::Op;
 use value_tokenizer::ValueTokenizer;
@@ -135,26 +135,7 @@ where T: Iterator<Item = ValuePart<'a>>
     fn push_on_list_on_value_stack(&mut self, push_val: ValuePart<'a>) {
         let list_starter = self.value_stack.pop().unwrap_or(ValuePart::List(vec![]));
         debug!("evaluate push_on_list_on_value_stack list_starter: {:?} push_val: {:?}", list_starter, push_val);
-
-        let list_parts = match (list_starter, push_val) {
-            (ValuePart::List(mut starter), ValuePart::List(push)) => {
-                starter.extend(push);
-                starter
-            },
-            (other, ValuePart::List(push)) => {
-                let mut ve = vec![other];
-                ve.extend(push);
-                ve
-            },
-            (ValuePart::List(mut starter), other) => {
-                starter.push(other);
-                starter
-            },
-            (other_starter, other_push) => {
-                vec![other_starter, other_push]
-            },
-        };
-        self.value_stack.push(ValuePart::List(list_parts));
+        self.value_stack.push(ValuePart::concat_into_list(list_starter, push_val));
     }
 
     fn math_machine(&mut self) {
