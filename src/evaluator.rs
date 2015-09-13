@@ -47,16 +47,21 @@ where T: Iterator<Item = ValuePart<'a>>
         while let Some(part) = self.value_tokens.next() {
             match part {
                 ValuePart::Variable(name) => {
-                    match variables.get(&(*name).to_string()) {
+                    let value = match variables.get(&(*name).to_string()) {
                         Some(v) => {
-                            self.value_stack.push(match v.clone() {
+                            match v.clone() {
                                 ValuePart::Number(nv) => {
                                     ValuePart::Number(NumberValue { computed: true, ..nv })
                                 },
                                 other => other,
-                            })
+                            }
                         },
-                        None => self.value_stack.push(ValuePart::String(name)),
+                        None => ValuePart::String(name),
+                    };
+                    if last_was_an_operator {
+                        self.value_stack.push(value);
+                    } else {
+                        self.push_on_list_on_value_stack(value);
                     }
                     last_was_an_operator = false;
                 },
@@ -125,12 +130,24 @@ where T: Iterator<Item = ValuePart<'a>>
 
     fn push_on_list_on_value_stack(&mut self, push_val: ValuePart<'a>) {
         let list_starter = self.value_stack.pop().unwrap_or(ValuePart::List(vec![]));
-        let list_parts = match list_starter {
-            ValuePart::List(mut v) => {
-                v.push(push_val);
-                v
+
+        let list_parts = match (list_starter, push_val) {
+            (ValuePart::List(mut starter), ValuePart::List(push)) => {
+                starter.extend(push);
+                starter
             },
-            other => vec![other, push_val],
+            (other, ValuePart::List(push)) => {
+                let mut ve = vec![other];
+                ve.extend(push);
+                ve
+            },
+            (ValuePart::List(mut starter), other) => {
+                starter.push(other);
+                starter
+            },
+            (other_starter, other_push) => {
+                vec![other_starter, other_push]
+            },
         };
         self.value_stack.push(ValuePart::List(list_parts));
     }
