@@ -201,23 +201,23 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn it_flattents_lists() {
-    //     let answer = Evaluator::new_from_string("80% 90%, 80% 90%, 80% 90%").evaluate(&HashMap::new());
-    //     assert_eq!(
-    //         ValuePart::List(vec![
-    //             ValuePart::Number(NumberValue { scalar: 80.0, unit: Some(Borrowed("%")), computed: true}),
-    //             ValuePart::Number(NumberValue { scalar: 90.0, unit: Some(Borrowed("%")), computed: true}),
-    //             ValuePart::Operator(Op::Comma),
-    //             ValuePart::Number(NumberValue { scalar: 80.0, unit: Some(Borrowed("%")), computed: true}),
-    //             ValuePart::Number(NumberValue { scalar: 90.0, unit: Some(Borrowed("%")), computed: true}),
-    //             ValuePart::Operator(Op::Comma),
-    //             ValuePart::Number(NumberValue { scalar: 80.0, unit: Some(Borrowed("%")), computed: true}),
-    //             ValuePart::Number(NumberValue { scalar: 90.0, unit: Some(Borrowed("%")), computed: true}),
-    //         ]),
-    //         answer
-    //     );
-    // }
+    #[test]
+    fn it_flattents_lists() {
+        let answer = Evaluator::new_from_string("80% 90%, 80% 90%, 80% 90%").evaluate(&HashMap::new());
+        assert_eq!(
+            ValuePart::List(vec![
+                ValuePart::Number(NumberValue { scalar: 80.0, unit: Some(Borrowed("%")), computed: false}),
+                ValuePart::Number(NumberValue { scalar: 90.0, unit: Some(Borrowed("%")), computed: false}),
+                ValuePart::Operator(Op::Comma),
+                ValuePart::Number(NumberValue { scalar: 80.0, unit: Some(Borrowed("%")), computed: false}),
+                ValuePart::Number(NumberValue { scalar: 90.0, unit: Some(Borrowed("%")), computed: false}),
+                ValuePart::Operator(Op::Comma),
+                ValuePart::Number(NumberValue { scalar: 80.0, unit: Some(Borrowed("%")), computed: false}),
+                ValuePart::Number(NumberValue { scalar: 90.0, unit: Some(Borrowed("%")), computed: false}),
+            ]),
+            answer
+        );
+    }
 
     #[test]
     fn it_divides_if_value_came_from_a_variable() {

@@ -58,10 +58,19 @@ impl Op {
     fn force_list_collapse<'a>(&self, mut vp: ValuePart<'a>) -> ValuePart<'a> {
         match vp {
             ValuePart::List(ref mut l) => {
-                let mut ve = vec![ValuePart::Operator(Op::LeftParen)];
-                l.push(ValuePart::Operator(Op::RightParen));
-                ve.append(l);
-                Evaluator::new(ve).evaluate(&HashMap::new())
+                if l.iter().any(|v| {
+                    match v {
+                        &ValuePart::Operator(Op::Slash) => true,
+                        _ => false,
+                    }
+                }) {
+                    let mut ve = vec![ValuePart::Operator(Op::LeftParen)];
+                    l.push(ValuePart::Operator(Op::RightParen));
+                    ve.append(l);
+                    Evaluator::new(ve).evaluate(&HashMap::new())
+                } else {
+                    ValuePart::List(l.clone())
+                }
             },
             _ => vp,
         }
