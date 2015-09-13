@@ -41,14 +41,11 @@ impl Op {
         match (self, second) {
             (&Op::Plus, s @ ValuePart::List(..)) => self.apply_list(first, s),
             (&Op::Slash, s) => self.apply_slash(first, s, paren_level),
-            (&Op::Comma, ValuePart::List(ref mut l)) => {
-                let mut ve = vec![ValuePart::Operator(*self)];
-                ve.append(l);
-                self.apply_list(first, ValuePart::List(ve))
-            },
             (&Op::Comma, s) => {
-
-                self.apply_list(first, ValuePart::List(vec![ValuePart::Operator(*self), s]))
+                ValuePart::concat_into_list(
+                    ValuePart::concat_into_list(first, ValuePart::Operator(*self)),
+                    s,
+                )
             },
             (_, s) => {
                 self.apply_math(first, s)

@@ -242,36 +242,32 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn it_does_jacked_stuff() {
-    //     let mut vars = HashMap::new();
-    //     vars.insert("$stuff".to_string(), ValuePart::List(vec![
-    //         ValuePart::Number(NumberValue::computed(1.0)),
-    //         ValuePart::Number(NumberValue::computed(2.0)),
-    //         ValuePart::Number(NumberValue::computed(3.0)),
-    //     ]));
-    //     let answer = Evaluator::new_from_string("1/2, $stuff url(\"www.foo.com/blah.png\") blah blah").evaluate(&vars);
-    //
-    //     assert_eq!(
-    //         ValuePart::List(vec![
-    //             ValuePart::List(vec![
-    //                 ValuePart::Number(NumberValue::from_scalar(1.0)),
-    //                 ValuePart::Operator(Op::Slash),
-    //                 ValuePart::Number(NumberValue::from_scalar(2.0)),
-    //             ]),
-    //             ValuePart::Operator(Op::Comma),
-    //             ValuePart::List(vec![
-    //                 ValuePart::Number(NumberValue::computed(1.0)),
-    //                 ValuePart::Number(NumberValue::computed(2.0)),
-    //                 ValuePart::Number(NumberValue::computed(3.0)),
-    //                 ValuePart::String(Borrowed("url(\"www.foo.com/blah.png\")")),
-    //                 ValuePart::String(Borrowed("blah")),
-    //                 ValuePart::String(Borrowed("blah")),
-    //             ]),
-    //         ]),
-    //         answer
-    //     );
-    // }
+    #[test]
+    fn it_does_jacked_stuff() {
+        let mut vars = HashMap::new();
+        vars.insert("$stuff".to_string(), ValuePart::List(vec![
+            ValuePart::Number(NumberValue::computed(1.0)),
+            ValuePart::Number(NumberValue::computed(2.0)),
+            ValuePart::Number(NumberValue::computed(3.0)),
+        ]));
+        let answer = Evaluator::new_from_string("1/2, $stuff url(\"www.foo.com/blah.png\") blah blah").evaluate(&vars);
+
+        assert_eq!(
+            ValuePart::List(vec![
+                ValuePart::Number(NumberValue::from_scalar(1.0)),
+                ValuePart::Operator(Op::Slash),
+                ValuePart::Number(NumberValue::from_scalar(2.0)),
+                ValuePart::Operator(Op::Comma),
+                ValuePart::Number(NumberValue::computed(1.0)),
+                ValuePart::Number(NumberValue::computed(2.0)),
+                ValuePart::Number(NumberValue::computed(3.0)),
+                ValuePart::String(Borrowed("url(\"www.foo.com/blah.png\")")),
+                ValuePart::String(Borrowed("blah")),
+                ValuePart::String(Borrowed("blah")),
+            ]),
+            answer
+        );
+    }
 
     #[test]
     fn it_handles_lots_of_parens_and_slashes() {
