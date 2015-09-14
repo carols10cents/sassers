@@ -1,4 +1,4 @@
-use std::borrow::Cow::Borrowed;
+use std::borrow::Cow::*;
 use std::borrow::Cow;
 use std::fmt;
 
@@ -46,10 +46,17 @@ impl<'a, 'b> NumberValue<'a> {
         }
     }
 
+    pub fn unit_string(&self) -> &str {
+        match self.unit {
+            Some(Borrowed(ref b)) => b,
+            Some(Owned(ref o))    => o,
+            None                  => "",
+        }
+    }
 }
 
 impl<'a> fmt::Display for NumberValue<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.scalar, self.unit.clone().unwrap_or(Borrowed("")))
+        write!(f, "{}{}", self.scalar, self.unit_string())
     }
 }
