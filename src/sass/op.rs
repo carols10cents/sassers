@@ -3,7 +3,7 @@ use sass::number_value::NumberValue;
 use evaluator::Evaluator;
 
 use std::borrow::Cow;
-use std::borrow::Cow::Borrowed;
+use std::borrow::Cow::*;
 use std::str::FromStr;
 use std::collections::HashMap;
 
@@ -138,35 +138,43 @@ impl Op {
             (ValuePart::Number(f), ValuePart::Number(s)) => (f, s),
             (f, s) => return ValuePart::String(format!("Invalid apply math arguments:\n  first: {:?}\n  second: {:?}\n", f, s).into()),
         };
-        let first_num = f.scalar;
-        let second_num = s.scalar;
-        let result_units: Option<Cow<'a, str>> = match (f.unit, s.unit) {
-            (Some(u), None) => Some(u.into_owned().into()),
-            (None, Some(u)) => Some(u.into_owned().into()),
-            (Some(ref u1), Some(ref u2)) if u1 == u2 => {
-                match *self {
-                    Op::Slash => None,
-                    _         => Some(u1.clone().into_owned().into()),
-                }
-            },
-            (None, None) => None,
-            (other1, other2) => return ValuePart::String(
-                format!("Incompatible units: {:?} and {:?}", other1, other2).into()
-            ),
-        };
-        let result = match *self {
-            Op::Plus => first_num + second_num,
-            Op::Minus => first_num - second_num,
-            Op::Star => first_num * second_num,
-            Op::Slash => first_num / second_num,
-            Op::Percent => first_num % second_num,
-            _ => 0.0,
-        };
+
+        let result_units = self.compute_units(f.unit, s.unit);
+        let result = self.compute_numbers(f.scalar, s.scalar);
+
         ValuePart::Number(NumberValue {
             scalar: result,
             unit: result_units,
             computed: true,
         })
+    }
+
+    fn compute_numbers(&self, first_num: f32, second_num: f32) -> f32 {
+        match *self {
+            Op::Plus    => first_num + second_num,
+            Op::Minus   => first_num - second_num,
+            Op::Star    => first_num * second_num,
+            Op::Slash   => first_num / second_num,
+            Op::Percent => first_num % second_num,
+            _           => 0.0, // TODO: Result
+        }
+    }
+
+    fn compute_units<'a>(&self, funit: Option<Cow<'a, str>>, sunit: Option<Cow<'a, str>>) -> Option<Cow<'a, str>> {
+        match (funit, sunit) {
+            (Some(u), None) | (None, Some(u)) => Some(u.into_owned().into()),
+            (Some(ref u1), Some(ref u2)) if u1 == u2 => {
+                match *self {
+                    Op::Slash => None, // Divide out the units
+                    // TODO: Multiplication that produces square units should return Err
+                    _         => Some(u1.clone().into_owned().into()),
+                }
+            },
+            (None, None) => None,
+            (other1, other2) => {
+                Some(Owned(format!("Incompatible units: {:?} and {:?}", other1, other2))) // TODO: Result
+            },
+        }
     }
 
     pub fn same_or_greater_precedence(self, other: Op) -> bool {
