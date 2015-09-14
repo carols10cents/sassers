@@ -61,12 +61,62 @@ impl<'a> fmt::Display for ValuePart<'a> {
             ValuePart::String(ref str) => write!(f, "{}", str),
             ValuePart::Number(ref num) => write!(f, "{}", num),
             ValuePart::List(ref list) => {
-                write!(f, "{}", list.iter().map( |l| l.to_string() ).collect::<Vec<_>>().join(" "))
+                let mut last_needs_space = false;
+                let mut str = String::new();
+                for item in list {
+                    if last_needs_space &&
+                       *item != ValuePart::Operator(Op::Slash) &&
+                       *item != ValuePart::Operator(Op::Comma) {
+                        str.push_str(" ");
+                    }
+                    str.push_str(&item.to_string());
+                    match item {
+                        &ValuePart::Operator(Op::Slash) => last_needs_space = false,
+                        _ => last_needs_space = true,
+                    }
+                }
+                write!(f, "{}", str)
             },
             ValuePart::Operator(Op::Slash) => write!(f, "/"),
             ValuePart::Operator(Op::Comma) => write!(f, ","),
             ValuePart::Operator(..) => unreachable!(),
         }
 
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sass::number_value::NumberValue;
+    use sass::op::Op;
+
+    #[test]
+    fn it_puts_spaces_between_list_parts() {
+        let list = ValuePart::List(vec![
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
+            ValuePart::Number(NumberValue::from_scalar(52.0)),
+        ]);
+        assert_eq!("3 52", list.to_string());
+    }
+
+    #[test]
+    fn it_does_not_put_spaces_before_commas() {
+        let list = ValuePart::List(vec![
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
+            ValuePart::Operator(Op::Comma),
+            ValuePart::Number(NumberValue::from_scalar(52.0)),
+        ]);
+        assert_eq!("3, 52", list.to_string());
+    }
+
+    #[test]
+    fn it_does_not_put_spaces_around_slashes() {
+        let list = ValuePart::List(vec![
+            ValuePart::Number(NumberValue::from_scalar(3.0)),
+            ValuePart::Operator(Op::Slash),
+            ValuePart::Number(NumberValue::from_scalar(52.0)),
+        ]);
+        assert_eq!("3/52", list.to_string());
     }
 }
