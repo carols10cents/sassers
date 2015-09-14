@@ -41,7 +41,9 @@ impl<'a> Event<'a> {
 
     pub fn compressed(&self) -> String {
         match *self {
-            Event::Property(ref name, ref value) => format!("{}:{}", name, value),
+            Event::Property(ref name, ref value) => {
+                format!("{}:{}", name, value.replace(", ", ","))
+            },
             Event::Comment(..) => unreachable!(),
             Event::ChildRule(ref sass_rule) => sass_rule.compressed(),
             Event::Variable(..) => unreachable!(),
