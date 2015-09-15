@@ -53,6 +53,14 @@ impl<'a, 'b> ColorValue<'a> {
             op.math(self.blue as f32, nv.scalar) as i32,
         )
     }
+
+    pub fn combine_colors(self, op: Op, c: ColorValue<'a>) -> ColorValue<'a> {
+        ColorValue::from_rgb(
+            op.math(self.red as f32, c.red as f32) as i32,
+            op.math(self.green as f32, c.green as f32) as i32,
+            op.math(self.blue as f32, c.blue as f32) as i32,
+        )
+    }
 }
 
 impl<'a> fmt::Display for ColorValue<'a> {

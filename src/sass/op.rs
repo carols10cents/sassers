@@ -142,6 +142,9 @@ impl Op {
             (ValuePart::Color(f), ValuePart::Number(s)) => {
                 ValuePart::Color(f.apply_math(*self, s))
             },
+            (ValuePart::Color(f), ValuePart::Color(s)) => {
+                ValuePart::Color(f.combine_colors(*self, s))
+            },
             (f, s) => {
                 // TODO: result
                 ValuePart::String(
