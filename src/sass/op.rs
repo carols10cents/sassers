@@ -135,12 +135,17 @@ impl Op {
     }
 
     fn apply_math<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
-        let (f, s) = match (first, second) {
-            (ValuePart::Number(f), ValuePart::Number(s)) => (f, s),
-            (f, s) => return ValuePart::String(format!("Invalid apply math arguments:\n  first: {:?}\n  second: {:?}\n", f, s).into()),
-        };
-
-        ValuePart::Number(f.apply_math(*self, s))
+        match (first, second) {
+            (ValuePart::Number(f), ValuePart::Number(s)) => {
+                ValuePart::Number(f.apply_math(*self, s))
+            },
+            (f, s) => {
+                // TODO: result
+                ValuePart::String(
+                    format!("Invalid apply math arguments:\n  first: {:?}\n  second: {:?}\n", f, s).into()
+                )
+            },
+        }
     }
 
     pub fn same_or_greater_precedence(self, other: Op) -> bool {
