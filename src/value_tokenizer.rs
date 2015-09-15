@@ -272,7 +272,9 @@ mod tests {
     fn it_recognizes_hex() {
         let mut vt = ValueTokenizer::new("#aabbcc");
         assert_eq!(
-            Some(ValuePart::Color(ColorValue { red: 170, green: 187, blue: 204 })),
+            Some(ValuePart::Color(ColorValue {
+                red: 170, green: 187, blue: 204, original: Borrowed("#aabbcc"),
+            })),
             vt.next()
         );
         assert_eq!(None, vt.next());
@@ -282,7 +284,9 @@ mod tests {
     fn it_recognizes_short_hex() {
         let mut vt = ValueTokenizer::new("#cba");
         assert_eq!(
-            Some(ValuePart::Color(ColorValue { red: 204, green: 187, blue: 170 })),
+            Some(ValuePart::Color(ColorValue {
+                red: 204, green: 187, blue: 170, original: Borrowed("#cba"),
+            })),
             vt.next()
         );
         assert_eq!(None, vt.next());

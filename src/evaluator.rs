@@ -115,7 +115,10 @@ where T: Iterator<Item = ValuePart<'a>>
                     self.value_stack.push(list);
                     last_was_an_operator = false;
                 },
-                color @ ValuePart::Color(..) => panic!("I don't know what to do with colors yet"),
+                color @ ValuePart::Color(..) => {
+                    self.value_stack.push(color);
+                    last_was_an_operator = false;
+                },
             }
         }
 
@@ -239,6 +242,16 @@ mod tests {
 
         assert_eq!(
             ValuePart::Number(NumberValue::computed(5.0)),
+            answer
+        );
+    }
+
+    #[test]
+    fn it_concats_colors_and_literals() {
+        let answer = Evaluator::new_from_string("#abc + hello").evaluate(&HashMap::new());
+
+        assert_eq!(
+            ValuePart::String(Borrowed("#abchello")),
             answer
         );
     }
