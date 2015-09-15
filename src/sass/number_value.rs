@@ -1,3 +1,5 @@
+use sass::op::Op;
+
 use std::borrow::Cow::*;
 use std::borrow::Cow;
 use std::fmt;
@@ -51,6 +53,47 @@ impl<'a, 'b> NumberValue<'a> {
             Some(Borrowed(ref b)) => b,
             Some(Owned(ref o))    => o,
             None                  => "",
+        }
+    }
+
+    pub fn apply_math(self, op: Op, nv: NumberValue<'a>) -> NumberValue<'a> {
+        let result       = self.compute_number(op, &nv);
+        let result_units = self.compute_units(op, nv);
+
+        NumberValue {
+            scalar:   result,
+            unit:     result_units,
+            computed: true,
+        }
+    }
+
+    fn compute_number(&self, op: Op, nv: &NumberValue<'a>) -> f32 {
+        let first_num = self.scalar;
+        let second_num = nv.scalar;
+        match op {
+            Op::Plus    => first_num + second_num,
+            Op::Minus   => first_num - second_num,
+            Op::Star    => first_num * second_num,
+            Op::Slash   => first_num / second_num,
+            Op::Percent => first_num % second_num,
+            _           => 0.0, // TODO: Result
+        }
+    }
+
+    fn compute_units(self, op: Op, nv: NumberValue<'a>) -> Option<Cow<'a, str>> {
+        match (self.unit, nv.unit) {
+            (Some(u), None) | (None, Some(u)) => Some(u.into_owned().into()),
+            (Some(ref u1), Some(ref u2)) if u1 == u2 => {
+                match op {
+                    Op::Slash => None, // Divide out the units
+                    // TODO: Multiplication that produces square units should return Err
+                    _         => Some(u1.clone().into_owned().into()),
+                }
+            },
+            (None, None) => None,
+            (other1, other2) => {
+                Some(Owned(format!("Incompatible units: {:?} and {:?}", other1, other2))) // TODO: Result
+            },
         }
     }
 }
