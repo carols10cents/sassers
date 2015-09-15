@@ -40,6 +40,9 @@ impl Op {
     pub fn apply<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>, paren_level: i32) -> ValuePart<'a> {
         match (self, second) {
             (&Op::Plus, s @ ValuePart::List(..)) => self.apply_list(first, s),
+            (&Op::Plus, s @ ValuePart::String(..)) => {
+                ValuePart::String(format!("{}{}", first, s).into())
+            },
             (&Op::Slash, s) => self.apply_slash(first, s, paren_level),
             (&Op::Comma, s) => {
                 ValuePart::concat_into_list(
