@@ -68,16 +68,7 @@ impl<'a, 'b> NumberValue<'a> {
     }
 
     fn compute_number(&self, op: Op, nv: &NumberValue<'a>) -> f32 {
-        let first_num = self.scalar;
-        let second_num = nv.scalar;
-        match op {
-            Op::Plus    => first_num + second_num,
-            Op::Minus   => first_num - second_num,
-            Op::Star    => first_num * second_num,
-            Op::Slash   => first_num / second_num,
-            Op::Percent => first_num % second_num,
-            _           => 0.0, // TODO: Result
-        }
+        op.math(self.scalar, nv.scalar)
     }
 
     fn compute_units(self, op: Op, nv: NumberValue<'a>) -> Option<Cow<'a, str>> {

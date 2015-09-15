@@ -139,12 +139,26 @@ impl Op {
             (ValuePart::Number(f), ValuePart::Number(s)) => {
                 ValuePart::Number(f.apply_math(*self, s))
             },
+            (ValuePart::Color(f), ValuePart::Number(s)) => {
+                ValuePart::Color(f.apply_math(*self, s))
+            },
             (f, s) => {
                 // TODO: result
                 ValuePart::String(
                     format!("Invalid apply math arguments:\n  first: {:?}\n  second: {:?}\n", f, s).into()
                 )
             },
+        }
+    }
+
+    pub fn math(&self, first_num: f32, second_num: f32) -> f32 {
+        match *self {
+            Op::Plus    => first_num + second_num,
+            Op::Minus   => first_num - second_num,
+            Op::Star    => first_num * second_num,
+            Op::Slash   => first_num / second_num,
+            Op::Percent => first_num % second_num,
+            _           => 0.0, // TODO: Result
         }
     }
 

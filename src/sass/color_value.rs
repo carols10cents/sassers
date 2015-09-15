@@ -1,3 +1,6 @@
+use sass::op::Op;
+use sass::number_value::NumberValue;
+
 use std::borrow::Cow;
 use std::fmt;
 
@@ -30,17 +33,31 @@ impl<'a, 'b> ColorValue<'a> {
         }
     }
 
+    pub fn from_rgb(r: i32, g: i32, b: i32) -> ColorValue<'a> {
+        ColorValue {
+            red: r, green: g, blue: b, original: format!("#{:x}{:x}{:x}", r, g, b).into(),
+        }
+    }
+
     pub fn into_owned(self) -> ColorValue<'b> {
         ColorValue {
             red: self.red, green: self.green, blue: self.blue,
             original: self.original.into_owned().into(),
         }
     }
+
+    pub fn apply_math(self, op: Op, nv: NumberValue<'a>) -> ColorValue<'a> {
+        ColorValue::from_rgb(
+            op.math(self.red as f32, nv.scalar) as i32,
+            op.math(self.green as f32, nv.scalar) as i32,
+            op.math(self.blue as f32, nv.scalar) as i32,
+        )
+    }
 }
 
 impl<'a> fmt::Display for ColorValue<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let candidate = format!("#{}{}{}", self.red, self.green, self.blue);
+        let candidate = format!("#{:x}{:x}{:x}", self.red, self.green, self.blue);
         if candidate.len() < self.original.len() {
             write!(f, "{}", candidate)
         } else {
