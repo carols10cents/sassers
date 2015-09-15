@@ -277,4 +277,14 @@ mod tests {
         );
         assert_eq!(None, vt.next());
     }
+
+    #[test]
+    fn it_recognizes_short_hex() {
+        let mut vt = ValueTokenizer::new("#cba");
+        assert_eq!(
+            Some(ValuePart::Color(ColorValue { red: 204, green: 187, blue: 170 })),
+            vt.next()
+        );
+        assert_eq!(None, vt.next());
+    }
 }

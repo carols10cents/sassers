@@ -10,10 +10,20 @@ pub struct ColorValue {
 
 impl<'a> ColorValue {
     pub fn from_hex(hex: Cow<'a, str>) -> ColorValue {
-        ColorValue {
-            red:   i32::from_str_radix(&hex[1..3], 16).unwrap(),
-            green: i32::from_str_radix(&hex[3..5], 16).unwrap(),
-            blue:  i32::from_str_radix(&hex[5..7], 16).unwrap(),
+        if hex.len() == 4 {
+            ColorValue {
+                red:   i32::from_str_radix(&hex[1..2], 16).unwrap() * 17,
+                green: i32::from_str_radix(&hex[2..3], 16).unwrap() * 17,
+                blue:  i32::from_str_radix(&hex[3..4], 16).unwrap() * 17,
+            }
+        } else if hex.len() == 7 {
+            ColorValue {
+                red:   i32::from_str_radix(&hex[1..3], 16).unwrap(),
+                green: i32::from_str_radix(&hex[3..5], 16).unwrap(),
+                blue:  i32::from_str_radix(&hex[5..7], 16).unwrap(),
+            }
+        } else {
+            panic!("Invalid hex color: {}", hex); // TODO: Result
         }
     }
 }
