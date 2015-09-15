@@ -115,6 +115,7 @@ where T: Iterator<Item = ValuePart<'a>>
                     self.value_stack.push(list);
                     last_was_an_operator = false;
                 },
+                color @ ValuePart::Color(..) => panic!("I don't know what to do with colors yet"),
             }
         }
 

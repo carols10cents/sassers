@@ -1,3 +1,4 @@
+use sass::color_value::ColorValue;
 use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
 use sass::op::Op;
@@ -53,6 +54,10 @@ impl<'a> ValueTokenizer<'a> {
             i += self.scan_while(&self.value_str[i..limit], isnt_space);
             self.offset = i;
             Some(ValuePart::Variable(Borrowed(&self.value_str[start..i])))
+        } else if self.bytes[start] == b'#' {
+            i += self.scan_while(&self.value_str[i..limit], isnt_space);
+            self.offset = i;
+            Some(ValuePart::Color(ColorValue::from_hex(Borrowed(&self.value_str[start..i]))))
         } else {
             i += self.scan_while(&self.value_str[i..limit], isnt_space);
             self.offset = i;
@@ -126,6 +131,7 @@ fn is_operator(c: u8) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sass::color_value::ColorValue;
     use sass::value_part::ValuePart;
     use sass::number_value::NumberValue;
     use sass::op::Op;
@@ -259,6 +265,16 @@ mod tests {
         assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(3.0))), vt.next());
         assert_eq!(Some(ValuePart::Operator(Op::Slash)), vt.next());
         assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(5.0))), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_recognizes_hex() {
+        let mut vt = ValueTokenizer::new("#aabbcc");
+        assert_eq!(
+            Some(ValuePart::Color(ColorValue { red: 170, green: 187, blue: 204 })),
+            vt.next()
+        );
         assert_eq!(None, vt.next());
     }
 }

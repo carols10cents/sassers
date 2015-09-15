@@ -1,3 +1,4 @@
+pub mod color_value;
 pub mod comment;
 pub mod number_value;
 pub mod op;

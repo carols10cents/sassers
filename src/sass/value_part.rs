@@ -1,4 +1,5 @@
 use sass::op::Op;
+use sass::color_value::ColorValue;
 use sass::number_value::NumberValue;
 
 use std::fmt;
@@ -11,6 +12,7 @@ pub enum ValuePart<'a> {
     Number(NumberValue<'a>),
     Operator(Op),
     List(Vec<ValuePart<'a>>),
+    Color(ColorValue),
 }
 
 impl<'a> ValuePart<'a> {
@@ -43,6 +45,7 @@ impl<'a> ValuePart<'a> {
             ValuePart::Number(nv) => ValuePart::Number(nv.into_owned().into()),
             ValuePart::List(v) => ValuePart::List(v.into_iter().map(|p| p.into_owned().into()).collect::<Vec<_>>()),
             ValuePart::Operator(o) => ValuePart::Operator(o),
+            ValuePart::Color(c) => ValuePart::Color(c),
         }
     }
 
@@ -60,6 +63,7 @@ impl<'a> fmt::Display for ValuePart<'a> {
             ValuePart::Variable(ref name) => write!(f, "{}", name),
             ValuePart::String(ref str) => write!(f, "{}", str),
             ValuePart::Number(ref num) => write!(f, "{}", num),
+            ValuePart::Color(ref color) => write!(f, "{}", color),
             ValuePart::List(ref list) => {
                 let mut last_needs_space = false;
                 let mut str = String::new();
