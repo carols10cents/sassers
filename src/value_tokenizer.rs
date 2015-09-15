@@ -55,7 +55,8 @@ impl<'a> ValueTokenizer<'a> {
             self.offset = i;
             Some(ValuePart::Variable(Borrowed(&self.value_str[start..i])))
         } else if self.bytes[start] == b'#' {
-            i += self.scan_while(&self.value_str[i..limit], isnt_space);
+            i += 1;
+            i += self.scan_while(&self.value_str[i..limit], valid_hex_char);
             self.offset = i;
             Some(ValuePart::Color(ColorValue::from_hex(Borrowed(&self.value_str[start..i]))))
         } else {
@@ -111,6 +112,13 @@ fn isnt_space(c: u8) -> bool {
 
 fn valid_unit_char(c: u8) -> bool {
     c == b'%' || (!is_space(c) && !is_operator(c))
+}
+
+fn valid_hex_char(c: u8) -> bool {
+    match c {
+        b'0' ... b'9' | b'a' ... b'f' => true,
+        _ => false,
+    }
 }
 
 fn is_number(c: u8) -> bool {
@@ -289,6 +297,19 @@ mod tests {
             })),
             vt.next()
         );
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_recognizes_hex_is_separate_from_parens() {
+        let mut vt = ValueTokenizer::new("#cba)");
+        assert_eq!(
+            Some(ValuePart::Color(ColorValue {
+                red: 204, green: 187, blue: 170, original: Borrowed("#cba"),
+            })),
+            vt.next()
+        );
+        assert_eq!(Some(ValuePart::Operator(Op::RightParen)), vt.next());
         assert_eq!(None, vt.next());
     }
 }
