@@ -3,6 +3,8 @@ use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
 use sass::op::Op;
 
+use error::Result;
+
 use std::borrow::Cow::Borrowed;
 
 #[derive(Debug)]
@@ -21,14 +23,14 @@ impl<'a> ValueTokenizer<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Option<ValuePart<'a>> {
+    pub fn parse(&mut self) -> Result<Option<ValuePart<'a>>> {
         self.skip_leading_whitespace();
 
         let start = self.offset;
         let mut i = self.offset;
         let limit = self.value_str.len();
 
-        if start == limit {
+        let ret = if start == limit {
             None
         } else if is_operator(self.bytes[start]) {
             self.offset = start + 1;
@@ -58,12 +60,17 @@ impl<'a> ValueTokenizer<'a> {
             i += 1;
             i += self.scan_while(&self.value_str[i..limit], valid_hex_char);
             self.offset = i;
-            Some(ValuePart::Color(ColorValue::from_hex(Borrowed(&self.value_str[start..i]))))
+            match ColorValue::from_hex(Borrowed(&self.value_str[start..i])) {
+                Ok(v) => Some(ValuePart::Color(v)),
+                Err(e) => return Err(e),
+            }
         } else {
             i += self.scan_while(&self.value_str[i..limit], isnt_space);
             self.offset = i;
             Some(ValuePart::String(Borrowed(&self.value_str[start..i])))
-        }
+        };
+
+        Ok(ret)
     }
 
     fn scan_while<F>(&mut self, data: &str, f: F) -> usize
@@ -92,11 +99,15 @@ impl<'a> ValueTokenizer<'a> {
 }
 
 impl<'a> Iterator for ValueTokenizer<'a> {
-    type Item = ValuePart<'a>;
+    type Item = Result<ValuePart<'a>>;
 
-    fn next(&mut self) -> Option<ValuePart<'a>> {
+    fn next(&mut self) -> Option<Result<ValuePart<'a>>> {
         if self.offset < self.value_str.len() {
-            return self.parse()
+            return match self.parse() {
+                Ok(Some(v)) => Some(Ok(v)),
+                Ok(None) => None,
+                Err(e) => Some(Err(e)),
+            }
         }
         None
     }
@@ -148,47 +159,47 @@ mod tests {
     #[test]
     fn it_returns_string_part() {
         let mut vt = ValueTokenizer::new("foo");
-        assert_eq!(Some(ValuePart::String(Borrowed(&"foo"))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::String(Borrowed(&"foo")))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_space_separated_string_parts() {
         let mut vt = ValueTokenizer::new("foo bar");
-        assert_eq!(Some(ValuePart::String(Borrowed(&"foo"))), vt.next());
-        assert_eq!(Some(ValuePart::String(Borrowed(&"bar"))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::String(Borrowed(&"foo")))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::String(Borrowed(&"bar")))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_variable() {
         let mut vt = ValueTokenizer::new("$foo");
-        assert_eq!(Some(ValuePart::Variable(Borrowed(&"$foo"))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Variable(Borrowed(&"$foo")))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_variables_and_string_parts() {
         let mut vt = ValueTokenizer::new("foo $bar baz $quux");
-        assert_eq!(Some(ValuePart::String(Borrowed(&"foo"))), vt.next());
-        assert_eq!(Some(ValuePart::Variable(Borrowed(&"$bar"))), vt.next());
-        assert_eq!(Some(ValuePart::String(Borrowed(&"baz"))), vt.next());
-        assert_eq!(Some(ValuePart::Variable(Borrowed(&"$quux"))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::String(Borrowed(&"foo")))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Variable(Borrowed(&"$bar")))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::String(Borrowed(&"baz")))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Variable(Borrowed(&"$quux")))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_number() {
         let mut vt = ValueTokenizer::new("3");
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(3.0))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(3.0)))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_two_numbers() {
         let mut vt = ValueTokenizer::new("3 8.9");
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(3.0))), vt.next());
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(8.9))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(3.0)))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(8.9)))), vt.next());
         assert_eq!(None, vt.next());
     }
 
@@ -196,7 +207,7 @@ mod tests {
     fn it_returns_numbers_with_units() {
         let mut vt = ValueTokenizer::new("3px");
         assert_eq!(
-            Some(ValuePart::Number(NumberValue::with_units(3.0, Borrowed(&"px")))),
+            Some(Ok(ValuePart::Number(NumberValue::with_units(3.0, Borrowed(&"px"))))),
             vt.next()
         );
         assert_eq!(None, vt.next());
@@ -205,12 +216,12 @@ mod tests {
     #[test]
     fn it_returns_numbers_with_units_but_not_parens() {
         let mut vt = ValueTokenizer::new("(3px)");
-        assert_eq!(Some(ValuePart::Operator(Op::LeftParen)), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Operator(Op::LeftParen))), vt.next());
         assert_eq!(
-            Some(ValuePart::Number(NumberValue::with_units(3.0, Borrowed(&"px")))),
+            Some(Ok(ValuePart::Number(NumberValue::with_units(3.0, Borrowed(&"px"))))),
             vt.next()
         );
-        assert_eq!(Some(ValuePart::Operator(Op::RightParen)), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Operator(Op::RightParen))), vt.next());
         assert_eq!(None, vt.next());
     }
 
@@ -218,11 +229,11 @@ mod tests {
     fn it_returns_numbers_with_percents_as_units() {
         let mut vt = ValueTokenizer::new("10px 8%");
         assert_eq!(
-            Some(ValuePart::Number(NumberValue::with_units(10.0, Borrowed(&"px")))),
+            Some(Ok(ValuePart::Number(NumberValue::with_units(10.0, Borrowed(&"px"))))),
             vt.next()
         );
         assert_eq!(
-            Some(ValuePart::Number(NumberValue::with_units(8.0, Borrowed(&"%")))),
+            Some(Ok(ValuePart::Number(NumberValue::with_units(8.0, Borrowed(&"%"))))),
             vt.next()
         );
         assert_eq!(None, vt.next());
@@ -231,48 +242,48 @@ mod tests {
     #[test]
     fn it_returns_operator() {
         let mut vt = ValueTokenizer::new("+");
-        assert_eq!(Some(ValuePart::Operator(Op::Plus)), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Operator(Op::Plus))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_numbers_and_operators() {
         let mut vt = ValueTokenizer::new("6 + 75.2");
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(6.0))), vt.next());
-        assert_eq!(Some(ValuePart::Operator(Op::Plus)), vt.next());
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(75.2))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(6.0)))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Operator(Op::Plus))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(75.2)))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_numbers_and_operators_without_spaces() {
         let mut vt = ValueTokenizer::new("6+75.2");
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(6.0))), vt.next());
-        assert_eq!(Some(ValuePart::Operator(Op::Plus)), vt.next());
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(75.2))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(6.0)))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Operator(Op::Plus))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(75.2)))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_does_stuff_with_parens() {
         let mut vt = ValueTokenizer::new("2+(3 4)");
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(2.0))), vt.next());
-        assert_eq!(Some(ValuePart::Operator(Op::Plus)), vt.next());
-        assert_eq!(Some(ValuePart::Operator(Op::LeftParen)), vt.next());
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(3.0))), vt.next());
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(4.0))), vt.next());
-        assert_eq!(Some(ValuePart::Operator(Op::RightParen)), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(2.0)))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Operator(Op::Plus))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Operator(Op::LeftParen))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(3.0)))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(4.0)))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Operator(Op::RightParen))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_does_stuff_with_slash_separators() {
         let mut vt = ValueTokenizer::new("15 / 3 / 5");
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(15.0))), vt.next());
-        assert_eq!(Some(ValuePart::Operator(Op::Slash)), vt.next());
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(3.0))), vt.next());
-        assert_eq!(Some(ValuePart::Operator(Op::Slash)), vt.next());
-        assert_eq!(Some(ValuePart::Number(NumberValue::from_scalar(5.0))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(15.0)))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Operator(Op::Slash))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(3.0)))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Operator(Op::Slash))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(5.0)))), vt.next());
         assert_eq!(None, vt.next());
     }
 
@@ -280,9 +291,9 @@ mod tests {
     fn it_recognizes_hex() {
         let mut vt = ValueTokenizer::new("#aabbcc");
         assert_eq!(
-            Some(ValuePart::Color(ColorValue {
+            Some(Ok(ValuePart::Color(ColorValue {
                 red: 170, green: 187, blue: 204, original: Borrowed("#aabbcc"),
-            })),
+            }))),
             vt.next()
         );
         assert_eq!(None, vt.next());
@@ -292,9 +303,9 @@ mod tests {
     fn it_recognizes_short_hex() {
         let mut vt = ValueTokenizer::new("#cba");
         assert_eq!(
-            Some(ValuePart::Color(ColorValue {
+            Some(Ok(ValuePart::Color(ColorValue {
                 red: 204, green: 187, blue: 170, original: Borrowed("#cba"),
-            })),
+            }))),
             vt.next()
         );
         assert_eq!(None, vt.next());
@@ -304,12 +315,12 @@ mod tests {
     fn it_recognizes_hex_is_separate_from_parens() {
         let mut vt = ValueTokenizer::new("#cba)");
         assert_eq!(
-            Some(ValuePart::Color(ColorValue {
+            Some(Ok(ValuePart::Color(ColorValue {
                 red: 204, green: 187, blue: 170, original: Borrowed("#cba"),
-            })),
+            }))),
             vt.next()
         );
-        assert_eq!(Some(ValuePart::Operator(Op::RightParen)), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Operator(Op::RightParen))), vt.next());
         assert_eq!(None, vt.next());
     }
 }

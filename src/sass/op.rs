@@ -1,3 +1,4 @@
+use error::{Result, SassError, ErrorKind};
 use sass::value_part::ValuePart;
 use evaluator::Evaluator;
 
@@ -18,8 +19,8 @@ pub enum Op {
 }
 
 impl FromStr for Op {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    type Err = SassError;
+    fn from_str(s: &str) -> Result<Self> {
         match s {
             "+" => Ok(Op::Plus),
             "-" => Ok(Op::Minus),
@@ -29,22 +30,25 @@ impl FromStr for Op {
             "(" => Ok(Op::LeftParen),
             ")" => Ok(Op::RightParen),
             "," => Ok(Op::Comma),
-            _   => Err(()),
+            op  => Err(SassError {
+                kind: ErrorKind::InvalidOperator,
+                message: format!("Invalid Operator: {}", op),
+            }),
         }
     }
 }
 
 impl Op {
-    pub fn apply<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>, paren_level: i32) -> ValuePart<'a> {
+    pub fn apply<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>, paren_level: i32) -> Result<ValuePart<'a>> {
         match (self, second) {
             (&Op::Plus, s @ ValuePart::List(..)) => self.apply_list(first, s),
             (&Op::Plus, s @ ValuePart::String(..)) => {
-                ValuePart::String(format!("{}{}", first, s).into())
+                Ok(ValuePart::String(format!("{}{}", first, s).into()))
             },
             (&Op::Slash, s) => self.apply_slash(first, s, paren_level),
             (&Op::Comma, s) => {
                 ValuePart::concat_into_list(
-                    ValuePart::concat_into_list(first, ValuePart::Operator(*self)),
+                    try!(ValuePart::concat_into_list(first, ValuePart::Operator(*self))),
                     s,
                 )
             },
@@ -54,7 +58,7 @@ impl Op {
         }
     }
 
-    fn force_list_collapse<'a>(&self, mut vp: ValuePart<'a>) -> ValuePart<'a> {
+    fn force_list_collapse<'a>(&self, mut vp: ValuePart<'a>) -> Result<ValuePart<'a>> {
         match vp {
             ValuePart::List(ref mut l) => {
                 if l.iter().any(|v| {
@@ -66,18 +70,20 @@ impl Op {
                     let mut ve = vec![ValuePart::Operator(Op::LeftParen)];
                     l.push(ValuePart::Operator(Op::RightParen));
                     ve.append(l);
-                    Evaluator::new(ve).evaluate(&HashMap::new())
+                    Evaluator::new(
+                        ve.into_iter().map(|v| Ok(v)).collect::<Vec<_>>()
+                    ).evaluate(&HashMap::new())
                 } else {
-                    ValuePart::List(l.clone())
+                    Ok(ValuePart::List(l.clone()))
                 }
             },
-            _ => vp,
+            _ => Ok(vp),
         }
     }
 
-    fn apply_list<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
-        let first_collapsed  = self.force_list_collapse(first);
-        let second_collapsed = self.force_list_collapse(second);
+    fn apply_list<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> Result<ValuePart<'a>> {
+        let first_collapsed  = try!(self.force_list_collapse(first));
+        let second_collapsed = try!(self.force_list_collapse(second));
 
         match (first_collapsed, second_collapsed) {
             (ValuePart::Number(fnum), ValuePart::List(mut slist)) => {
@@ -101,21 +107,27 @@ impl Op {
                 self.apply_math(f, s)
             },
             (unk_first, unk_second) => {
-                return ValuePart::String(format!(
-                    "Unknown apply_list match:\n  first: {:?}\n  second: {:?}",
-                    unk_first, unk_second
-                ).into())
+                Err(SassError {
+                    kind: ErrorKind::InvalidApplyListArgs,
+                    message: format!(
+                        "Invalid apply_list arguments:\n  first: {:?}\n  second: {:?}",
+                        unk_first, unk_second
+                    ),
+                })
             },
         }
     }
 
-    fn apply_slash<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>, paren_level: i32) -> ValuePart<'a> {
+    fn apply_slash<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>, paren_level: i32) -> Result<ValuePart<'a>> {
         if paren_level == 0 {
             if first.computed_number() || second.computed_number() {
-                self.apply_math(self.force_list_collapse(first), self.force_list_collapse(second))
+                let first_collapsed  = try!(self.force_list_collapse(first));
+                let second_collapsed = try!(self.force_list_collapse(second));
+
+                self.apply_math(first_collapsed, second_collapsed)
             } else {
                 ValuePart::concat_into_list(
-                    ValuePart::concat_into_list(first, ValuePart::Operator(*self)),
+                    try!(ValuePart::concat_into_list(first, ValuePart::Operator(*self))),
                     second,
                 )
             }
@@ -123,7 +135,7 @@ impl Op {
             match first {
                 ValuePart::List(..) => {
                     ValuePart::concat_into_list(
-                        ValuePart::concat_into_list(first, ValuePart::Operator(*self)),
+                        try!(ValuePart::concat_into_list(first, ValuePart::Operator(*self))),
                         second,
                     )
                 },
@@ -134,35 +146,45 @@ impl Op {
         }
     }
 
-    fn apply_math<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> ValuePart<'a> {
+    fn apply_math<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> Result<ValuePart<'a>> {
         match (first, second) {
             (ValuePart::Number(f), ValuePart::Number(s)) => {
-                ValuePart::Number(f.apply_math(*self, s))
+                Ok(ValuePart::Number(try!(f.apply_math(*self, s))))
             },
             (ValuePart::Color(f), ValuePart::Number(s)) => {
-                ValuePart::Color(f.apply_math(*self, s))
+                Ok(ValuePart::Color(try!(f.apply_math(*self, s))))
             },
             (ValuePart::Color(f), ValuePart::Color(s)) => {
-                ValuePart::Color(f.combine_colors(*self, s))
+                Ok(ValuePart::Color(try!(f.combine_colors(*self, s))))
             },
             (f, s) => {
-                // TODO: result
-                ValuePart::String(
-                    format!("Invalid apply math arguments:\n  first: {:?}\n  second: {:?}\n", f, s).into()
-                )
+                Err(SassError {
+                    kind: ErrorKind::InvalidApplyMathArgs,
+                    message: format!(
+                        "Invalid apply math arguments:\n  first: {:?}\n  second: {:?}",
+                        f, s
+                    ),
+                })
             },
         }
     }
 
-    pub fn math(&self, first_num: f32, second_num: f32) -> f32 {
-        match *self {
+    pub fn math(&self, first_num: f32, second_num: f32) -> Result<f32> {
+        let res = match *self {
             Op::Plus    => first_num + second_num,
             Op::Minus   => first_num - second_num,
             Op::Star    => first_num * second_num,
             Op::Slash   => first_num / second_num,
             Op::Percent => first_num % second_num,
-            _           => 0.0, // TODO: Result
-        }
+            other => return Err(SassError {
+                kind: ErrorKind::InvalidOperator,
+                message: format!(
+                    "Cannot apply operator {:?} as math",
+                    other
+                ),
+            }),
+        };
+        Ok(res)
     }
 
     pub fn same_or_greater_precedence(self, other: Op) -> bool {

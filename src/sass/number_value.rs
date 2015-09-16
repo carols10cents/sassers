@@ -1,4 +1,5 @@
 use sass::op::Op;
+use error::{Result, SassError, ErrorKind};
 
 use std::borrow::Cow::*;
 use std::borrow::Cow;
@@ -56,36 +57,49 @@ impl<'a, 'b> NumberValue<'a> {
         }
     }
 
-    pub fn apply_math(self, op: Op, nv: NumberValue<'a>) -> NumberValue<'a> {
-        let result       = self.compute_number(op, &nv);
-        let result_units = self.compute_units(op, nv);
+    pub fn apply_math(self, op: Op, nv: NumberValue<'a>) -> Result<NumberValue<'a>> {
+        let result       = try!(self.compute_number(op, &nv));
+        let result_units = try!(self.compute_units(op, nv));
 
-        NumberValue {
+        Ok(NumberValue {
             scalar:   result,
             unit:     result_units,
             computed: true,
-        }
+        })
     }
 
-    fn compute_number(&self, op: Op, nv: &NumberValue<'a>) -> f32 {
+    fn compute_number(&self, op: Op, nv: &NumberValue<'a>) -> Result<f32> {
         op.math(self.scalar, nv.scalar)
     }
 
-    fn compute_units(self, op: Op, nv: NumberValue<'a>) -> Option<Cow<'a, str>> {
-        match (self.unit, nv.unit) {
+    fn compute_units(self, op: Op, nv: NumberValue<'a>) -> Result<Option<Cow<'a, str>>> {
+        let unit = match (self.unit, nv.unit) {
             (Some(u), None) | (None, Some(u)) => Some(u.into_owned().into()),
             (Some(ref u1), Some(ref u2)) if u1 == u2 => {
                 match op {
                     Op::Slash => None, // Divide out the units
-                    // TODO: Multiplication that produces square units should return Err
-                    _         => Some(u1.clone().into_owned().into()),
+                    Op::Star => return Err(SassError {
+                        kind: ErrorKind::InvalidSquareUnits,
+                        message: format!(
+                            "Multiplication of {:?} and {:?} would produce invalid squared units",
+                            u1, u2
+                        ),
+                    }),
+                    _ => Some(u1.clone().into_owned().into()),
                 }
             },
             (None, None) => None,
             (other1, other2) => {
-                Some(Owned(format!("Incompatible units: {:?} and {:?}", other1, other2))) // TODO: Result
+                return Err(SassError {
+                    kind: ErrorKind::IncompatibleUnits,
+                    message: format!(
+                        "Incompatible units: {:?} and {:?}",
+                        other1, other2
+                    ),
+                });
             },
-        }
+        };
+        Ok(unit)
     }
 }
 

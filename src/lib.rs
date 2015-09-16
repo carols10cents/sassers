@@ -1,4 +1,3 @@
-#![feature(append)]
 #![feature(collections)]
 
 #[macro_use]
@@ -10,6 +9,7 @@ use std::fs::File;
 use std::io::Read;
 use regex::Regex;
 
+mod error;
 mod evaluator;
 mod event;
 mod output;
@@ -19,27 +19,8 @@ mod top_level_event;
 mod value_tokenizer;
 mod variable_mapper;
 
+use error::{SassError, ErrorKind, Result};
 use tokenizer::Tokenizer;
-
-pub type Result<T> = std::result::Result<T, Error>;
-
-#[derive(Debug)]
-pub struct Error {
-    pub message: String,
-    pub kind: ErrorKind,
-}
-
-impl From<std::io::Error> for Error {
-    fn from(err: std::io::Error) -> Error {
-        Error { message: format!("IO error! {}", err), kind: ErrorKind::IoError }
-    }
-}
-
-#[derive(Debug)]
-pub enum ErrorKind {
-    IoError,
-    InvalidStyle,
-}
 
 fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
     let mut file = try!(File::open(&inputpath));
@@ -71,13 +52,13 @@ pub fn compile(inputfile: &str, style: &str) -> Result<String> {
 
     let mut tokenizer = Tokenizer::new(&imports_resolved);
     match style {
-        "nested"     => Ok(output::nested(&mut tokenizer)),
-        "compressed" => Ok(output::compressed(&mut tokenizer)),
-        "expanded"   => Ok(output::expanded(&mut tokenizer)),
-        "compact"    => Ok(output::compact(&mut tokenizer)),
-        "debug"      => Ok(output::debug(&mut tokenizer)),
+        "nested"     => Ok(try!(output::nested(&mut tokenizer))),
+        "compressed" => Ok(try!(output::compressed(&mut tokenizer))),
+        "expanded"   => Ok(try!(output::expanded(&mut tokenizer))),
+        "compact"    => Ok(try!(output::compact(&mut tokenizer))),
+        "debug"      => Ok(try!(output::debug(&mut tokenizer))),
         _            => {
-            Err(Error {
+            Err(SassError {
                 kind: ErrorKind::InvalidStyle,
                 message: format!("Unknown style {:?}. Please specify one of nested, compressed, expanded, or compact.", style),
             })

@@ -1,100 +1,108 @@
+use error::Result;
 use tokenizer::Tokenizer;
 use top_level_event::TopLevelEvent;
 use variable_mapper::VariableMapper;
 
-pub fn expanded<'a, I>(tokenizer: &mut I) -> String
-    where I: Iterator<Item = TopLevelEvent<'a>>
+pub fn expanded<'a, I>(tokenizer: &mut I) -> Result<String>
+    where I: Iterator<Item = Result<TopLevelEvent<'a>>>
 {
     let mut vm = VariableMapper::new(tokenizer);
     let mut output = String::new();
 
     while let Some(event) = vm.next() {
         match event {
-            TopLevelEvent::Rule(rule) => {
+            Ok(TopLevelEvent::Rule(rule)) => {
                 output.push_str(&rule.expanded());
                 output.push_str("\n\n");
             },
-            TopLevelEvent::Variable(..) => {},
-            TopLevelEvent::Comment(comment) => {
+            Ok(TopLevelEvent::Variable(..)) => {},
+            Ok(TopLevelEvent::Comment(comment)) => {
                 output.push_str(&comment.expanded());
                 output.push_str("\n");
             },
+            Err(e) => return Err(e),
         }
     }
 
-    output
+    Ok(output)
 }
 
-pub fn nested<'a, I>(tokenizer: &mut I) -> String
-    where I: Iterator<Item = TopLevelEvent<'a>>
+pub fn nested<'a, I>(tokenizer: &mut I) -> Result<String>
+    where I: Iterator<Item = Result<TopLevelEvent<'a>>>
 {
     let mut vm = VariableMapper::new(tokenizer);
     let mut output = String::new();
 
     while let Some(event) = vm.next() {
         match event {
-            TopLevelEvent::Rule(rule) => {
+            Ok(TopLevelEvent::Rule(rule)) => {
                 output.push_str(&rule.nested());
                 output.push_str("\n\n");
             },
-            TopLevelEvent::Variable(..) => {},
-            TopLevelEvent::Comment(comment) => {
+            Ok(TopLevelEvent::Variable(..)) => {},
+            Ok(TopLevelEvent::Comment(comment)) => {
                 output.push_str(&comment.nested());
                 output.push_str("\n");
             },
+            Err(e) => return Err(e),
         }
     }
 
-    output
+    Ok(output)
 }
 
-pub fn compact<'a, I>(tokenizer: &mut I) -> String
-    where I: Iterator<Item = TopLevelEvent<'a>>
+pub fn compact<'a, I>(tokenizer: &mut I) -> Result<String>
+    where I: Iterator<Item = Result<TopLevelEvent<'a>>>
 {
     let mut vm = VariableMapper::new(tokenizer);
     let mut output = String::new();
 
     while let Some(event) = vm.next() {
         match event {
-            TopLevelEvent::Rule(rule) => {
+            Ok(TopLevelEvent::Rule(rule)) => {
                 output.push_str(&rule.compact());
                 output.push_str("\n\n");
             },
-            TopLevelEvent::Variable(..) => {},
-            TopLevelEvent::Comment(comment) => {
+            Ok(TopLevelEvent::Variable(..)) => {},
+            Ok(TopLevelEvent::Comment(comment)) => {
                 output.push_str(&comment.compact());
                 output.push_str("\n");
             },
+            Err(e) => return Err(e),
         }
     }
 
-    output
+    Ok(output)
 }
 
-pub fn compressed<'a, I>(tokenizer: &mut I) -> String
-    where I: Iterator<Item = TopLevelEvent<'a>>
+pub fn compressed<'a, I>(tokenizer: &mut I) -> Result<String>
+    where I: Iterator<Item = Result<TopLevelEvent<'a>>>
 {
     let mut vm = VariableMapper::new(tokenizer);
     let mut output = String::new();
 
     while let Some(event) = vm.next() {
         match event {
-            TopLevelEvent::Rule(rule) => {
+            Ok(TopLevelEvent::Rule(rule)) => {
                 output.push_str(&rule.compressed());
             },
-            TopLevelEvent::Variable(..) => {},
-            TopLevelEvent::Comment(..) => {},
+            Ok(TopLevelEvent::Variable(..)) => {},
+            Ok(TopLevelEvent::Comment(..)) => {},
+            Err(e) => return Err(e),
         }
     }
 
-    output
+    Ok(output)
 }
 
-pub fn debug(tokenizer: &mut Tokenizer) -> String {
+pub fn debug(tokenizer: &mut Tokenizer) -> Result<String> {
     let mut output = String::new();
 
     while let Some(event) = tokenizer.next() {
-        output.push_str(&format!("{:?}\n", event));
+        match event {
+            Ok(ev) => output.push_str(&format!("{:?}\n", ev)),
+            Err(e) => return Err(e),
+        }
     }
-    output
+    Ok(output)
 }

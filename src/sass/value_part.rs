@@ -1,3 +1,4 @@
+use error::{Result}; //, SassError, ErrorKind};
 use sass::op::Op;
 use sass::color_value::ColorValue;
 use sass::number_value::NumberValue;
@@ -16,7 +17,7 @@ pub enum ValuePart<'a> {
 }
 
 impl<'a> ValuePart<'a> {
-    pub fn concat_into_list(left: ValuePart<'a>, right: ValuePart<'a>) -> ValuePart<'static> {
+    pub fn concat_into_list(left: ValuePart<'a>, right: ValuePart<'a>) -> Result<ValuePart<'static>> {
         let list_parts = match (left, right) {
             (ValuePart::List(mut l), ValuePart::List(r)) => {
                 l.extend(r);
@@ -35,7 +36,7 @@ impl<'a> ValuePart<'a> {
                 vec![l, r]
             },
         };
-        ValuePart::List(list_parts).into_owned().into()
+        Ok(ValuePart::List(list_parts).into_owned().into())
     }
 
     pub fn into_owned(self) -> ValuePart<'static> {

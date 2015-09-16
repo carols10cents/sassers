@@ -1,3 +1,4 @@
+use error::{SassError, ErrorKind, Result};
 use event::Event;
 use sass::comment::SassComment;
 use sass::rule::SassRule;
@@ -66,13 +67,13 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn start_something(&mut self) -> Option<TopLevelEvent<'a>> {
+    fn start_something(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
         let mut current_sass_rule = SassRule::new();
         self.current_sass_rule_selectors_done = false;
 
         self.pick_something();
         while self.state != State::OutsideRules {
-            if self.state == State::Eof { return None }
+            if self.state == State::Eof { return Ok(None) }
 
             // See if this works now that State is Copy
             // self.state = match self.state
@@ -104,12 +105,9 @@ impl<'a> Tokenizer<'a> {
                 self.current_sass_rule_selectors_done = false;
                 self.pick_something();
             } else if self.state == State::InVariable {
-                let var = self.next_variable();
-                if var.is_some() {
-                    return var
-                } else {
-                    // is this really what we should be doing here? reachable?
-                    self.state = State::Eof;
+                return match self.next_variable() {
+                    Ok(v) => Ok(Some(v)),
+                    Err(e) => Err(e),
                 }
             } else if self.state == State::InComment {
                 let comment = self.next_comment();
@@ -117,23 +115,29 @@ impl<'a> Tokenizer<'a> {
                     if self.sass_rule_stack.len() == 0 &&
                        current_sass_rule.selectors.len() == 0 &&
                        current_sass_rule.children.len() == 0 {
-                           return Some(TopLevelEvent::Comment(SassComment { comment: comment.unwrap() }))
+                           return Ok(Some(
+                               TopLevelEvent::Comment(SassComment { comment: comment.unwrap() })
+                           ))
                     } else {
                         current_sass_rule.children.push(comment.unwrap());
                         self.pick_something();
                     }
                 } else {
-                    // is this really what we should be doing here? reachable?
-                    self.state = State::Eof;
+                    return Ok(None)
                 }
             } else {
-                println!("i dont know what to do for {:?}", self.state);
-                println!("current sass rule = {:?}", current_sass_rule);
-                self.state = State::Eof;
+                return Err(SassError {
+                    kind: ErrorKind::TokenizerError,
+                    message: format!(
+                        "Current tokenization state: {:?}. Current sass rule = {:?}",
+                        self.state,
+                        current_sass_rule
+                    ),
+                })
             }
         }
 
-        Some(TopLevelEvent::Rule(current_sass_rule))
+        Ok(Some(TopLevelEvent::Rule(current_sass_rule)))
     }
 
     fn pick_something(&mut self) {
@@ -237,7 +241,7 @@ impl<'a> Tokenizer<'a> {
         None
     }
 
-    fn next_variable(&mut self) -> Option<TopLevelEvent<'a>> {
+    fn next_variable(&mut self) -> Result<TopLevelEvent<'a>> {
         // TODO: can parts of this be deduplicated with properties?
         let name_beginning = self.offset;
         let mut i = name_beginning;
@@ -269,14 +273,19 @@ impl<'a> Tokenizer<'a> {
 
                 self.skip_leading_whitespace();
 
-                return Some(TopLevelEvent::Variable(SassVariable{
+                return Ok(TopLevelEvent::Variable(SassVariable{
                     name: Borrowed(&self.sass[name_beginning..name_end]),
                     value: Borrowed(&self.sass[value_beginning..value_end]),
                 }))
             }
         }
         self.offset = self.sass.len();
-        None
+        Err(SassError {
+            kind: ErrorKind::ExpectedVariable,
+            message: String::from(
+                "Expected variable declaration and value; reached EOF instead."
+            ),
+        })
     }
 
     fn next_property(&mut self) -> Option<Event<'a>> {
@@ -414,11 +423,15 @@ impl<'a> Tokenizer<'a> {
 }
 
 impl<'a> Iterator for Tokenizer<'a> {
-    type Item = TopLevelEvent<'a>;
+    type Item = Result<TopLevelEvent<'a>>;
 
-    fn next(&mut self) -> Option<TopLevelEvent<'a>> {
+    fn next(&mut self) -> Option<Result<TopLevelEvent<'a>>> {
         if self.offset < self.sass.len() {
-            return self.start_something()
+            return match self.start_something() {
+                Ok(Some(t)) => Some(Ok(t)),
+                Ok(None) => None,
+                Err(e) => Some(Err(e)),
+            }
         }
         None
     }
