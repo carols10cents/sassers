@@ -155,7 +155,7 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
     fn pop_operator(&mut self) -> Result<Op> {
         self.op_stack.pop().ok_or(SassError {
             kind: ErrorKind::ExpectedOperator,
-            message: String::from("Expected value to be on value stack but it was empty"),
+            message: String::from("Expected operator to be on operator stack but it was empty"),
         })
     }
 
