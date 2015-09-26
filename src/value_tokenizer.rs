@@ -64,13 +64,56 @@ impl<'a> ValueTokenizer<'a> {
                 Ok(v) => Some(ValuePart::Color(v)),
                 Err(e) => return Err(e),
             }
+        } else if self.eat("rgb(") {
+            let r = self.eat_integer();
+            self.eat(",");
+            let g = self.eat_integer();
+            self.eat(",");
+            let b = self.eat_integer();
+            self.eat(")");
+
+            Some(ValuePart::Color(
+                ColorValue {
+                    red: r, green: g, blue: b,
+                    original: Borrowed(&self.value_str[start..self.offset]),
+                }
+            ))
         } else {
-            i += self.scan_while(&self.value_str[i..limit], isnt_space);
+            i = start;
+            i += self.scan_while(&self.value_str[start..limit], isnt_space);
             self.offset = i;
             Some(ValuePart::String(Borrowed(&self.value_str[start..i])))
         };
 
         Ok(ret)
+    }
+
+    fn eat_integer(&mut self) -> i32 {
+        let limit = self.value_str.len();
+        let mut i = self.offset;
+        let color_start = i;
+
+        i += self.scan_while(&self.value_str[i..limit], is_number);
+        self.offset = i;
+        self.value_str[color_start..i].parse().unwrap_or(0)
+    }
+
+    fn eat(&mut self, expected: &str) -> bool {
+        for c in expected.as_bytes().iter() {
+            if !self.eatch(c) {
+                return false
+            }
+        }
+        return true
+    }
+
+    fn eatch(&mut self, expected_char: &u8) -> bool {
+        if self.bytes[self.offset] == *expected_char {
+            self.offset += 1;
+            true
+        } else {
+            false
+        }
     }
 
     fn scan_while<F>(&mut self, data: &str, f: F) -> usize
@@ -321,6 +364,18 @@ mod tests {
             vt.next()
         );
         assert_eq!(Some(Ok(ValuePart::Operator(Op::RightParen))), vt.next());
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_recognizes_rgb() {
+        let mut vt = ValueTokenizer::new("rgb(10,100,73)");
+        assert_eq!(
+            Some(Ok(ValuePart::Color(ColorValue {
+                red: 10, green: 100, blue: 73, original: Borrowed("rgb(10,100,73)"),
+            }))),
+            vt.next()
+        );
         assert_eq!(None, vt.next());
     }
 }
