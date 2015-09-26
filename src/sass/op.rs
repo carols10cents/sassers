@@ -2,6 +2,7 @@ use error::{Result, SassError, ErrorKind};
 use sass::value_part::ValuePart;
 use evaluator::Evaluator;
 
+use std::fmt;
 use std::borrow::Cow::*;
 use std::str::FromStr;
 use std::collections::HashMap;
@@ -37,6 +38,23 @@ impl FromStr for Op {
         }
     }
 }
+
+impl<'a> fmt::Display for Op {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match *self {
+            Op::Plus       => "+",
+            Op::Minus      => "-",
+            Op::Star       => "*",
+            Op::Slash      => "/",
+            Op::Percent    => "%",
+            Op::LeftParen  => "(",
+            Op::RightParen => ")",
+            Op::Comma      => ",",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 
 impl Op {
     pub fn apply<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>, paren_level: i32) -> Result<ValuePart<'a>> {
@@ -156,6 +174,9 @@ impl Op {
             },
             (ValuePart::Color(f), ValuePart::Color(s)) => {
                 Ok(ValuePart::Color(try!(f.combine_colors(*self, s))))
+            },
+            (ValuePart::Number(f), ValuePart::Color(s)) => {
+                Ok(ValuePart::String(format!("{}{}{}", f, self, s).into()))
             },
             (f, s) => {
                 Err(SassError {
