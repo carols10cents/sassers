@@ -1,9 +1,13 @@
 extern crate sassers;
 extern crate docopt;
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 
 #[cfg(not(test))]
 fn main() {
     use docopt::Docopt;
+    env_logger::init().unwrap();
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
     static USAGE: &'static str = "
 Usage:

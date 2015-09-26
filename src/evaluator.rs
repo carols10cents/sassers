@@ -43,6 +43,7 @@ impl<'a, T> Evaluator<'a, T>
 where T: Iterator<Item = Result<ValuePart<'a>>>
 {
     pub fn evaluate(&mut self, variables: &HashMap<String, ValuePart<'a>>) -> Result<ValuePart<'a>> {
+        debug!("=====new evaluate call=======");
         let mut last_was_an_operator = true;
 
         while let Some(Ok(part)) = self.value_tokens.next() {
