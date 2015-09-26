@@ -127,7 +127,7 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
         debug!("evaluate value_tokens empty: value_stack: {:?} op_stack: {:?}", self.value_stack, self.op_stack);
 
         while !self.op_stack.is_empty() {
-            let _ = self.math_machine();
+            try!(self.math_machine());
         }
 
         if self.value_stack.len() > 1 {
