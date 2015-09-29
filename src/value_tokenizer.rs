@@ -65,11 +65,11 @@ impl<'a> ValueTokenizer<'a> {
                 Err(e) => return Err(e),
             }
         } else if self.eat("rgb(") {
-            let r = self.eat_integer();
+            let r = self.eat_color_u8();
             self.eat(",");
-            let g = self.eat_integer();
+            let g = self.eat_color_u8();
             self.eat(",");
-            let b = self.eat_integer();
+            let b = self.eat_color_u8();
             self.eat(")");
 
             Some(ValuePart::Color(
@@ -88,7 +88,7 @@ impl<'a> ValueTokenizer<'a> {
         Ok(ret)
     }
 
-    fn eat_integer(&mut self) -> u8 {
+    fn eat_color_u8(&mut self) -> u8 {
         let limit = self.value_str.len();
         let mut i = self.offset;
         let color_start = i;
