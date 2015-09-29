@@ -52,7 +52,7 @@ impl<'a, 'b> ColorValue<'a> {
     pub fn into_owned(self) -> ColorValue<'b> {
         ColorValue {
             red: self.red, green: self.green, blue: self.blue,
-            computed: false,
+            computed: self.computed,
             original: self.original.into_owned().into(),
         }
     }
@@ -278,6 +278,22 @@ mod tests {
     fn it_ignores_overflow_when_not_a_named_color() {
         let c = ColorValue::from_hex(Borrowed("#ff0000")).unwrap();
         let res = c.apply_math(Op::Plus, NumberValue::from_scalar(1.0)).unwrap();
+        assert!(res.computed);
         assert_eq!("#ff0101", format!("{}", res));
+    }
+
+    #[test]
+    fn it_prefers_named_colors_if_computed() {
+        let c = ColorValue::from_computed(192, 192, 192);
+        assert_eq!("silver", format!("{}", c));
+    }
+
+    #[test]
+    fn combining_colors_results_in_computed() {
+        let c = ColorValue::from_hex(Borrowed("#ff0000")).unwrap();
+        let d = ColorValue::from_hex(Borrowed("#00ff00")).unwrap();
+        let res = c.combine_colors(Op::Plus, d).unwrap();
+        assert!(res.computed);
+        assert_eq!("yellow", format!("{}", res));
     }
 }
