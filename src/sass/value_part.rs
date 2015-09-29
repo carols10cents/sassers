@@ -56,6 +56,22 @@ impl<'a> ValuePart<'a> {
             _ => false,
         }
     }
+
+    pub fn expanded(&self) -> String {
+        format!("{}", self)
+    }
+
+    pub fn nested(&self) -> String {
+        format!("{}", self)
+    }
+
+    pub fn compact(&self) -> String {
+        format!("{}", self)
+    }
+
+    pub fn compressed(&self) -> String {
+        format!("{}", self)
+    }
 }
 
 impl<'a> fmt::Display for ValuePart<'a> {

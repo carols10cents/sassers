@@ -33,18 +33,16 @@ impl<'vm, I> VariableMapper<'vm, I> {
                     local_variables.insert((*name).to_string(), val);
                     None
                 },
-                Event::Property(name, value) => {
+                Event::UnevaluatedProperty(name, value) => {
                     let mut ev = Evaluator::new_from_string(&value);
-                    let ev_res_string = match ev.evaluate(&local_variables) {
-                        Ok(s) => s.to_string(),
+                    let ev_res = match ev.evaluate(&local_variables) {
+                        Ok(s)  => s.into_owned(),
                         Err(e) => return Some(Err(e)),
                     };
 
                     Some(Ok(Event::Property(
                         name,
-                        // TODO: Is it ok that property values are strings or should they
-                        // be value parts ...?
-                        ev_res_string.into()
+                        ev_res,
                     )))
                 },
                 Event::ChildRule(rule) => {

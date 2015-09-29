@@ -352,9 +352,9 @@ impl<'a> Tokenizer<'a> {
                         value: Borrowed(&self.sass[value_beginning..value_end])
                     }))
                 } else {
-                    return Some(Event::Property(
+                    return Some(Event::UnevaluatedProperty(
                         Borrowed(&self.sass[name_beginning..name_end]),
-                        Borrowed(&self.sass[value_beginning..value_end])
+                        Borrowed(&self.sass[value_beginning..value_end]),
                     ))
                 }
             }

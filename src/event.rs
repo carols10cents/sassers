@@ -1,11 +1,13 @@
 use sass::rule::SassRule;
 use sass::variable::SassVariable;
+use sass::value_part::ValuePart;
 
 use std::borrow::Cow;
 
 #[derive(Debug, Clone)]
 pub enum Event<'a> {
-    Property(Cow<'a, str>, Cow<'a, str>),
+    Property(Cow<'a, str>, ValuePart<'a>),
+    UnevaluatedProperty(Cow<'a, str>, Cow<'a, str>),
     Comment(Cow<'a, str>),
     ChildRule(SassRule<'a>),
     Variable(SassVariable<'a>),
@@ -14,39 +16,39 @@ pub enum Event<'a> {
 impl<'a> Event<'a> {
     pub fn expanded(&self) -> String {
         match *self {
-            Event::Property(ref name, ref value) => format!("  {}: {};", name, value),
+            Event::Property(ref name, ref value) => format!("  {}: {};", name, value.expanded()),
             Event::Comment(ref comment) => format!("  {}", comment),
             Event::ChildRule(ref sass_rule) => sass_rule.expanded(),
-            Event::Variable(..) => unreachable!(),
+            _ => unreachable!(),
         }
     }
 
     pub fn nested(&self) -> String {
         match *self {
-            Event::Property(ref name, ref value) => format!("  {}: {};", name, value),
+            Event::Property(ref name, ref value) => format!("  {}: {};", name, value.nested()),
             Event::Comment(ref comment) => format!("  {}", comment),
             Event::ChildRule(ref sass_rule) => sass_rule.nested(),
-            Event::Variable(..) => unreachable!(),
+            _ => unreachable!(),
         }
     }
 
     pub fn compact(&self) -> String {
         match *self {
-            Event::Property(ref name, ref value) => format!("{}: {};", name, value),
+            Event::Property(ref name, ref value) => format!("{}: {};", name, value.compact()),
             Event::Comment(ref comment) => (*comment).to_string(),
             Event::ChildRule(ref sass_rule) => sass_rule.compact(),
-            Event::Variable(..) => unreachable!(),
+            _ => unreachable!(),
         }
     }
 
     pub fn compressed(&self) -> String {
         match *self {
             Event::Property(ref name, ref value) => {
-                format!("{}:{}", name, value.replace(", ", ","))
+                format!("{}:{}", name, value.compressed().replace(", ", ","))
             },
             Event::Comment(..) => unreachable!(),
             Event::ChildRule(ref sass_rule) => sass_rule.compressed(),
-            Event::Variable(..) => unreachable!(),
+            _ => unreachable!(),
         }
     }
 
