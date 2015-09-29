@@ -88,7 +88,7 @@ impl<'a> ValueTokenizer<'a> {
         Ok(ret)
     }
 
-    fn eat_integer(&mut self) -> i32 {
+    fn eat_integer(&mut self) -> u8 {
         let limit = self.value_str.len();
         let mut i = self.offset;
         let color_start = i;
