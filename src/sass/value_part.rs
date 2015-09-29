@@ -70,7 +70,27 @@ impl<'a> ValuePart<'a> {
     }
 
     pub fn compressed(&self) -> String {
-        format!("{}", self)
+        match *self {
+            ValuePart::List(ref list) => {
+                let mut last_needs_space = false;
+                let mut str = String::new();
+                for item in list {
+                    if last_needs_space &&
+                       *item != ValuePart::Operator(Op::Slash) &&
+                       *item != ValuePart::Operator(Op::Comma) {
+                        str.push_str(" ");
+                    }
+                    str.push_str(&item.compressed());
+                    match item {
+                        &ValuePart::Operator(Op::Slash) => last_needs_space = false,
+                        &ValuePart::Operator(Op::Comma) => last_needs_space = false,
+                        _ => last_needs_space = true,
+                    }
+                }
+                format!("{}", str)
+            },
+            _ => format!("{}", self),
+        }
     }
 }
 
@@ -102,7 +122,6 @@ impl<'a> fmt::Display for ValuePart<'a> {
             ValuePart::Operator(Op::Comma) => write!(f, ","),
             ValuePart::Operator(..) => unreachable!(),
         }
-
     }
 }
 
