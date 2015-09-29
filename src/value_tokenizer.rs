@@ -67,8 +67,10 @@ impl<'a> ValueTokenizer<'a> {
         } else if self.eat("rgb(") {
             let r = self.eat_color_u8();
             self.eat(",");
+            self.skip_leading_whitespace();
             let g = self.eat_color_u8();
             self.eat(",");
+            self.skip_leading_whitespace();
             let b = self.eat_color_u8();
             self.eat(")");
 
@@ -373,6 +375,18 @@ mod tests {
         assert_eq!(
             Some(Ok(ValuePart::Color(ColorValue {
                 red: 10, green: 100, blue: 73, original: Borrowed("rgb(10,100,73)"),
+            }))),
+            vt.next()
+        );
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_recognizes_rgb_with_spaces() {
+        let mut vt = ValueTokenizer::new("rgb(10, 100, 73)");
+        assert_eq!(
+            Some(Ok(ValuePart::Color(ColorValue {
+                red: 10, green: 100, blue: 73, original: Borrowed("rgb(10, 100, 73)"),
             }))),
             vt.next()
         );
