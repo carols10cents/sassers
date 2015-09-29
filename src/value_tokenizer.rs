@@ -77,6 +77,7 @@ impl<'a> ValueTokenizer<'a> {
             Some(ValuePart::Color(
                 ColorValue {
                     red: r, green: g, blue: b,
+                    computed: false,
                     original: Borrowed(&self.value_str[start..self.offset]),
                 }
             ))
@@ -337,7 +338,7 @@ mod tests {
         let mut vt = ValueTokenizer::new("#aabbcc");
         assert_eq!(
             Some(Ok(ValuePart::Color(ColorValue {
-                red: 170, green: 187, blue: 204, original: Borrowed("#aabbcc"),
+                red: 170, green: 187, blue: 204, computed: false, original: Borrowed("#aabbcc"),
             }))),
             vt.next()
         );
@@ -349,7 +350,7 @@ mod tests {
         let mut vt = ValueTokenizer::new("#cba");
         assert_eq!(
             Some(Ok(ValuePart::Color(ColorValue {
-                red: 204, green: 187, blue: 170, original: Borrowed("#cba"),
+                red: 204, green: 187, blue: 170, computed: false, original: Borrowed("#cba"),
             }))),
             vt.next()
         );
@@ -361,7 +362,7 @@ mod tests {
         let mut vt = ValueTokenizer::new("#cba)");
         assert_eq!(
             Some(Ok(ValuePart::Color(ColorValue {
-                red: 204, green: 187, blue: 170, original: Borrowed("#cba"),
+                red: 204, green: 187, blue: 170, computed: false, original: Borrowed("#cba"),
             }))),
             vt.next()
         );
@@ -374,7 +375,8 @@ mod tests {
         let mut vt = ValueTokenizer::new("rgb(10,100,73)");
         assert_eq!(
             Some(Ok(ValuePart::Color(ColorValue {
-                red: 10, green: 100, blue: 73, original: Borrowed("rgb(10,100,73)"),
+                red: 10, green: 100, blue: 73,
+                computed: false, original: Borrowed("rgb(10,100,73)"),
             }))),
             vt.next()
         );
@@ -386,7 +388,8 @@ mod tests {
         let mut vt = ValueTokenizer::new("rgb(10, 100, 73)");
         assert_eq!(
             Some(Ok(ValuePart::Color(ColorValue {
-                red: 10, green: 100, blue: 73, original: Borrowed("rgb(10, 100, 73)"),
+                red: 10, green: 100, blue: 73,
+                computed: false, original: Borrowed("rgb(10, 100, 73)"),
             }))),
             vt.next()
         );

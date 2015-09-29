@@ -11,6 +11,7 @@ pub struct ColorValue<'a> {
     pub red: u8,
     pub green: u8,
     pub blue: u8,
+    pub computed: bool,
     pub original: Cow<'a, str>,
 }
 
@@ -21,6 +22,7 @@ impl<'a, 'b> ColorValue<'a> {
                 red:   u8::from_str_radix(&hex[1..2], 16).unwrap() * 17,
                 green: u8::from_str_radix(&hex[2..3], 16).unwrap() * 17,
                 blue:  u8::from_str_radix(&hex[3..4], 16).unwrap() * 17,
+                computed: false,
                 original: hex,
             })
         } else if hex.len() == 7 {
@@ -28,6 +30,7 @@ impl<'a, 'b> ColorValue<'a> {
                 red:   u8::from_str_radix(&hex[1..3], 16).unwrap(),
                 green: u8::from_str_radix(&hex[3..5], 16).unwrap(),
                 blue:  u8::from_str_radix(&hex[5..7], 16).unwrap(),
+                computed: false,
                 original: hex,
             })
         } else {
@@ -38,38 +41,35 @@ impl<'a, 'b> ColorValue<'a> {
         }
     }
 
-    pub fn from_rgb(r: u8, g: u8, b: u8) -> ColorValue<'a> {
+    pub fn from_computed(r: u8, g: u8, b: u8) -> ColorValue<'a> {
         ColorValue {
-            red: r, green: g, blue: b, original: format!("#{:02x}{:02x}{:02x}", r, g, b).into(),
+            red: r, green: g, blue: b,
+            computed: true,
+            original: hex_format(r, g, b).into(),
         }
     }
 
     pub fn into_owned(self) -> ColorValue<'b> {
         ColorValue {
             red: self.red, green: self.green, blue: self.blue,
+            computed: false,
             original: self.original.into_owned().into(),
         }
     }
 
     pub fn apply_math(self, op: Op, nv: NumberValue<'a>) -> Result<ColorValue<'a>> {
-        let num = nv.scalar as u8;
-        Ok(ColorValue::from_rgb(
-            try!(saturating_math(op, self.red, num)),
-            try!(saturating_math(op, self.green, num)),
-            try!(saturating_math(op, self.blue, num)),
-        ))
+        let num   = nv.scalar as u8;
+        let red   = try!(saturating_math(op, self.red, num));
+        let green = try!(saturating_math(op, self.green, num));
+        let blue  = try!(saturating_math(op, self.blue, num));
+        Ok(ColorValue::from_computed(red, green, blue))
     }
 
     pub fn combine_colors(self, op: Op, c: ColorValue<'a>) -> Result<ColorValue<'a>> {
-        Ok(ColorValue::from_rgb(
-            try!(saturating_math(op, self.red, c.red)),
-            try!(saturating_math(op, self.green, c.green)),
-            try!(saturating_math(op, self.blue, c.blue)),
-        ))
-    }
-
-    pub fn to_full_hex(&self) -> String {
-        format!("#{:02x}{:02x}{:02x}", self.red, self.green, self.blue)
+        let red   = try!(saturating_math(op, self.red, c.red));
+        let green = try!(saturating_math(op, self.green, c.green));
+        let blue  = try!(saturating_math(op, self.blue, c.blue));
+        Ok(ColorValue::from_computed(red, green, blue))
     }
 
     pub fn to_named_color(&self) -> String {
@@ -112,8 +112,7 @@ impl<'a, 'b> ColorValue<'a> {
             (222, 184, 135) => "burlywood",
             (95, 158, 160)  => "cadetblue",
 
-
-            (_, _, _)       => return self.to_full_hex(),
+            (r, g, b)       => return hex_format(r, g, b),
         })
                // 'chartreuse'           => 7FFF00,
                // 'chocolate'            => D2691E,
@@ -249,9 +248,17 @@ fn saturating_math(op: Op, a: u8, b: u8) -> Result<u8> {
     })
 }
 
+fn hex_format(red: u8, green: u8, blue: u8) -> String {
+    format!("#{:02x}{:02x}{:02x}", red, green, blue)
+}
+
 impl<'a> fmt::Display for ColorValue<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let candidate = self.to_named_color();
+        let candidate = if self.computed {
+            self.to_named_color()
+        } else {
+            hex_format(self.red, self.green, self.blue)
+        };
         if candidate.len() < self.original.len() {
             write!(f, "{}", candidate)
         } else {
