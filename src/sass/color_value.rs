@@ -72,6 +72,26 @@ impl<'a, 'b> ColorValue<'a> {
         Ok(ColorValue::from_computed(red, green, blue))
     }
 
+    pub fn to_short_hex(&self) -> String {
+        if self.red % 17 == 0 && self.green % 17 == 0 && self.blue % 17 == 0 {
+            format!("#{:x}{:x}{:x}", self.red / 17, self.green / 17, self.blue / 17)
+        } else {
+            hex_format(self.red, self.green, self.blue)
+        }
+    }
+
+    pub fn compressed(&self) -> String {
+        if self.computed {
+            if self.to_short_hex().len() < self.to_named_color().len() {
+                self.to_short_hex()
+            } else {
+                self.to_named_color()
+            }
+        } else {
+            format!("{}", self)
+        }
+    }
+
     pub fn to_named_color(&self) -> String {
         // TODO once we have alpha channel: 'transparent', 0x00000000
 
@@ -259,7 +279,7 @@ impl<'a> fmt::Display for ColorValue<'a> {
         } else {
             hex_format(self.red, self.green, self.blue)
         };
-        if candidate.len() < self.original.len() {
+        if candidate.len() <= self.original.len() {
             write!(f, "{}", candidate)
         } else {
             write!(f, "{}", self.original)

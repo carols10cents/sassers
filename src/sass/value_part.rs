@@ -71,6 +71,7 @@ impl<'a> ValuePart<'a> {
 
     pub fn compressed(&self) -> String {
         match *self {
+            ValuePart::Color(ref color) => format!("{}", color.compressed()),
             ValuePart::List(ref list) => {
                 let mut last_needs_space = false;
                 let mut str = String::new();
