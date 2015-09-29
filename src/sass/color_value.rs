@@ -4,6 +4,7 @@ use sass::number_value::NumberValue;
 
 use std::borrow::Cow;
 use std::fmt;
+use std::cmp;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColorValue<'a> {
@@ -52,9 +53,9 @@ impl<'a, 'b> ColorValue<'a> {
 
     pub fn apply_math(self, op: Op, nv: NumberValue<'a>) -> Result<ColorValue<'a>> {
         Ok(ColorValue::from_rgb(
-            try!(op.math(self.red as f32, nv.scalar)) as i32,
-            try!(op.math(self.green as f32, nv.scalar)) as i32,
-            try!(op.math(self.blue as f32, nv.scalar)) as i32,
+            cmp::min(try!(op.math(self.red as f32, nv.scalar)) as i32, 255),
+            cmp::min(try!(op.math(self.green as f32, nv.scalar)) as i32, 255),
+            cmp::min(try!(op.math(self.blue as f32, nv.scalar)) as i32, 255),
         ))
     }
 
