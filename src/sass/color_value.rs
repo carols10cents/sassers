@@ -40,7 +40,7 @@ impl<'a, 'b> ColorValue<'a> {
 
     pub fn from_rgb(r: i32, g: i32, b: i32) -> ColorValue<'a> {
         ColorValue {
-            red: r, green: g, blue: b, original: format!("#{:x}{:x}{:x}", r, g, b).into(),
+            red: r, green: g, blue: b, original: format!("#{:02x}{:02x}{:02x}", r, g, b).into(),
         }
     }
 
@@ -70,11 +70,26 @@ impl<'a, 'b> ColorValue<'a> {
 
 impl<'a> fmt::Display for ColorValue<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let candidate = format!("#{:x}{:x}{:x}", self.red, self.green, self.blue);
+        let candidate = format!("#{:02x}{:02x}{:02x}", self.red, self.green, self.blue);
         if candidate.len() < self.original.len() {
             write!(f, "{}", candidate)
         } else {
             write!(f, "{}", self.original)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sass::number_value::NumberValue;
+    use sass::op::Op;
+    use std::borrow::Cow::Borrowed;
+
+    #[test]
+    fn it_ignores_overflow_when_not_a_named_color() {
+        let c = ColorValue::from_hex(Borrowed("#ff0000")).unwrap();
+        let res = c.apply_math(Op::Plus, NumberValue::from_scalar(1.0)).unwrap();
+        assert_eq!("#ff0101", format!("{}", res));
     }
 }
