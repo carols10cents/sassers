@@ -203,8 +203,10 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn eat(&mut self, expected: &str) -> bool {
+        let original_offset = self.offset;
         for c in expected.as_bytes().iter() {
             if !self.eatch(c) {
+                self.offset = original_offset;
                 return false
             }
         }

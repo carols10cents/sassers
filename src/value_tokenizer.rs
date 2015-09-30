@@ -82,7 +82,6 @@ impl<'a> ValueTokenizer<'a> {
                 }
             ))
         } else {
-            i = start;
             i += self.scan_while(&self.value_str[start..limit], isnt_space);
             self.offset = i;
             Some(ValuePart::String(Borrowed(&self.value_str[start..i])))
@@ -102,8 +101,10 @@ impl<'a> ValueTokenizer<'a> {
     }
 
     fn eat(&mut self, expected: &str) -> bool {
+        let original_offset = self.offset;
         for c in expected.as_bytes().iter() {
             if !self.eatch(c) {
+                self.offset = original_offset;
                 return false
             }
         }
