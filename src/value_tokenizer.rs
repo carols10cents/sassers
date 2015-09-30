@@ -4,6 +4,7 @@ use sass::value_part::ValuePart;
 use sass::op::Op;
 
 use error::Result;
+use tokenizer_utils::*;
 
 use std::borrow::Cow::Borrowed;
 
@@ -157,40 +158,6 @@ impl<'a> Iterator for ValueTokenizer<'a> {
             }
         }
         None
-    }
-}
-
-fn is_space(c: u8) -> bool {
-    c == b' '
-}
-
-fn isnt_space(c: u8) -> bool {
-    !is_space(c)
-}
-
-fn valid_unit_char(c: u8) -> bool {
-    c == b'%' || (!is_space(c) && !is_operator(c))
-}
-
-fn valid_hex_char(c: u8) -> bool {
-    match c {
-        b'0' ... b'9' | b'a' ... b'f' => true,
-        _ => false,
-    }
-}
-
-fn is_number(c: u8) -> bool {
-    let result = match c {
-        b'0' ... b'9' | b'.' => true,
-        _ => false,
-    };
-    result
-}
-
-fn is_operator(c: u8) -> bool {
-    match c {
-        b'+' | b'-' | b'*' | b'/' | b'%' | b'(' | b')' | b',' => true,
-        _ => false,
     }
 }
 

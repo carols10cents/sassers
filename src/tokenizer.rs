@@ -5,33 +5,9 @@ use sass::rule::SassRule;
 use sass::selector::SassSelector;
 use sass::variable::SassVariable;
 use top_level_event::TopLevelEvent;
+use tokenizer_utils::*;
 
 use std::borrow::Cow::Borrowed;
-
-fn is_ascii_whitespace(c: u8) -> bool {
-   is_newline(c) || is_ascii_whitespace_no_nl(c)
-}
-
-fn is_ascii_whitespace_no_nl(c: u8) -> bool {
-    c == b'\t' || c == 0x0b || c == 0x0c || c == b' '
-}
-
-fn is_newline(c: u8) -> bool {
-    c == b'\n' || c == b'\r'
-}
-
-fn isnt_newline(c: u8) -> bool {
-    !is_newline(c)
-}
-
-// unusual among "scan" functions in that it scans from the _back_ of the string
-// TODO: should also scan unicode whitespace?
-fn scan_trailing_whitespace(data: &str) -> usize {
-    match data.as_bytes().iter().rev().position(|&c| !is_ascii_whitespace_no_nl(c)) {
-        Some(i) => i,
-        None => data.len()
-    }
-}
 
 #[derive(Debug)]
 pub struct Tokenizer<'a> {
