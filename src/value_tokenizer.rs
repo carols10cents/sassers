@@ -108,7 +108,7 @@ impl<'a> Iterator for ValueTokenizer<'a> {
     type Item = Result<ValuePart<'a>>;
 
     fn next(&mut self) -> Option<Result<ValuePart<'a>>> {
-        if self.toker.offset < self.toker.inner_str.len() {
+        if !self.toker.at_eof() {
             return match self.parse() {
                 Ok(Some(v)) => Some(Ok(v)),
                 Ok(None) => None,

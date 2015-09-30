@@ -123,7 +123,7 @@ impl<'a> Tokenizer<'a> {
     fn pick_something(&mut self) {
         self.toker.skip_leading_whitespace();
 
-        if self.toker.offset == self.toker.inner_str.len() {
+        if self.toker.at_eof() {
             self.state = State::Eof;
             return
         }
@@ -225,7 +225,7 @@ impl<'a> Tokenizer<'a> {
     fn next_property(&mut self) -> Option<Event<'a>> {
         self.toker.skip_leading_whitespace();
 
-        if self.toker.offset == self.toker.inner_str.len() {
+        if self.toker.at_eof() {
             self.state = State::Eof;
             return None
         }
@@ -358,7 +358,7 @@ impl<'a> Iterator for Tokenizer<'a> {
     type Item = Result<TopLevelEvent<'a>>;
 
     fn next(&mut self) -> Option<Result<TopLevelEvent<'a>>> {
-        if self.toker.offset < self.toker.inner_str.len() {
+        if !self.toker.at_eof() {
             return match self.start_something() {
                 Ok(Some(t)) => Some(Ok(t)),
                 Ok(None) => None,

@@ -70,6 +70,10 @@ impl<'a> Toker<'a> {
         self.inner_str.len()
     }
 
+    pub fn at_eof(&self) -> bool {
+        self.offset == self.limit()
+    }
+
     pub fn eat(&mut self, expected: &str) -> bool {
         let original_offset = self.offset;
         for c in expected.as_bytes().iter() {
