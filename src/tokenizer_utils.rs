@@ -66,6 +66,10 @@ pub struct Toker<'a> {
 }
 
 impl<'a> Toker<'a> {
+    pub fn limit(&self) -> usize {
+        self.inner_str.len()
+    }
+
     pub fn eat(&mut self, expected: &str) -> bool {
         let original_offset = self.offset;
         for c in expected.as_bytes().iter() {
@@ -86,7 +90,13 @@ impl<'a> Toker<'a> {
         }
     }
 
-    pub fn scan_while<F>(&mut self, data: &str, f: F) -> usize
+    pub fn scan_while_or_end<F>(&mut self, start: usize, f: F) -> usize
+            where F: Fn(u8) -> bool {
+        let end = self.limit();
+        self.scan_while(&self.inner_str[start..end], f)
+    }
+
+    fn scan_while<F>(&mut self, data: &str, f: F) -> usize
             where F: Fn(u8) -> bool {
         match data.as_bytes().iter().position(|&c| !f(c)) {
             Some(i) => i,
@@ -96,19 +106,18 @@ impl<'a> Toker<'a> {
 
    pub fn skip_leading_whitespace(&mut self) {
        let mut i = self.offset;
-       let limit = self.inner_str.len();
 
-       while i < limit {
+       while i < self.limit() {
            let c = self.bytes[i];
            if is_ascii_whitespace(c) {
-               i += self.scan_while(&self.inner_str[i..self.inner_str.len()], is_ascii_whitespace);
-           } else if c == b'/' && i + 1 < limit && self.bytes[i + 1] == b'/' {
-               i += self.scan_while(&self.inner_str[i..self.inner_str.len()], isnt_newline);
+               i += self.scan_while_or_end(i, is_ascii_whitespace);
+           } else if c == b'/' && i + 1 < self.limit() && self.bytes[i + 1] == b'/' {
+               i += self.scan_while_or_end(i, isnt_newline);
            } else {
                self.offset = i;
                return
            }
        }
-       self.offset = limit;
+       self.offset = self.limit();
    }
 }

@@ -43,6 +43,10 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
+    fn limit(&self) -> usize {
+        self.toker.limit()
+    }
+
     fn start_something(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
         let mut current_sass_rule = SassRule::new();
         self.current_sass_rule_selectors_done = false;
@@ -136,7 +140,7 @@ impl<'a> Tokenizer<'a> {
             return
         }
 
-        if c == b'/' && (self.toker.offset + 1) < self.toker.inner_str.len() {
+        if c == b'/' && (self.toker.offset + 1) < self.limit() {
             let d = self.toker.bytes[self.toker.offset + 1];
             if d == b'*' {
                 self.state = State::InComment;
@@ -155,10 +159,9 @@ impl<'a> Tokenizer<'a> {
     fn next_comment(&mut self) -> Option<Event<'a>> {
         let comment_body_beginning = self.toker.offset;
         let mut i = comment_body_beginning + 2;
-        let limit = self.toker.inner_str.len();
 
-        while i < limit {
-            match self.toker.bytes[i..limit].iter().position(|&c| c == b'*' ) {
+        while i < self.limit() {
+            match self.toker.bytes[i..self.limit()].iter().position(|&c| c == b'*' ) {
                 Some(pos) => { i += pos; },
                 None => { break; },
             }
@@ -177,10 +180,9 @@ impl<'a> Tokenizer<'a> {
         // TODO: can parts of this be deduplicated with properties?
         let name_beginning = self.toker.offset;
         let mut i = name_beginning;
-        let limit = self.toker.inner_str.len();
 
-        while i < limit {
-            match self.toker.bytes[i..limit].iter().position(|&c| c == b':' ) {
+        while i < self.limit() {
+            match self.toker.bytes[i..self.limit()].iter().position(|&c| c == b':' ) {
                 Some(pos) => { i += pos; },
                 None => { break; },
             }
@@ -194,10 +196,10 @@ impl<'a> Tokenizer<'a> {
             let value_beginning = self.toker.offset;
             i = value_beginning;
 
-            while i < limit {
-                match self.toker.bytes[i..limit].iter().position(|&c| c == b';') {
+            while i < self.limit() {
+                match self.toker.bytes[i..self.limit()].iter().position(|&c| c == b';') {
                     Some(pos) => { i += pos; },
-                    None => { i = limit; break; },
+                    None => { i = self.limit(); break; },
                 }
 
                 let value_end = i;
@@ -211,7 +213,7 @@ impl<'a> Tokenizer<'a> {
                 }))
             }
         }
-        self.toker.offset = self.toker.inner_str.len();
+        self.toker.offset = self.limit();
         Err(SassError {
             kind: ErrorKind::ExpectedVariable,
             message: String::from(
@@ -230,7 +232,6 @@ impl<'a> Tokenizer<'a> {
 
         let name_beginning = self.toker.offset;
         let mut i = name_beginning;
-        let limit = self.toker.inner_str.len();
 
         let c = self.toker.bytes[i];
         if c == b'}' {
@@ -244,8 +245,8 @@ impl<'a> Tokenizer<'a> {
             return None
         }
 
-        while i < limit {
-            match self.toker.bytes[i..limit].iter().position(|&c| c == b':' || c == b'{') {
+        while i < self.limit() {
+            match self.toker.bytes[i..self.limit()].iter().position(|&c| c == b':' || c == b'{') {
                 Some(pos) => { i += pos; },
                 None => { break; },
             }
@@ -267,10 +268,10 @@ impl<'a> Tokenizer<'a> {
             let value_beginning = self.toker.offset;
             i = value_beginning;
 
-            while i < limit {
-                match self.toker.bytes[i..limit].iter().position(|&c| c == b';') {
+            while i < self.limit() {
+                match self.toker.bytes[i..self.limit()].iter().position(|&c| c == b';') {
                     Some(pos) => { i += pos; },
-                    None => { i = limit; break; },
+                    None => { i = self.limit(); break; },
                 }
 
                 let value_end = i;
@@ -291,7 +292,7 @@ impl<'a> Tokenizer<'a> {
                 }
             }
         }
-        self.toker.offset = self.toker.inner_str.len();
+        self.toker.offset = self.limit();
         None
     }
 
@@ -300,12 +301,11 @@ impl<'a> Tokenizer<'a> {
 
         let beginning = self.toker.offset;
         let mut i = beginning;
-        let limit = self.toker.inner_str.len();
 
-        while i < limit {
-            match self.toker.bytes[i..limit].iter().position(|&c| c == b',' || c == b'{' || c == b':') {
+        while i < self.limit() {
+            match self.toker.bytes[i..self.limit()].iter().position(|&c| c == b',' || c == b'{' || c == b':') {
                 Some(pos) => { i += pos; },
-                None => { i = limit; break; },
+                None => { i = self.limit(); break; },
             }
 
             let c = self.toker.bytes[i];

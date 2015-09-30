@@ -24,24 +24,27 @@ impl<'a> ValueTokenizer<'a> {
         }
     }
 
+    fn limit(&self) -> usize {
+        self.toker.limit()
+    }
+
     pub fn parse(&mut self) -> Result<Option<ValuePart<'a>>> {
         self.toker.skip_leading_whitespace();
 
         let start = self.toker.offset;
         let mut i = self.toker.offset;
-        let limit = self.toker.inner_str.len();
 
-        let ret = if start == limit {
+        let ret = if start == self.limit() {
             None
         } else if is_operator(self.toker.bytes[start]) {
             self.toker.offset = start + 1;
             Some(ValuePart::Operator(self.toker.inner_str[start..start + 1].parse().unwrap_or(Op::Plus)))
         } else if is_number(self.toker.bytes[start]) {
-            i += self.toker.scan_while(&self.toker.inner_str[i..limit], is_number);
+            i += self.toker.scan_while_or_end(i, is_number);
             self.toker.offset = i;
-            if i < limit && valid_unit_char(self.toker.bytes[i]) {
+            if i < self.limit() && valid_unit_char(self.toker.bytes[i]) {
                 let unit_start = i;
-                i += self.toker.scan_while(&self.toker.inner_str[i..limit], valid_unit_char);
+                i += self.toker.scan_while_or_end(i, valid_unit_char);
                 self.toker.offset = i;
                 Some(ValuePart::Number(NumberValue::with_units(
                     self.toker.inner_str[start..unit_start].parse().unwrap_or(0.0),
@@ -54,12 +57,12 @@ impl<'a> ValueTokenizer<'a> {
                 )))
             }
         } else if self.toker.bytes[start] == b'$' {
-            i += self.toker.scan_while(&self.toker.inner_str[i..limit], isnt_space);
+            i += self.toker.scan_while_or_end(i, isnt_space);
             self.toker.offset = i;
             Some(ValuePart::Variable(Borrowed(&self.toker.inner_str[start..i])))
         } else if self.toker.bytes[start] == b'#' {
             i += 1;
-            i += self.toker.scan_while(&self.toker.inner_str[i..limit], valid_hex_char);
+            i += self.toker.scan_while_or_end(i, valid_hex_char);
             self.toker.offset = i;
             match ColorValue::from_hex(Borrowed(&self.toker.inner_str[start..i])) {
                 Ok(v) => Some(ValuePart::Color(v)),
@@ -83,7 +86,7 @@ impl<'a> ValueTokenizer<'a> {
                 }
             ))
         } else {
-            i += self.toker.scan_while(&self.toker.inner_str[start..limit], isnt_space);
+            i += self.toker.scan_while_or_end(start, isnt_space);
             self.toker.offset = i;
             Some(ValuePart::String(Borrowed(&self.toker.inner_str[start..i])))
         };
@@ -92,11 +95,10 @@ impl<'a> ValueTokenizer<'a> {
     }
 
     fn eat_color_u8(&mut self) -> u8 {
-        let limit = self.toker.inner_str.len();
         let mut i = self.toker.offset;
         let color_start = i;
 
-        i += self.toker.scan_while(&self.toker.inner_str[i..limit], is_number);
+        i += self.toker.scan_while_or_end(i, is_number);
         self.toker.offset = i;
         self.toker.inner_str[color_start..i].parse().unwrap_or(0)
     }
