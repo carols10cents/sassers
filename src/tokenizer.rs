@@ -11,9 +11,7 @@ use std::borrow::Cow::Borrowed;
 
 #[derive(Debug)]
 pub struct Tokenizer<'a> {
-    sass: &'a str,
-    bytes: &'a [u8],
-    offset: usize,
+    toker: Toker<'a>,
     state: State,
     sass_rule_stack: Vec<SassRule<'a>>,
     current_sass_rule_selectors_done: bool,
@@ -32,11 +30,13 @@ enum State {
 }
 
 impl<'a> Tokenizer<'a> {
-    pub fn new(sass: &'a str) -> Tokenizer<'a> {
+    pub fn new(inner_str: &'a str) -> Tokenizer<'a> {
         Tokenizer {
-            sass: &sass,
-            bytes: &sass.as_bytes(),
-            offset: 0,
+            toker: Toker {
+                inner_str: &inner_str,
+                bytes: &inner_str.as_bytes(),
+                offset: 0,
+            },
             state: State::OutsideRules,
             sass_rule_stack: Vec::new(),
             current_sass_rule_selectors_done: false,
@@ -65,7 +65,7 @@ impl<'a> Tokenizer<'a> {
                     current_sass_rule.children.push(prop.unwrap());
                 }
             } else if self.state == State::EndRule {
-                self.eat("}");
+                self.toker.eat("}");
 
                 match self.sass_rule_stack.pop() {
                     Some(mut rule) => {
@@ -117,14 +117,14 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn pick_something(&mut self) {
-        self.skip_leading_whitespace();
+        self.toker.skip_leading_whitespace();
 
-        if self.offset == self.sass.len() {
+        if self.toker.offset == self.toker.inner_str.len() {
             self.state = State::Eof;
             return
         }
 
-        let c = self.bytes[self.offset];
+        let c = self.toker.bytes[self.toker.offset];
 
         if c == b'}' {
             self.state = State::EndRule;
@@ -136,8 +136,8 @@ impl<'a> Tokenizer<'a> {
             return
         }
 
-        if c == b'/' && (self.offset + 1) < self.sass.len() {
-            let d = self.bytes[self.offset + 1];
+        if c == b'/' && (self.toker.offset + 1) < self.toker.inner_str.len() {
+            let d = self.toker.bytes[self.toker.offset + 1];
             if d == b'*' {
                 self.state = State::InComment;
                 return
@@ -152,66 +152,20 @@ impl<'a> Tokenizer<'a> {
         self.state = State::InSelectors;
     }
 
-    fn scan_while<F>(&mut self, data: &str, f: F) -> usize
-            where F: Fn(u8) -> bool {
-        match data.as_bytes().iter().position(|&c| !f(c)) {
-            Some(i) => i,
-            None => data.len()
-        }
-    }
-
-    fn skip_leading_whitespace(&mut self) {
-        let mut i = self.offset;
-        let limit = self.sass.len();
-
-        while i < limit {
-            let c = self.bytes[i];
-            if is_ascii_whitespace(c) {
-                i += self.scan_while(&self.sass[i..self.sass.len()], is_ascii_whitespace);
-            } else if c == b'/' && i + 1 < limit && self.bytes[i + 1] == b'/' {
-                i += self.scan_while(&self.sass[i..self.sass.len()], isnt_newline);
-            } else {
-                self.offset = i;
-                return
-            }
-        }
-        self.offset = limit;
-    }
-
-    fn eat(&mut self, expected: &str) -> bool {
-        let original_offset = self.offset;
-        for c in expected.as_bytes().iter() {
-            if !self.eatch(c) {
-                self.offset = original_offset;
-                return false
-            }
-        }
-        return true
-    }
-
-    fn eatch(&mut self, expected_char: &u8) -> bool {
-        if self.bytes[self.offset] == *expected_char {
-            self.offset += 1;
-            true
-        } else {
-            false
-        }
-    }
-
     fn next_comment(&mut self) -> Option<Event<'a>> {
-        let comment_body_beginning = self.offset;
+        let comment_body_beginning = self.toker.offset;
         let mut i = comment_body_beginning + 2;
-        let limit = self.sass.len();
+        let limit = self.toker.inner_str.len();
 
         while i < limit {
-            match self.bytes[i..limit].iter().position(|&c| c == b'*' ) {
+            match self.toker.bytes[i..limit].iter().position(|&c| c == b'*' ) {
                 Some(pos) => { i += pos; },
                 None => { break; },
             }
 
-            if self.bytes[i+1] == b'/' {
-                self.offset = i + 2;
-                return Some(Event::Comment(Borrowed(&self.sass[comment_body_beginning..i + 2])))
+            if self.toker.bytes[i+1] == b'/' {
+                self.toker.offset = i + 2;
+                return Some(Event::Comment(Borrowed(&self.toker.inner_str[comment_body_beginning..i + 2])))
             } else {
                 i += 1;
             }
@@ -221,12 +175,12 @@ impl<'a> Tokenizer<'a> {
 
     fn next_variable(&mut self) -> Result<TopLevelEvent<'a>> {
         // TODO: can parts of this be deduplicated with properties?
-        let name_beginning = self.offset;
+        let name_beginning = self.toker.offset;
         let mut i = name_beginning;
-        let limit = self.sass.len();
+        let limit = self.toker.inner_str.len();
 
         while i < limit {
-            match self.bytes[i..limit].iter().position(|&c| c == b':' ) {
+            match self.toker.bytes[i..limit].iter().position(|&c| c == b':' ) {
                 Some(pos) => { i += pos; },
                 None => { break; },
             }
@@ -234,30 +188,30 @@ impl<'a> Tokenizer<'a> {
             let name_end = i;
 
             i += 1;
-            self.offset = i;
-            self.skip_leading_whitespace();
+            self.toker.offset = i;
+            self.toker.skip_leading_whitespace();
 
-            let value_beginning = self.offset;
+            let value_beginning = self.toker.offset;
             i = value_beginning;
 
             while i < limit {
-                match self.bytes[i..limit].iter().position(|&c| c == b';') {
+                match self.toker.bytes[i..limit].iter().position(|&c| c == b';') {
                     Some(pos) => { i += pos; },
                     None => { i = limit; break; },
                 }
 
                 let value_end = i;
-                self.offset = i + 1;
+                self.toker.offset = i + 1;
 
-                self.skip_leading_whitespace();
+                self.toker.skip_leading_whitespace();
 
                 return Ok(TopLevelEvent::Variable(SassVariable{
-                    name: Borrowed(&self.sass[name_beginning..name_end]),
-                    value: Borrowed(&self.sass[value_beginning..value_end]),
+                    name: Borrowed(&self.toker.inner_str[name_beginning..name_end]),
+                    value: Borrowed(&self.toker.inner_str[value_beginning..value_end]),
                 }))
             }
         }
-        self.offset = self.sass.len();
+        self.toker.offset = self.toker.inner_str.len();
         Err(SassError {
             kind: ErrorKind::ExpectedVariable,
             message: String::from(
@@ -267,38 +221,38 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn next_property(&mut self) -> Option<Event<'a>> {
-        self.skip_leading_whitespace();
+        self.toker.skip_leading_whitespace();
 
-        if self.offset == self.sass.len() {
+        if self.toker.offset == self.toker.inner_str.len() {
             self.state = State::Eof;
             return None
         }
 
-        let name_beginning = self.offset;
+        let name_beginning = self.toker.offset;
         let mut i = name_beginning;
-        let limit = self.sass.len();
+        let limit = self.toker.inner_str.len();
 
-        let c = self.bytes[i];
+        let c = self.toker.bytes[i];
         if c == b'}' {
             self.state = State::EndRule;
             return None
         }
 
-        let d = self.bytes[i + 1];
+        let d = self.toker.bytes[i + 1];
         if c == b'/' && d == b'*' {
             self.state = State::InComment;
             return None
         }
 
         while i < limit {
-            match self.bytes[i..limit].iter().position(|&c| c == b':' || c == b'{') {
+            match self.toker.bytes[i..limit].iter().position(|&c| c == b':' || c == b'{') {
                 Some(pos) => { i += pos; },
                 None => { break; },
             }
 
             // Inefficient since we already skipped the whitespace and we'll have to
             // do it again but oh well
-            let c = self.bytes[i];
+            let c = self.toker.bytes[i];
             if c == b'{' {
                 self.state = State::InRule;
                 return None
@@ -307,54 +261,54 @@ impl<'a> Tokenizer<'a> {
             let name_end = i;
 
             i += 1;
-            self.offset = i;
-            self.skip_leading_whitespace();
+            self.toker.offset = i;
+            self.toker.skip_leading_whitespace();
 
-            let value_beginning = self.offset;
+            let value_beginning = self.toker.offset;
             i = value_beginning;
 
             while i < limit {
-                match self.bytes[i..limit].iter().position(|&c| c == b';') {
+                match self.toker.bytes[i..limit].iter().position(|&c| c == b';') {
                     Some(pos) => { i += pos; },
                     None => { i = limit; break; },
                 }
 
                 let value_end = i;
-                self.offset = i + 1;
+                self.toker.offset = i + 1;
 
-                self.skip_leading_whitespace();
+                self.toker.skip_leading_whitespace();
 
-                if self.bytes[name_beginning] == b'$' {
+                if self.toker.bytes[name_beginning] == b'$' {
                     return Some(Event::Variable(SassVariable {
-                        name: Borrowed(&self.sass[name_beginning..name_end]),
-                        value: Borrowed(&self.sass[value_beginning..value_end])
+                        name: Borrowed(&self.toker.inner_str[name_beginning..name_end]),
+                        value: Borrowed(&self.toker.inner_str[value_beginning..value_end])
                     }))
                 } else {
                     return Some(Event::UnevaluatedProperty(
-                        Borrowed(&self.sass[name_beginning..name_end]),
-                        Borrowed(&self.sass[value_beginning..value_end]),
+                        Borrowed(&self.toker.inner_str[name_beginning..name_end]),
+                        Borrowed(&self.toker.inner_str[value_beginning..value_end]),
                     ))
                 }
             }
         }
-        self.offset = self.sass.len();
+        self.toker.offset = self.toker.inner_str.len();
         None
     }
 
     fn next_selector(&mut self) -> Option<SassSelector<'a>> {
-        self.skip_leading_whitespace();
+        self.toker.skip_leading_whitespace();
 
-        let beginning = self.offset;
+        let beginning = self.toker.offset;
         let mut i = beginning;
-        let limit = self.sass.len();
+        let limit = self.toker.inner_str.len();
 
         while i < limit {
-            match self.bytes[i..limit].iter().position(|&c| c == b',' || c == b'{' || c == b':') {
+            match self.toker.bytes[i..limit].iter().position(|&c| c == b',' || c == b'{' || c == b':') {
                 Some(pos) => { i += pos; },
                 None => { i = limit; break; },
             }
 
-            let c = self.bytes[i];
+            let c = self.toker.bytes[i];
 
             if c == b':' {
                 self.state = State::InProperties;
@@ -362,7 +316,7 @@ impl<'a> Tokenizer<'a> {
             }
 
             if c == b',' || c == b'{' {
-                let n = scan_trailing_whitespace(&self.sass[beginning..i]);
+                let n = scan_trailing_whitespace(&self.toker.inner_str[beginning..i]);
                 let end = i - n;
                 if end > beginning {
                     if c == b'{' {
@@ -374,25 +328,25 @@ impl<'a> Tokenizer<'a> {
                             self.state = State::InProperties;
                         }
                     }
-                    self.offset = i + 1;
-                    return Some(SassSelector::new(&self.sass[beginning..end]))
+                    self.toker.offset = i + 1;
+                    return Some(SassSelector::new(&self.toker.inner_str[beginning..end]))
                 } else {
                     // only whitespace between commas
-                    self.offset += 1;
+                    self.toker.offset += 1;
                     return self.next_selector()
                 }
             }
 
-            self.offset = i;
+            self.toker.offset = i;
             if i > beginning {
-                return Some(SassSelector::new(&self.sass[beginning..i]))
+                return Some(SassSelector::new(&self.toker.inner_str[beginning..i]))
             }
             i += 1;
         }
 
         if i > beginning {
-            self.offset = i;
-            Some(SassSelector::new(&self.sass[beginning..i]))
+            self.toker.offset = i;
+            Some(SassSelector::new(&self.toker.inner_str[beginning..i]))
         } else {
             self.state = State::Eof;
             None
@@ -404,7 +358,7 @@ impl<'a> Iterator for Tokenizer<'a> {
     type Item = Result<TopLevelEvent<'a>>;
 
     fn next(&mut self) -> Option<Result<TopLevelEvent<'a>>> {
-        if self.offset < self.sass.len() {
+        if self.toker.offset < self.toker.inner_str.len() {
             return match self.start_something() {
                 Ok(Some(t)) => Some(Ok(t)),
                 Ok(None) => None,
