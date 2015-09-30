@@ -1,5 +1,6 @@
 use error::{Result, SassError, ErrorKind};
 use sass::value_part::ValuePart;
+use sass::color_value::ColorValue;
 use evaluator::Evaluator;
 
 use std::fmt;
@@ -176,7 +177,12 @@ impl Op {
                 Ok(ValuePart::Color(try!(f.combine_colors(*self, s))))
             },
             (ValuePart::Number(f), ValuePart::Color(s)) => {
-                Ok(ValuePart::String(format!("{}{}{}", f, self, s).into()))
+                ValuePart::concat_into_list(
+                    try!(ValuePart::concat_into_list(
+                        ValuePart::Number(f), ValuePart::Operator(*self)
+                    )),
+                    ValuePart::Color(ColorValue { computed: true, ..s}),
+                )
             },
             (f, s) => {
                 Err(SassError {

@@ -78,13 +78,15 @@ impl<'a> ValuePart<'a> {
                 for item in list {
                     if last_needs_space &&
                        *item != ValuePart::Operator(Op::Slash) &&
-                       *item != ValuePart::Operator(Op::Comma) {
+                       *item != ValuePart::Operator(Op::Comma) &&
+                       *item != ValuePart::Operator(Op::Minus) {
                         str.push_str(" ");
                     }
                     str.push_str(&item.compressed());
                     match item {
-                        &ValuePart::Operator(Op::Slash) => last_needs_space = false,
-                        &ValuePart::Operator(Op::Comma) => last_needs_space = false,
+                        &ValuePart::Operator(Op::Slash) |
+                        &ValuePart::Operator(Op::Comma) |
+                        &ValuePart::Operator(Op::Minus) => last_needs_space = false,
                         _ => last_needs_space = true,
                     }
                 }
@@ -108,12 +110,14 @@ impl<'a> fmt::Display for ValuePart<'a> {
                 for item in list {
                     if last_needs_space &&
                        *item != ValuePart::Operator(Op::Slash) &&
-                       *item != ValuePart::Operator(Op::Comma) {
+                       *item != ValuePart::Operator(Op::Comma) &&
+                       *item != ValuePart::Operator(Op::Minus) {
                         str.push_str(" ");
                     }
                     str.push_str(&item.to_string());
                     match item {
-                        &ValuePart::Operator(Op::Slash) => last_needs_space = false,
+                        &ValuePart::Operator(Op::Slash) |
+                        &ValuePart::Operator(Op::Minus) => last_needs_space = false,
                         _ => last_needs_space = true,
                     }
                 }
@@ -121,6 +125,7 @@ impl<'a> fmt::Display for ValuePart<'a> {
             },
             ValuePart::Operator(Op::Slash) => write!(f, "/"),
             ValuePart::Operator(Op::Comma) => write!(f, ","),
+            ValuePart::Operator(Op::Minus) => write!(f, "-"),
             ValuePart::Operator(..) => unreachable!(),
         }
     }
