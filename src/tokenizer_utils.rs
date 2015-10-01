@@ -34,12 +34,28 @@ pub fn valid_hex_char(c: u8) -> bool {
     }
 }
 
+pub fn valid_selector_char(c: u8) -> bool {
+    c != b',' && c != b'{' && c != b':'
+}
+
+pub fn valid_name_char(c: u8) -> bool {
+    c != b':' && c != b'{'
+}
+
 pub fn is_number(c: u8) -> bool {
     let result = match c {
         b'0' ... b'9' | b'.' => true,
         _ => false,
     };
     result
+}
+
+pub fn isnt_asterisk(c: u8) -> bool {
+    c != b'*'
+}
+
+pub fn isnt_semicolon(c: u8) -> bool {
+    c != b';'
 }
 
 pub fn is_operator(c: u8) -> bool {

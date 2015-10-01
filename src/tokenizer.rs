@@ -161,10 +161,7 @@ impl<'a> Tokenizer<'a> {
         let mut i = comment_body_beginning + 2;
 
         while i < self.limit() {
-            match self.toker.bytes[i..self.limit()].iter().position(|&c| c == b'*' ) {
-                Some(pos) => { i += pos; },
-                None => { break; },
-            }
+            i += self.toker.scan_while_or_end(i, isnt_asterisk);
 
             if self.toker.bytes[i+1] == b'/' {
                 self.toker.offset = i + 2;
@@ -182,11 +179,7 @@ impl<'a> Tokenizer<'a> {
         let mut i = name_beginning;
 
         while i < self.limit() {
-            match self.toker.bytes[i..self.limit()].iter().position(|&c| c == b':' ) {
-                Some(pos) => { i += pos; },
-                None => { break; },
-            }
-
+            i += self.toker.scan_while_or_end(i, valid_name_char);
             let name_end = i;
 
             i += 1;
@@ -197,11 +190,7 @@ impl<'a> Tokenizer<'a> {
             i = value_beginning;
 
             while i < self.limit() {
-                match self.toker.bytes[i..self.limit()].iter().position(|&c| c == b';') {
-                    Some(pos) => { i += pos; },
-                    None => { i = self.limit(); break; },
-                }
-
+                i += self.toker.scan_while_or_end(i, isnt_semicolon);
                 let value_end = i;
                 self.toker.offset = i + 1;
 
@@ -246,10 +235,7 @@ impl<'a> Tokenizer<'a> {
         }
 
         while i < self.limit() {
-            match self.toker.bytes[i..self.limit()].iter().position(|&c| c == b':' || c == b'{') {
-                Some(pos) => { i += pos; },
-                None => { break; },
-            }
+            i += self.toker.scan_while_or_end(i, valid_name_char);
 
             // Inefficient since we already skipped the whitespace and we'll have to
             // do it again but oh well
@@ -269,11 +255,7 @@ impl<'a> Tokenizer<'a> {
             i = value_beginning;
 
             while i < self.limit() {
-                match self.toker.bytes[i..self.limit()].iter().position(|&c| c == b';') {
-                    Some(pos) => { i += pos; },
-                    None => { i = self.limit(); break; },
-                }
-
+                i += self.toker.scan_while_or_end(i, isnt_semicolon);
                 let value_end = i;
                 self.toker.offset = i + 1;
 
@@ -303,11 +285,7 @@ impl<'a> Tokenizer<'a> {
         let mut i = beginning;
 
         while i < self.limit() {
-            match self.toker.bytes[i..self.limit()].iter().position(|&c| c == b',' || c == b'{' || c == b':') {
-                Some(pos) => { i += pos; },
-                None => { i = self.limit(); break; },
-            }
-
+            i += self.toker.scan_while_or_end(i, valid_selector_char);
             let c = self.toker.bytes[i];
 
             if c == b':' {
