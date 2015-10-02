@@ -285,31 +285,39 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn selector_list(&mut self) -> Result<Vec<SassSelector<'a>>> {
-        let mut selectors = Vec::new();
+    fn tokenize_list<F>(&mut self, separator: &str, end_list: &str, valid_char_fn: &F) -> Result<Vec<Cow<'a, str>>>
+        where F: Fn(u8) -> bool {
+        let mut list = Vec::new();
 
         let mut i = self.toker.offset;
         while i < self.limit() {
             self.toker.skip_leading_whitespace();
             i = self.toker.offset;
             let beginning = self.toker.offset;
-            i += self.toker.scan_while_or_end(i, valid_selector_char);
+            i += self.toker.scan_while_or_end(i, valid_char_fn);
 
             let n = scan_trailing_whitespace(&self.toker.inner_str[beginning..i]);
             let end = i - n;
 
-            selectors.push(SassSelector::new(&self.toker.inner_str[beginning..end]));
+            list.push(Borrowed(&self.toker.inner_str[beginning..end]));
+
             self.toker.offset = i;
-            if self.toker.eat("{").is_ok() {
-                self.current_sass_rule_selectors_done = true;
-                self.state = State::InProperties;
+            if self.toker.eat(end_list).is_ok() {
                 break;
             } else {
-                try!(self.toker.eat(","));
+                try!(self.toker.eat(separator));
             }
         }
 
-        Ok(selectors)
+        Ok(list)
+    }
+
+    fn selector_list(&mut self) -> Result<Vec<SassSelector<'a>>> {
+        let selectors = try!(self.tokenize_list(",", "{", &valid_selector_char));
+        self.current_sass_rule_selectors_done = true;
+        self.state = State::InProperties;
+
+        Ok(selectors.into_iter().map(|s| SassSelector::new(s)).collect())
     }
 }
 

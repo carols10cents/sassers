@@ -20,7 +20,7 @@ fn compress_attr_selectors(data: &str) -> String {
 }
 
 impl<'a> SassSelector<'a> {
-    pub fn new(selector_str: &'a str) -> SassSelector<'a> {
-        SassSelector { name: compress_attr_selectors(&squeeze(selector_str)).into() }
+    pub fn new(selector_str: Cow<'a, str>) -> SassSelector<'a> {
+        SassSelector { name: compress_attr_selectors(&squeeze(selector_str.as_ref())).into() }
     }
 }
