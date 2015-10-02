@@ -162,10 +162,14 @@ impl<'a> Tokenizer<'a> {
 
         while i < self.limit() {
             i += self.toker.scan_while_or_end(i, isnt_asterisk);
+            self.toker.offset = i;
 
-            if self.toker.bytes[i+1] == b'/' {
-                self.toker.offset = i + 2;
-                return Some(Event::Comment(Borrowed(&self.toker.inner_str[comment_body_beginning..i + 2])))
+            if self.toker.eat("*/").is_ok() {
+                return Some(
+                    Event::Comment(Borrowed(
+                        &self.toker.inner_str[comment_body_beginning..self.toker.offset]
+                    ))
+                )
             } else {
                 i += 1;
             }
@@ -182,8 +186,8 @@ impl<'a> Tokenizer<'a> {
             i += self.toker.scan_while_or_end(i, valid_name_char);
             let name_end = i;
 
-            i += 1;
             self.toker.offset = i;
+            try!(self.toker.eat(":"));
             self.toker.skip_leading_whitespace();
 
             let value_beginning = self.toker.offset;
@@ -192,8 +196,9 @@ impl<'a> Tokenizer<'a> {
             while i < self.limit() {
                 i += self.toker.scan_while_or_end(i, isnt_semicolon);
                 let value_end = i;
-                self.toker.offset = i + 1;
+                self.toker.offset = i;
 
+                try!(self.toker.eat(";"));
                 self.toker.skip_leading_whitespace();
 
                 return Ok(TopLevelEvent::Variable(SassVariable{
