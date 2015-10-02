@@ -108,7 +108,7 @@ impl<'a> Toker<'a> {
                 return Err(SassError {
                     kind: ErrorKind::TokenizerError,
                     message: format!(
-                        "Expected: {}, Saw: {}",
+                        "Expected: `{}`, Saw: `{}`",
                         expected,
                         &self.inner_str[
                             self.offset..cmp::min(self.offset + expected.len(), self.limit())
