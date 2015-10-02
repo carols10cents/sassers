@@ -68,15 +68,15 @@ impl<'a> ValueTokenizer<'a> {
                 Ok(v) => Some(ValuePart::Color(v)),
                 Err(e) => return Err(e),
             }
-        } else if self.toker.eat("rgb(") {
+        } else if self.toker.eat("rgb(").is_ok() {
             let r = self.eat_color_u8();
-            self.toker.eat(",");
+            try!(self.toker.eat(","));
             self.toker.skip_leading_whitespace();
             let g = self.eat_color_u8();
-            self.toker.eat(",");
+            try!(self.toker.eat(","));
             self.toker.skip_leading_whitespace();
             let b = self.eat_color_u8();
-            self.toker.eat(")");
+            try!(self.toker.eat(")"));
 
             Some(ValuePart::Color(
                 ColorValue {

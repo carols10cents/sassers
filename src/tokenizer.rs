@@ -69,7 +69,7 @@ impl<'a> Tokenizer<'a> {
                     current_sass_rule.children.push(prop.unwrap());
                 }
             } else if self.state == State::EndRule {
-                self.toker.eat("}");
+                try!(self.toker.eat("}"));
 
                 match self.sass_rule_stack.pop() {
                     Some(mut rule) => {

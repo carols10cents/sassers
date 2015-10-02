@@ -1,3 +1,5 @@
+use error::{SassError, ErrorKind, Result};
+use std::cmp;
 
 pub fn is_space(c: u8) -> bool {
     c == b' '
@@ -90,15 +92,24 @@ impl<'a> Toker<'a> {
         self.offset == self.limit()
     }
 
-    pub fn eat(&mut self, expected: &str) -> bool {
+    pub fn eat(&mut self, expected: &str) -> Result<bool> {
         let original_offset = self.offset;
         for c in expected.as_bytes().iter() {
             if !self.eatch(c) {
                 self.offset = original_offset;
-                return false
+                return Err(SassError {
+                    kind: ErrorKind::TokenizerError,
+                    message: format!(
+                        "Expected: {}, Saw: {}",
+                        expected,
+                        &self.inner_str[
+                            self.offset..cmp::min(self.offset + expected.len(), self.limit())
+                        ]
+                    ),
+                })
             }
         }
-        return true
+        Ok(true)
     }
 
     fn eatch(&mut self, expected_char: &u8) -> bool {
