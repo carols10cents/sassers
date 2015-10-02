@@ -244,20 +244,20 @@ impl<'a> Tokenizer<'a> {
             return Ok(None)
         }
 
-        let name_beginning = self.toker.offset;
-        let mut i = name_beginning;
-
-        let c = self.toker.bytes[i];
+        let c = self.toker.curr_byte();
         if c == b'}' {
             self.state = State::EndRule;
             return Ok(None)
         }
 
-        let d = self.toker.bytes[i + 1];
+        let d = self.toker.next_byte();
         if c == b'/' && d == b'*' {
             self.state = State::InComment;
             return Ok(None)
         }
+
+        let name_beginning = self.toker.offset;
+        let mut i = name_beginning;
 
         while i < self.limit() {
             i += self.toker.scan_while_or_end(i, valid_name_char);

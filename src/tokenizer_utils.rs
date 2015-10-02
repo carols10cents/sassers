@@ -92,6 +92,14 @@ impl<'a> Toker<'a> {
         self.offset == self.limit()
     }
 
+    pub fn curr_byte(&self) -> u8 {
+        self.bytes[self.offset]
+    }
+
+    pub fn next_byte(&self) -> u8 {
+        self.bytes[self.offset + 1]
+    }
+
     pub fn eat(&mut self, expected: &str) -> Result<bool> {
         let original_offset = self.offset;
         for c in expected.as_bytes().iter() {
