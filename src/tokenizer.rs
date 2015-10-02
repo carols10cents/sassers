@@ -59,14 +59,14 @@ impl<'a> Tokenizer<'a> {
             // self.state = match self.state
 
             if self.state == State::InSelectors {
-                let sel = self.next_selector();
-                if sel.is_some() {
-                    current_sass_rule.selectors.push(sel.unwrap());
+                match try!(self.next_selector()) {
+                    Some(sel) => current_sass_rule.selectors.push(sel),
+                    None => {},
                 }
             } else if self.state == State::InProperties {
-                let prop = self.next_property();
-                if prop.is_some() {
-                    current_sass_rule.children.push(prop.unwrap());
+                match try!(self.next_property()) {
+                    Some(prop) => current_sass_rule.children.push(prop),
+                    None => {},
                 }
             } else if self.state == State::EndRule {
                 try!(self.toker.eat("}"));
@@ -85,12 +85,9 @@ impl<'a> Tokenizer<'a> {
                 self.current_sass_rule_selectors_done = false;
                 self.pick_something();
             } else if self.state == State::InVariable {
-                return match self.next_variable() {
-                    Ok(v) => Ok(Some(v)),
-                    Err(e) => Err(e),
-                }
+                return self.next_variable()
             } else if self.state == State::InComment {
-                let comment = self.next_comment();
+                let comment = try!(self.next_comment());
                 if comment.is_some() {
                     if self.sass_rule_stack.len() == 0 &&
                        current_sass_rule.selectors.len() == 0 &&
@@ -109,7 +106,7 @@ impl<'a> Tokenizer<'a> {
                 return Err(SassError {
                     kind: ErrorKind::TokenizerError,
                     message: format!(
-                        "Current tokenization state: {:?}. Current sass rule = {:?}",
+                        "Something unexpected happened in tokenization! Current tokenization state: {:?}. Current sass rule = {:?}",
                         self.state,
                         current_sass_rule
                     ),
@@ -156,7 +153,7 @@ impl<'a> Tokenizer<'a> {
         self.state = State::InSelectors;
     }
 
-    fn next_comment(&mut self) -> Option<Event<'a>> {
+    fn next_comment(&mut self) -> Result<Option<Event<'a>>> {
         let comment_body_beginning = self.toker.offset;
         let mut i = comment_body_beginning + 2;
 
@@ -165,19 +162,25 @@ impl<'a> Tokenizer<'a> {
             self.toker.offset = i;
 
             if self.toker.eat("*/").is_ok() {
-                return Some(
+                return Ok(Some(
                     Event::Comment(Borrowed(
                         &self.toker.inner_str[comment_body_beginning..self.toker.offset]
                     ))
-                )
+                ))
             } else {
                 i += 1;
             }
         }
-        None
+        self.toker.offset = self.limit();
+        Err(SassError {
+            kind: ErrorKind::UnexpectedEof,
+            message: String::from(
+                "Expected comment; reached EOF instead."
+            ),
+        })
     }
 
-    fn next_variable(&mut self) -> Result<TopLevelEvent<'a>> {
+    fn next_variable(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
         // TODO: can parts of this be deduplicated with properties?
         let name_beginning = self.toker.offset;
         let mut i = name_beginning;
@@ -185,7 +188,6 @@ impl<'a> Tokenizer<'a> {
         while i < self.limit() {
             i += self.toker.scan_while_or_end(i, valid_name_char);
             let name_end = i;
-
             self.toker.offset = i;
             try!(self.toker.eat(":"));
             self.toker.skip_leading_whitespace();
@@ -197,31 +199,30 @@ impl<'a> Tokenizer<'a> {
                 i += self.toker.scan_while_or_end(i, isnt_semicolon);
                 let value_end = i;
                 self.toker.offset = i;
-
                 try!(self.toker.eat(";"));
                 self.toker.skip_leading_whitespace();
 
-                return Ok(TopLevelEvent::Variable(SassVariable{
+                return Ok(Some(TopLevelEvent::Variable(SassVariable{
                     name: Borrowed(&self.toker.inner_str[name_beginning..name_end]),
                     value: Borrowed(&self.toker.inner_str[value_beginning..value_end]),
-                }))
+                })))
             }
         }
         self.toker.offset = self.limit();
         Err(SassError {
-            kind: ErrorKind::ExpectedVariable,
+            kind: ErrorKind::UnexpectedEof,
             message: String::from(
                 "Expected variable declaration and value; reached EOF instead."
             ),
         })
     }
 
-    fn next_property(&mut self) -> Option<Event<'a>> {
+    fn next_property(&mut self) -> Result<Option<Event<'a>>> {
         self.toker.skip_leading_whitespace();
 
         if self.toker.at_eof() {
             self.state = State::Eof;
-            return None
+            return Ok(None)
         }
 
         let name_beginning = self.toker.offset;
@@ -230,13 +231,13 @@ impl<'a> Tokenizer<'a> {
         let c = self.toker.bytes[i];
         if c == b'}' {
             self.state = State::EndRule;
-            return None
+            return Ok(None)
         }
 
         let d = self.toker.bytes[i + 1];
         if c == b'/' && d == b'*' {
             self.state = State::InComment;
-            return None
+            return Ok(None)
         }
 
         while i < self.limit() {
@@ -247,13 +248,12 @@ impl<'a> Tokenizer<'a> {
             let c = self.toker.bytes[i];
             if c == b'{' {
                 self.state = State::InRule;
-                return None
+                return Ok(None)
             }
 
             let name_end = i;
-
-            i += 1;
             self.toker.offset = i;
+            try!(self.toker.eat(":"));
             self.toker.skip_leading_whitespace();
 
             let value_beginning = self.toker.offset;
@@ -262,28 +262,28 @@ impl<'a> Tokenizer<'a> {
             while i < self.limit() {
                 i += self.toker.scan_while_or_end(i, isnt_semicolon);
                 let value_end = i;
-                self.toker.offset = i + 1;
-
+                self.toker.offset = i;
+                try!(self.toker.eat(";"));
                 self.toker.skip_leading_whitespace();
 
                 if self.toker.bytes[name_beginning] == b'$' {
-                    return Some(Event::Variable(SassVariable {
+                    return Ok(Some(Event::Variable(SassVariable {
                         name: Borrowed(&self.toker.inner_str[name_beginning..name_end]),
                         value: Borrowed(&self.toker.inner_str[value_beginning..value_end])
-                    }))
+                    })))
                 } else {
-                    return Some(Event::UnevaluatedProperty(
+                    return Ok(Some(Event::UnevaluatedProperty(
                         Borrowed(&self.toker.inner_str[name_beginning..name_end]),
                         Borrowed(&self.toker.inner_str[value_beginning..value_end]),
-                    ))
+                    )))
                 }
             }
         }
         self.toker.offset = self.limit();
-        None
+        Ok(None)
     }
 
-    fn next_selector(&mut self) -> Option<SassSelector<'a>> {
+    fn next_selector(&mut self) -> Result<Option<SassSelector<'a>>> {
         self.toker.skip_leading_whitespace();
 
         let beginning = self.toker.offset;
@@ -295,7 +295,7 @@ impl<'a> Tokenizer<'a> {
 
             if c == b':' {
                 self.state = State::InProperties;
-                return None
+                return Ok(None)
             }
 
             if c == b',' || c == b'{' {
@@ -305,14 +305,14 @@ impl<'a> Tokenizer<'a> {
                     if c == b'{' {
                         if self.current_sass_rule_selectors_done {
                             self.state = State::InRule;
-                            return None
+                            return Ok(None)
                         } else {
                             self.current_sass_rule_selectors_done = true;
                             self.state = State::InProperties;
                         }
                     }
                     self.toker.offset = i + 1;
-                    return Some(SassSelector::new(&self.toker.inner_str[beginning..end]))
+                    return Ok(Some(SassSelector::new(&self.toker.inner_str[beginning..end])))
                 } else {
                     // only whitespace between commas
                     self.toker.offset += 1;
@@ -322,17 +322,17 @@ impl<'a> Tokenizer<'a> {
 
             self.toker.offset = i;
             if i > beginning {
-                return Some(SassSelector::new(&self.toker.inner_str[beginning..i]))
+                return Ok(Some(SassSelector::new(&self.toker.inner_str[beginning..i])))
             }
             i += 1;
         }
 
         if i > beginning {
             self.toker.offset = i;
-            Some(SassSelector::new(&self.toker.inner_str[beginning..i]))
+            Ok(Some(SassSelector::new(&self.toker.inner_str[beginning..i])))
         } else {
             self.state = State::Eof;
-            None
+            Ok(None)
         }
     }
 }
