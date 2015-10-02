@@ -60,10 +60,7 @@ impl<'a> Tokenizer<'a> {
             // self.state = match self.state
 
             if self.state == State::InSelectors {
-                match try!(self.next_selector()) {
-                    Some(sel) => current_sass_rule.selectors.push(sel),
-                    None => {},
-                }
+                current_sass_rule.selectors = try!(self.selector_list());
             } else if self.state == State::InProperties {
                 match try!(self.next_property()) {
                     Some(prop) => current_sass_rule.children.push(prop),
@@ -288,52 +285,31 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn next_selector(&mut self) -> Result<Option<SassSelector<'a>>> {
-        self.toker.skip_leading_whitespace();
+    fn selector_list(&mut self) -> Result<Vec<SassSelector<'a>>> {
+        let mut selectors = Vec::new();
 
-        let beginning = self.toker.offset;
-        let mut i = beginning;
-
+        let mut i = self.toker.offset;
         while i < self.limit() {
+            self.toker.skip_leading_whitespace();
+            i = self.toker.offset;
+            let beginning = self.toker.offset;
             i += self.toker.scan_while_or_end(i, valid_selector_char);
-            let c = self.toker.bytes[i];
 
-            if c == b',' || c == b'{' {
-                let n = scan_trailing_whitespace(&self.toker.inner_str[beginning..i]);
-                let end = i - n;
-                if end > beginning {
-                    if c == b'{' {
-                        if self.current_sass_rule_selectors_done {
-                            self.state = State::InRule;
-                            return Ok(None)
-                        } else {
-                            self.current_sass_rule_selectors_done = true;
-                            self.state = State::InProperties;
-                        }
-                    }
-                    self.toker.offset = i + 1;
-                    return Ok(Some(SassSelector::new(&self.toker.inner_str[beginning..end])))
-                } else {
-                    // only whitespace between commas
-                    self.toker.offset += 1;
-                    return self.next_selector()
-                }
-            }
+            let n = scan_trailing_whitespace(&self.toker.inner_str[beginning..i]);
+            let end = i - n;
 
+            selectors.push(SassSelector::new(&self.toker.inner_str[beginning..end]));
             self.toker.offset = i;
-            if i > beginning {
-                return Ok(Some(SassSelector::new(&self.toker.inner_str[beginning..i])))
+            if self.toker.eat("{").is_ok() {
+                self.current_sass_rule_selectors_done = true;
+                self.state = State::InProperties;
+                break;
+            } else {
+                try!(self.toker.eat(","));
             }
-            i += 1;
         }
 
-        if i > beginning {
-            self.toker.offset = i;
-            Ok(Some(SassSelector::new(&self.toker.inner_str[beginning..i])))
-        } else {
-            self.state = State::Eof;
-            Ok(None)
-        }
+        Ok(selectors)
     }
 }
 
