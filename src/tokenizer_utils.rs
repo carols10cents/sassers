@@ -41,7 +41,11 @@ pub fn valid_selector_char(c: u8) -> bool {
 }
 
 pub fn valid_name_char(c: u8) -> bool {
-    c != b':' && c != b'{'
+    c != b':' && c != b'{' && c != b'(' && c != b')' && c != b';'
+}
+
+pub fn valid_mixin_arg_char(c: u8) -> bool {
+    c != b',' && c != b')'
 }
 
 pub fn is_number(c: u8) -> bool {
@@ -58,6 +62,10 @@ pub fn isnt_asterisk(c: u8) -> bool {
 
 pub fn isnt_semicolon(c: u8) -> bool {
     c != b';'
+}
+
+pub fn isnt_end_curly_brace(c: u8) -> bool {
+    c != b'}'
 }
 
 pub fn is_operator(c: u8) -> bool {

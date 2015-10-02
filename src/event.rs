@@ -1,6 +1,7 @@
 use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::value_part::ValuePart;
+use sass::mixin::SassMixinCall;
 
 use std::borrow::Cow;
 
@@ -11,6 +12,7 @@ pub enum Event<'a> {
     Comment(Cow<'a, str>),
     ChildRule(SassRule<'a>),
     Variable(SassVariable<'a>),
+    MixinCall(SassMixinCall<'a>),
 }
 
 impl<'a> Event<'a> {

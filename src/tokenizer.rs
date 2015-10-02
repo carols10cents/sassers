@@ -4,6 +4,7 @@ use sass::comment::SassComment;
 use sass::rule::SassRule;
 use sass::selector::SassSelector;
 use sass::variable::SassVariable;
+use sass::mixin::{SassMixin, SassMixinCall};
 use top_level_event::TopLevelEvent;
 use tokenizer_utils::*;
 
@@ -26,6 +27,8 @@ enum State {
     InRule,
     InSelectors,
     InProperties,
+    InMixin,
+    InMixinCall,
     EndRule,
     Eof,
 }
@@ -53,6 +56,7 @@ impl<'a> Tokenizer<'a> {
         self.current_sass_rule_selectors_done = false;
 
         self.pick_something();
+
         while self.state != State::OutsideRules {
             if self.state == State::Eof { return Ok(None) }
 
@@ -84,6 +88,10 @@ impl<'a> Tokenizer<'a> {
                 self.pick_something();
             } else if self.state == State::InVariable {
                 return self.next_variable()
+            } else if self.state == State::InMixin {
+                return self.next_mixin()
+            } else if self.state == State::InMixinCall {
+                return self.next_mixin_call()
             } else if self.state == State::InComment {
                 let comment = try!(self.next_comment());
                 if comment.is_some() {
@@ -132,6 +140,16 @@ impl<'a> Tokenizer<'a> {
 
         if c == b'$' {
             self.state = State::InVariable;
+            return
+        }
+
+        if self.toker.eat("@mixin ").is_ok() {
+            self.state = State::InMixin;
+            return
+        }
+
+        if self.toker.eat("@include ").is_ok() {
+            self.state = State::InMixinCall;
             return
         }
 
@@ -233,6 +251,83 @@ impl<'a> Tokenizer<'a> {
         })))
     }
 
+    fn next_mixin(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
+        let name_beginning = self.toker.offset;
+        let mut i = name_beginning;
+
+        while i < self.limit() {
+            i += self.toker.scan_while_or_end(i, valid_name_char);
+            let name_end = i;
+
+            self.toker.offset = i;
+            try!(self.toker.eat("("));
+
+            let arguments = try!(self.tokenize_list(",", ")", &valid_mixin_arg_char));
+
+            self.toker.skip_leading_whitespace();
+            try!(self.toker.eat("{"));
+            self.toker.skip_leading_whitespace();
+            i = self.toker.offset;
+            let body_beginning = i;
+            i += self.toker.scan_while_or_end(i, isnt_end_curly_brace);
+            let body_end = i;
+            self.toker.offset = i;
+            try!(self.toker.eat("}"));
+
+            let mixin = TopLevelEvent::Mixin(SassMixin {
+                name: Borrowed(&self.toker.inner_str[name_beginning..name_end]),
+                arguments: arguments,
+                body: Borrowed(&self.toker.inner_str[body_beginning..body_end]),
+            });
+
+            return Ok(Some(mixin))
+        }
+        self.toker.offset = self.limit();
+        Err(SassError {
+            kind: ErrorKind::UnexpectedEof,
+            message: String::from(
+                "Expected mixin declaration; reached EOF instead."
+            ),
+        })
+    }
+
+    fn next_mixin_call(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
+        self.toker.skip_leading_whitespace();
+        let name_beginning = self.toker.offset;
+        let mut i = name_beginning;
+
+        while i < self.limit() {
+            i += self.toker.scan_while_or_end(i, valid_name_char);
+            let name_end = i;
+            let name = Borrowed(&self.toker.inner_str[name_beginning..name_end]);
+
+            self.toker.offset = i;
+
+            let arguments = if self.toker.eat("(").is_ok() {
+                try!(self.tokenize_list(",", ")", &valid_mixin_arg_char))
+            } else {
+                Vec::new()
+            };
+
+            try!(self.toker.eat(";"));
+
+            let mixin_call = TopLevelEvent::MixinCall(SassMixinCall {
+                name: name,
+                arguments: arguments,
+            });
+
+            return Ok(Some(mixin_call))
+
+        }
+        self.toker.offset = self.limit();
+        Err(SassError {
+            kind: ErrorKind::UnexpectedEof,
+            message: String::from(
+                "Expected mixin call; reached EOF instead."
+            ),
+        })
+    }
+
     fn next_property(&mut self) -> Result<Option<Event<'a>>> {
         self.toker.skip_leading_whitespace();
 
@@ -254,6 +349,20 @@ impl<'a> Tokenizer<'a> {
         }
 
         let saved_offset = self.toker.offset;
+
+        if self.toker.eat("@include ").is_ok() {
+            match self.next_mixin_call() {
+                Ok(Some(TopLevelEvent::MixinCall(mixin_call))) => {
+                    return Ok(Some(Event::MixinCall(mixin_call)))
+                },
+                other => {
+                    return Err(SassError {
+                        kind: ErrorKind::TokenizerError,
+                        message: format!("Expected mixin call, instead got {:?}", other),
+                    })
+                }
+            }
+        }
 
         let prop_name = try!(self.next_name());
 
