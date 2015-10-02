@@ -256,50 +256,36 @@ impl<'a> Tokenizer<'a> {
             return Ok(None)
         }
 
-        let name_beginning = self.toker.offset;
-        let mut i = name_beginning;
+        let saved_offset = self.toker.offset;
 
-        while i < self.limit() {
-            i += self.toker.scan_while_or_end(i, valid_name_char);
+        let prop_name = try!(self.next_name());
 
-            // Inefficient since we already skipped the whitespace and we'll have to
-            // do it again but oh well
-            let c = self.toker.bytes[i];
-            if c == b'{' {
-                self.state = State::InRule;
-                return Ok(None)
-            }
-
-            let name_end = i;
-            self.toker.offset = i;
-            try!(self.toker.eat(":"));
-            self.toker.skip_leading_whitespace();
-
-            let value_beginning = self.toker.offset;
-            i = value_beginning;
-
-            while i < self.limit() {
-                i += self.toker.scan_while_or_end(i, isnt_semicolon);
-                let value_end = i;
-                self.toker.offset = i;
-                try!(self.toker.eat(";"));
-                self.toker.skip_leading_whitespace();
-
-                if self.toker.bytes[name_beginning] == b'$' {
-                    return Ok(Some(Event::Variable(SassVariable {
-                        name: Borrowed(&self.toker.inner_str[name_beginning..name_end]),
-                        value: Borrowed(&self.toker.inner_str[value_beginning..value_end])
-                    })))
-                } else {
-                    return Ok(Some(Event::UnevaluatedProperty(
-                        Borrowed(&self.toker.inner_str[name_beginning..name_end]),
-                        Borrowed(&self.toker.inner_str[value_beginning..value_end]),
-                    )))
-                }
-            }
+        let c = self.toker.curr_byte();
+        if c == b'{' {
+            self.state = State::InRule;
+            self.toker.offset = saved_offset;
+            return Ok(None)
         }
-        self.toker.offset = self.limit();
-        Ok(None)
+
+        try!(self.toker.eat(":"));
+        self.toker.skip_leading_whitespace();
+
+        let prop_value = try!(self.next_value());
+
+        try!(self.toker.eat(";"));
+        self.toker.skip_leading_whitespace();
+
+        if prop_name.as_bytes()[0] == b'$' {
+            Ok(Some(Event::Variable(SassVariable {
+                name:  prop_name,
+                value: prop_value,
+            })))
+        } else {
+            Ok(Some(Event::UnevaluatedProperty(
+                prop_name,
+                prop_value,
+            )))
+        }
     }
 
     fn next_selector(&mut self) -> Result<Option<SassSelector<'a>>> {
