@@ -298,11 +298,6 @@ impl<'a> Tokenizer<'a> {
             i += self.toker.scan_while_or_end(i, valid_selector_char);
             let c = self.toker.bytes[i];
 
-            if c == b':' {
-                self.state = State::InProperties;
-                return Ok(None)
-            }
-
             if c == b',' || c == b'{' {
                 let n = scan_trailing_whitespace(&self.toker.inner_str[beginning..i]);
                 let end = i - n;
