@@ -8,6 +8,7 @@ use top_level_event::TopLevelEvent;
 use tokenizer_utils::*;
 
 use std::borrow::Cow::Borrowed;
+use std::borrow::Cow;
 
 #[derive(Debug)]
 pub struct Tokenizer<'a> {
@@ -180,8 +181,7 @@ impl<'a> Tokenizer<'a> {
         })
     }
 
-    fn next_variable(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
-        // TODO: can parts of this be deduplicated with properties?
+    fn next_name(&mut self) -> Result<Cow<'a, str>> {
         let name_beginning = self.toker.offset;
         let mut i = name_beginning;
 
@@ -189,32 +189,51 @@ impl<'a> Tokenizer<'a> {
             i += self.toker.scan_while_or_end(i, valid_name_char);
             let name_end = i;
             self.toker.offset = i;
-            try!(self.toker.eat(":"));
-            self.toker.skip_leading_whitespace();
-
-            let value_beginning = self.toker.offset;
-            i = value_beginning;
-
-            while i < self.limit() {
-                i += self.toker.scan_while_or_end(i, isnt_semicolon);
-                let value_end = i;
-                self.toker.offset = i;
-                try!(self.toker.eat(";"));
-                self.toker.skip_leading_whitespace();
-
-                return Ok(Some(TopLevelEvent::Variable(SassVariable{
-                    name: Borrowed(&self.toker.inner_str[name_beginning..name_end]),
-                    value: Borrowed(&self.toker.inner_str[value_beginning..value_end]),
-                })))
-            }
+            return Ok(Borrowed(&self.toker.inner_str[name_beginning..name_end]))
         }
         self.toker.offset = self.limit();
         Err(SassError {
             kind: ErrorKind::UnexpectedEof,
             message: String::from(
-                "Expected variable declaration and value; reached EOF instead."
+                "Expected a valid name; reached EOF instead."
             ),
         })
+    }
+
+    fn next_value(&mut self) -> Result<Cow<'a, str>> {
+        let value_beginning = self.toker.offset;
+        let mut i = value_beginning;
+
+        while i < self.limit() {
+            i += self.toker.scan_while_or_end(i, isnt_semicolon);
+            let value_end = i;
+            self.toker.offset = i;
+            return Ok(Borrowed(&self.toker.inner_str[value_beginning..value_end]))
+        }
+        self.toker.offset = self.limit();
+        Err(SassError {
+            kind: ErrorKind::UnexpectedEof,
+            message: String::from(
+                "Expected a valid value; reached EOF instead."
+            ),
+        })
+    }
+
+    fn next_variable(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
+        let var_name = try!(self.next_name());
+
+        try!(self.toker.eat(":"));
+        self.toker.skip_leading_whitespace();
+
+        let var_value = try!(self.next_value());
+
+        try!(self.toker.eat(";"));
+        self.toker.skip_leading_whitespace();
+
+        Ok(Some(TopLevelEvent::Variable(SassVariable {
+            name:  var_name,
+            value: var_value,
+        })))
     }
 
     fn next_property(&mut self) -> Result<Option<Event<'a>>> {
