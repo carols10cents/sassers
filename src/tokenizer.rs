@@ -4,7 +4,7 @@ use sass::comment::SassComment;
 use sass::rule::SassRule;
 use sass::selector::SassSelector;
 use sass::variable::SassVariable;
-use sass::mixin::{SassMixin, SassMixinCall};
+use sass::mixin::{SassMixin, SassMixinCall, SassMixinArgument};
 use top_level_event::TopLevelEvent;
 use tokenizer_utils::*;
 
@@ -276,7 +276,9 @@ impl<'a> Tokenizer<'a> {
 
             let mixin = TopLevelEvent::Mixin(SassMixin {
                 name: Borrowed(&self.toker.inner_str[name_beginning..name_end]),
-                arguments: arguments,
+                arguments: arguments.into_iter().map(|a|
+                    SassMixinArgument::new(a)
+                ).collect(),
                 body: Borrowed(&self.toker.inner_str[body_beginning..body_end]),
             });
 
