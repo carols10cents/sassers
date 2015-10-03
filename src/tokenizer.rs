@@ -408,7 +408,9 @@ impl<'a> Tokenizer<'a> {
             let n = scan_trailing_whitespace(&self.toker.inner_str[beginning..i]);
             let end = i - n;
 
-            list.push(Borrowed(&self.toker.inner_str[beginning..end]));
+            if end > beginning {
+                list.push(Borrowed(&self.toker.inner_str[beginning..end]));
+            }
 
             self.toker.offset = i;
             if self.toker.eat(end_list).is_ok() {
