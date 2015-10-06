@@ -84,7 +84,7 @@ pub fn scan_trailing_whitespace(data: &str) -> usize {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Toker<'a> {
     pub inner_str: &'a str,
     pub bytes: &'a [u8],
@@ -111,7 +111,7 @@ impl<'a> Toker<'a> {
     pub fn eat(&mut self, expected: &str) -> Result<bool> {
         let original_offset = self.offset;
         for c in expected.as_bytes().iter() {
-            if !self.eatch(c) {
+            if !try!(self.eatch(c)) {
                 self.offset = original_offset;
                 return Err(SassError {
                     kind: ErrorKind::TokenizerError,
@@ -128,12 +128,22 @@ impl<'a> Toker<'a> {
         Ok(true)
     }
 
-    fn eatch(&mut self, expected_char: &u8) -> bool {
-        if self.bytes[self.offset] == *expected_char {
-            self.offset += 1;
-            true
+    fn eatch(&mut self, expected_char: &u8) -> Result<bool> {
+        if self.at_eof() {
+            Err(SassError {
+                kind: ErrorKind::UnexpectedEof,
+                message: format!(
+                    "Expected: `{}`; reached EOF instead.",
+                    *expected_char as char
+                ),
+            })
         } else {
-            false
+            if self.bytes[self.offset] == *expected_char {
+                self.offset += 1;
+                Ok(true)
+            } else {
+                Ok(false)
+            }
         }
     }
 
