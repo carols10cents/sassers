@@ -47,7 +47,7 @@ impl<'a> InnerTokenizer<'a> {
         self.toker.skip_leading_whitespace();
 
         if self.toker.at_eof() {
-            self.state = State::Eof;
+            return Ok(None)
         }
 
         let c = self.toker.bytes[self.toker.offset];
@@ -156,6 +156,10 @@ impl<'a> InnerTokenizer<'a> {
             return self.next_mixin_call()
         }
 
+        if self.toker.eat("@extend ").is_ok() {
+            return self.next_mixin_call()
+        }
+
         let prop_name = try!(self.next_name());
 
         debug!("prop_name = {:?}", prop_name);
@@ -223,6 +227,11 @@ impl<'a> InnerTokenizer<'a> {
     fn next_name(&mut self) -> Result<Cow<'a, str>> {
         let name_beginning = self.toker.offset;
         let mut i = name_beginning;
+
+        // Colons are valid at the beginning of a name
+        if self.toker.eat(":").is_ok() {
+            i = self.toker.offset;
+        }
 
         while i < self.limit() {
             i += self.toker.scan_while_or_end(i, valid_name_char);
@@ -354,9 +363,6 @@ impl<'a> Tokenizer<'a> {
                 while let Some(Ok(e)) = inner.next() {
                     current_sass_rule.children.push(e);
                 }
-                if self.toker.offset == inner.toker.offset {
-                    panic!("no bueno, {:?}", current_sass_rule);
-                }
                 self.toker.offset = inner.toker.offset;
 
                 try!(self.toker.eat("}"));
@@ -472,6 +478,11 @@ impl<'a> Tokenizer<'a> {
     fn next_name(&mut self) -> Result<Cow<'a, str>> {
         let name_beginning = self.toker.offset;
         let mut i = name_beginning;
+
+        // Colons are valid at the beginning of a name
+        if self.toker.eat(":").is_ok() {
+            i = self.toker.offset;
+        }
 
         while i < self.limit() {
             i += self.toker.scan_while_or_end(i, valid_name_char);

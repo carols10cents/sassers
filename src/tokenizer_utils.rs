@@ -118,9 +118,9 @@ impl<'a> Toker<'a> {
                     message: format!(
                         "Expected: `{}`, Saw: `{}`",
                         expected,
-                        &self.inner_str[
+                        String::from_utf8_lossy(&self.bytes[
                             self.offset..cmp::min(self.offset + expected.len(), self.limit())
-                        ]
+                        ])
                     ),
                 })
             }
