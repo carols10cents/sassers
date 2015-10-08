@@ -15,7 +15,6 @@ use std::borrow::Cow;
 pub struct Tokenizer<'a> {
     toker: Toker<'a>,
     state: State,
-    sass_rule_stack: Vec<SassRule<'a>>,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -53,14 +52,12 @@ impl<'a> InnerTokenizer<'a> {
         let c = self.toker.bytes[self.toker.offset];
 
         if c == b'}' {
-            debug!("end rule set line 57");
             return Ok(None)
         }
         if c == b'/' && (self.toker.offset + 1) < self.limit() {
             let d = self.toker.bytes[self.toker.offset + 1];
             if d == b'*' {
                 let comment = self.next_comment();
-                debug!("inner next comment: {:?}", comment);
                 return comment
             }
         }
@@ -76,8 +73,6 @@ impl<'a> InnerTokenizer<'a> {
     fn next_rule(&mut self) -> Result<Option<Event<'a>>> {
         let mut current_sass_rule = SassRule::new();
         current_sass_rule.selectors = try!(self.selector_list());
-        debug!("INNER Recursing...");
-        debug!("offset before = {:?}", self.toker.offset);
         let mut inner = InnerTokenizer {
             toker: Toker {
                 inner_str: &self.toker.inner_str,
@@ -90,16 +85,12 @@ impl<'a> InnerTokenizer<'a> {
             current_sass_rule.children.push(e);
         }
         self.toker.offset = inner.toker.offset;
-        debug!("offset after = {:?}", self.toker.offset);
         self.state = State::InProperties;
 
         while let Some(Ok(e)) = self.next() {
-            debug!("pushing {:?}", e);
             current_sass_rule.children.push(e);
         }
         try!(self.toker.eat("}"));
-        debug!("INNER recursing done, children: {:?}", current_sass_rule);
-        debug!("current state = {:?}", self.state);
 
         Ok(Some(Event::ChildRule(current_sass_rule)))
     }
@@ -140,7 +131,6 @@ impl<'a> InnerTokenizer<'a> {
 
         let c = self.toker.curr_byte();
         if c == b'}' {
-            debug!("end rule set line 145");
             return Ok(None)
         }
 
@@ -162,10 +152,7 @@ impl<'a> InnerTokenizer<'a> {
 
         let prop_name = try!(self.next_name());
 
-        debug!("prop_name = {:?}", prop_name);
-
         let c = self.toker.curr_byte();
-        debug!("c = {:?} ? {:?}", c as char, c == b'{');
         if c == b'{' {
             self.state = State::InSelectors;
             self.toker.offset = saved_offset;
@@ -298,7 +285,6 @@ impl<'a> InnerTokenizer<'a> {
 
     fn selector_list(&mut self) -> Result<Vec<SassSelector<'a>>> {
         let selectors = try!(self.tokenize_list(",", "{", &valid_selector_char));
-        debug!("selector list selectors = {:?}", selectors);
         self.state = State::InProperties;
 
         Ok(selectors.into_iter().map(|s| SassSelector::new(s)).collect())
@@ -330,7 +316,6 @@ impl<'a> Tokenizer<'a> {
                 offset: 0,
             },
             state: State::OutsideRules,
-            sass_rule_stack: Vec::new(),
         }
     }
 
@@ -367,16 +352,8 @@ impl<'a> Tokenizer<'a> {
 
                 try!(self.toker.eat("}"));
 
-                match self.sass_rule_stack.pop() {
-                    Some(mut rule) => {
-                        rule.children.push(Event::ChildRule(current_sass_rule));
-                        self.pick_something();
-                    },
-                    None => {
-                        self.state = State::OutsideRules;
-                        return Ok(Some(TopLevelEvent::Rule(current_sass_rule)))
-                    },
-                }
+                self.state = State::OutsideRules;
+                return Ok(Some(TopLevelEvent::Rule(current_sass_rule)))
             } else if self.state == State::InVariable {
                 return self.next_variable()
             } else if self.state == State::InMixin {
