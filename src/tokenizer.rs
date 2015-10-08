@@ -71,6 +71,7 @@ impl<'a> InnerTokenizer<'a> {
     }
 
     fn next_rule(&mut self) -> Result<Option<Event<'a>>> {
+        debug!("in next rule, offset {:?}", self.toker.offset);
         let mut current_sass_rule = SassRule::new();
         current_sass_rule.selectors = try!(self.selector_list());
         let mut inner = InnerTokenizer {
@@ -85,6 +86,7 @@ impl<'a> InnerTokenizer<'a> {
             current_sass_rule.children.push(e);
         }
         self.toker.offset = inner.toker.offset;
+        debug!("returned from inner rule, offset {:?}", self.toker.offset);
         self.state = State::InProperties;
 
         while let Some(Ok(e)) = self.next() {
@@ -333,27 +335,27 @@ impl<'a> Tokenizer<'a> {
             // self.state = match self.state
 
             if self.state == State::InSelectors {
-                let mut current_sass_rule = SassRule::new();
-                current_sass_rule.selectors = try!(self.selector_list());
-                debug!("Recursing...");
-                debug!("offset before = {:?}", self.toker.offset);
                 let mut inner = InnerTokenizer {
                     toker: Toker {
                         inner_str: &self.toker.inner_str,
                         bytes: &self.toker.bytes,
                         offset: self.toker.offset,
                     },
-                    state: State::InProperties,
+                    state: State::InSelectors,
                 };
-                while let Some(Ok(e)) = inner.next() {
-                    current_sass_rule.children.push(e);
-                }
+                let ret = match inner.next_rule() {
+                    Ok(Some(Event::ChildRule(rule))) => Ok(Some(TopLevelEvent::Rule(rule))),
+                    other => return Err(SassError {
+                        kind: ErrorKind::TokenizerError,
+                        message: format!(
+                            "Expected sass rule from inner tokenizer, got: {:?}.",
+                            other
+                        ),
+                    }),
+                };
                 self.toker.offset = inner.toker.offset;
-
-                try!(self.toker.eat("}"));
-
                 self.state = State::OutsideRules;
-                return Ok(Some(TopLevelEvent::Rule(current_sass_rule)))
+                return ret
             } else if self.state == State::InVariable {
                 return self.next_variable()
             } else if self.state == State::InMixin {
@@ -618,14 +620,6 @@ impl<'a> Tokenizer<'a> {
         }
 
         Ok(list)
-    }
-
-    fn selector_list(&mut self) -> Result<Vec<SassSelector<'a>>> {
-        let selectors = try!(self.tokenize_list(",", "{", &valid_selector_char));
-        debug!("selector list selectors = {:?}", selectors);
-        self.state = State::InProperties;
-
-        Ok(selectors.into_iter().map(|s| SassSelector::new(s)).collect())
     }
 }
 
