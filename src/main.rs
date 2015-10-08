@@ -29,6 +29,7 @@ Options:
     } else {
         let style = args.get_str("-t");
         let inputfile = args.get_str("<inputfile>");
+        debug!("input filename = {:?}", inputfile);
 
         match sassers::compile(&inputfile, style) {
             Ok(compiled) => println!("{}", compiled),

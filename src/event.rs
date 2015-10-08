@@ -21,7 +21,7 @@ impl<'a> Event<'a> {
             Event::Property(ref name, ref value) => format!("  {}: {};", name, value.expanded()),
             Event::Comment(ref comment) => format!("  {}", comment),
             Event::ChildRule(ref sass_rule) => sass_rule.expanded(),
-            _ => unreachable!(),
+            ref other => format!("other = {:?}", other),
         }
     }
 
@@ -30,7 +30,7 @@ impl<'a> Event<'a> {
             Event::Property(ref name, ref value) => format!("  {}: {};", name, value.nested()),
             Event::Comment(ref comment) => format!("  {}", comment),
             Event::ChildRule(ref sass_rule) => sass_rule.nested(),
-            _ => unreachable!(),
+            ref other => format!("other = {:?}", other),
         }
     }
 
@@ -39,7 +39,7 @@ impl<'a> Event<'a> {
             Event::Property(ref name, ref value) => format!("{}: {};", name, value.compact()),
             Event::Comment(ref comment) => (*comment).to_string(),
             Event::ChildRule(ref sass_rule) => sass_rule.compact(),
-            _ => unreachable!(),
+            ref other => format!("other = {:?}", other),
         }
     }
 
@@ -50,7 +50,7 @@ impl<'a> Event<'a> {
             },
             Event::Comment(..) => unreachable!(),
             Event::ChildRule(ref sass_rule) => sass_rule.compressed(),
-            _ => unreachable!(),
+            ref other => format!("other = {:?}", other),
         }
     }
 
