@@ -14,12 +14,10 @@ use std::borrow::Cow;
 #[derive(Debug)]
 pub struct Tokenizer<'a> {
     toker: Toker<'a>,
-    state: State,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 enum State {
-    OutsideRules,
     InComment,
     InSelectors,
     InProperties,
@@ -310,7 +308,6 @@ impl<'a> Tokenizer<'a> {
                 bytes: &inner_str.as_bytes(),
                 offset: 0,
             },
-            state: State::OutsideRules,
         }
     }
 
