@@ -158,7 +158,7 @@ impl<'a> InnerTokenizer<'a> {
         try!(self.toker.eat(":"));
         self.toker.skip_leading_whitespace();
 
-        let prop_value = try!(self.next_value());
+        let prop_value = try!(self.toker.next_value());
 
         try!(self.toker.eat(";"));
         self.toker.skip_leading_whitespace();
@@ -201,25 +201,6 @@ impl<'a> InnerTokenizer<'a> {
         });
 
         return Ok(Some(mixin_call))
-    }
-
-    fn next_value(&mut self) -> Result<Cow<'a, str>> {
-        let value_beginning = self.toker.offset;
-        let mut i = value_beginning;
-
-        while i < self.limit() {
-            i += self.toker.scan_while_or_end(i, isnt_semicolon);
-            let value_end = i;
-            self.toker.offset = i;
-            return Ok(Borrowed(&self.toker.inner_str[value_beginning..value_end]))
-        }
-        self.toker.offset = self.limit();
-        Err(SassError {
-            kind: ErrorKind::UnexpectedEof,
-            message: String::from(
-                "Expected a valid value; reached EOF instead."
-            ),
-        })
     }
 
     fn tokenize_list<F>(&mut self, separator: &str, end_list: &str, valid_char_fn: &F) -> Result<Vec<Cow<'a, str>>>
@@ -367,32 +348,13 @@ impl<'a> Tokenizer<'a> {
         })
     }
 
-    fn next_value(&mut self) -> Result<Cow<'a, str>> {
-        let value_beginning = self.toker.offset;
-        let mut i = value_beginning;
-
-        while i < self.limit() {
-            i += self.toker.scan_while_or_end(i, isnt_semicolon);
-            let value_end = i;
-            self.toker.offset = i;
-            return Ok(Borrowed(&self.toker.inner_str[value_beginning..value_end]))
-        }
-        self.toker.offset = self.limit();
-        Err(SassError {
-            kind: ErrorKind::UnexpectedEof,
-            message: String::from(
-                "Expected a valid value; reached EOF instead."
-            ),
-        })
-    }
-
     fn next_variable(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
         let var_name = try!(self.toker.next_name());
 
         try!(self.toker.eat(":"));
         self.toker.skip_leading_whitespace();
 
-        let var_value = try!(self.next_value());
+        let var_value = try!(self.toker.next_value());
 
         try!(self.toker.eat(";"));
         self.toker.skip_leading_whitespace();

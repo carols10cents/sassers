@@ -202,4 +202,23 @@ impl<'a> Toker<'a> {
            ),
        })
    }
+
+   pub fn next_value(&mut self) -> Result<Cow<'a, str>> {
+        let value_beginning = self.offset;
+        let mut i = value_beginning;
+
+        while i < self.limit() {
+            i += self.scan_while_or_end(i, isnt_semicolon);
+            let value_end = i;
+            self.offset = i;
+            return Ok(Borrowed(&self.inner_str[value_beginning..value_end]))
+        }
+        self.offset = self.limit();
+        Err(SassError {
+            kind: ErrorKind::UnexpectedEof,
+            message: String::from(
+                "Expected a valid value; reached EOF instead."
+            ),
+        })
+    }
 }
