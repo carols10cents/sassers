@@ -1,5 +1,6 @@
 use error::{SassError, ErrorKind, Result};
 use std::cmp;
+use std::borrow::Cow::{self, Borrowed};
 
 pub fn is_space(c: u8) -> bool {
     c == b' '
@@ -176,5 +177,29 @@ impl<'a> Toker<'a> {
            }
        }
        self.offset = self.limit();
+   }
+
+   pub fn next_name(&mut self) -> Result<Cow<'a, str>> {
+       let name_beginning = self.offset;
+       let mut i = name_beginning;
+
+       // Colons are valid at the beginning of a name
+       if self.eat(":").is_ok() {
+           i = self.offset;
+       }
+
+       while i < self.limit() {
+           i += self.scan_while_or_end(i, valid_name_char);
+           let name_end = i;
+           self.offset = i;
+           return Ok(Borrowed(&self.inner_str[name_beginning..name_end]))
+       }
+       self.offset = self.limit();
+       Err(SassError {
+           kind: ErrorKind::UnexpectedEof,
+           message: String::from(
+               "Expected a valid name; reached EOF instead."
+           ),
+       })
    }
 }

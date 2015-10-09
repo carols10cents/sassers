@@ -8,8 +8,7 @@ use sass::mixin::{SassMixin, SassMixinCall, SassMixinArgument};
 use top_level_event::TopLevelEvent;
 use tokenizer_utils::*;
 
-use std::borrow::Cow::Borrowed;
-use std::borrow::Cow;
+use std::borrow::Cow::{self, Borrowed};
 
 #[derive(Debug)]
 pub struct Tokenizer<'a> {
@@ -143,7 +142,7 @@ impl<'a> InnerTokenizer<'a> {
             return self.next_mixin_call()
         }
 
-        let prop_name = try!(self.next_name());
+        let prop_name = try!(self.toker.next_name());
 
         let c = self.toker.curr_byte();
         if c == b'{' {
@@ -202,30 +201,6 @@ impl<'a> InnerTokenizer<'a> {
         });
 
         return Ok(Some(mixin_call))
-    }
-
-    fn next_name(&mut self) -> Result<Cow<'a, str>> {
-        let name_beginning = self.toker.offset;
-        let mut i = name_beginning;
-
-        // Colons are valid at the beginning of a name
-        if self.toker.eat(":").is_ok() {
-            i = self.toker.offset;
-        }
-
-        while i < self.limit() {
-            i += self.toker.scan_while_or_end(i, valid_name_char);
-            let name_end = i;
-            self.toker.offset = i;
-            return Ok(Borrowed(&self.toker.inner_str[name_beginning..name_end]))
-        }
-        self.toker.offset = self.limit();
-        Err(SassError {
-            kind: ErrorKind::UnexpectedEof,
-            message: String::from(
-                "Expected a valid name; reached EOF instead."
-            ),
-        })
     }
 
     fn next_value(&mut self) -> Result<Cow<'a, str>> {
@@ -392,30 +367,6 @@ impl<'a> Tokenizer<'a> {
         })
     }
 
-    fn next_name(&mut self) -> Result<Cow<'a, str>> {
-        let name_beginning = self.toker.offset;
-        let mut i = name_beginning;
-
-        // Colons are valid at the beginning of a name
-        if self.toker.eat(":").is_ok() {
-            i = self.toker.offset;
-        }
-
-        while i < self.limit() {
-            i += self.toker.scan_while_or_end(i, valid_name_char);
-            let name_end = i;
-            self.toker.offset = i;
-            return Ok(Borrowed(&self.toker.inner_str[name_beginning..name_end]))
-        }
-        self.toker.offset = self.limit();
-        Err(SassError {
-            kind: ErrorKind::UnexpectedEof,
-            message: String::from(
-                "Expected a valid name; reached EOF instead."
-            ),
-        })
-    }
-
     fn next_value(&mut self) -> Result<Cow<'a, str>> {
         let value_beginning = self.toker.offset;
         let mut i = value_beginning;
@@ -436,7 +387,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn next_variable(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
-        let var_name = try!(self.next_name());
+        let var_name = try!(self.toker.next_name());
 
         try!(self.toker.eat(":"));
         self.toker.skip_leading_whitespace();
