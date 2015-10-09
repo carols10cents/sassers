@@ -20,14 +20,9 @@ pub struct Tokenizer<'a> {
 #[derive(PartialEq, Debug, Copy, Clone)]
 enum State {
     OutsideRules,
-    InVariable,
     InComment,
     InSelectors,
     InProperties,
-    InMixin,
-    InMixinCall,
-    EndRule,
-    Eof,
 }
 
 #[derive(Debug)]
@@ -57,13 +52,11 @@ impl<'a> InnerTokenizer<'a> {
         if c == b'/' && (self.toker.offset + 1) < self.limit() {
             let d = self.toker.bytes[self.toker.offset + 1];
             if d == b'*' {
-                let comment = self.next_comment();
-                return comment
+                return self.next_comment()
             }
         }
 
         match self.state {
-            State::Eof | State::EndRule => Ok(None),
             State::InProperties => self.next_property(),
             State::InSelectors => self.next_rule(),
             other => unreachable!("got {:?}", other),
@@ -326,108 +319,56 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn start_something(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
-        self.pick_something();
-
-        while self.state != State::OutsideRules {
-            if self.state == State::Eof { return Ok(None) }
-
-            // See if this works now that State is Copy
-            // self.state = match self.state
-
-            if self.state == State::InSelectors {
-                let mut inner = InnerTokenizer {
-                    toker: Toker {
-                        inner_str: &self.toker.inner_str,
-                        bytes: &self.toker.bytes,
-                        offset: self.toker.offset,
-                    },
-                    state: State::InSelectors,
-                };
-                let ret = match inner.next_rule() {
-                    Ok(Some(Event::ChildRule(rule))) => Ok(Some(TopLevelEvent::Rule(rule))),
-                    other => return Err(SassError {
-                        kind: ErrorKind::TokenizerError,
-                        message: format!(
-                            "Expected sass rule from inner tokenizer, got: {:?}.",
-                            other
-                        ),
-                    }),
-                };
-                self.toker.offset = inner.toker.offset;
-                self.state = State::OutsideRules;
-                return ret
-            } else if self.state == State::InVariable {
-                return self.next_variable()
-            } else if self.state == State::InMixin {
-                return self.next_mixin()
-            } else if self.state == State::InMixinCall {
-                return self.next_mixin_call()
-            } else if self.state == State::InComment {
-                let comment = try!(self.next_comment());
-                if comment.is_some() {
-                   return Ok(Some(
-                       TopLevelEvent::Comment(SassComment { comment: comment.unwrap() })
-                   ))
-                } else {
-                    return Ok(None)
-                }
-            } else {
-                return Err(SassError {
-                    kind: ErrorKind::TokenizerError,
-                    message: format!(
-                        "Something unexpected happened in tokenization! Current tokenization state: {:?}.",
-                        self.state
-                    ),
-                })
-            }
-        }
-
-        Ok(None)
-    }
-
-    fn pick_something(&mut self) {
         self.toker.skip_leading_whitespace();
 
         if self.toker.at_eof() {
-            self.state = State::Eof;
-            return
+            return Ok(None)
         }
 
         let c = self.toker.bytes[self.toker.offset];
 
-        if c == b'}' {
-            debug!("end rule set line 416");
-            self.state = State::EndRule;
-            return
-        }
-
         if c == b'$' {
-            self.state = State::InVariable;
-            return
+            return self.next_variable()
         }
 
         if self.toker.eat("@mixin ").is_ok() {
-            self.state = State::InMixin;
-            return
+            return self.next_mixin()
         }
 
         if self.toker.eat("@include ").is_ok() {
-            self.state = State::InMixinCall;
-            return
+            return self.next_mixin_call()
         }
 
         if c == b'/' && (self.toker.offset + 1) < self.limit() {
             let d = self.toker.bytes[self.toker.offset + 1];
             if d == b'*' {
-                self.state = State::InComment;
-                return
+                return self.next_comment()
             }
         }
 
-        self.state = State::InSelectors;
+        let mut inner = InnerTokenizer {
+            toker: Toker {
+                inner_str: &self.toker.inner_str,
+                bytes: &self.toker.bytes,
+                offset: self.toker.offset,
+            },
+            state: State::InSelectors,
+        };
+        let ret = match inner.next_rule() {
+            Ok(Some(Event::ChildRule(rule))) => Ok(Some(TopLevelEvent::Rule(rule))),
+            other => return Err(SassError {
+                kind: ErrorKind::TokenizerError,
+                message: format!(
+                    "Expected sass rule from inner tokenizer, got: {:?}.",
+                    other
+                ),
+            }),
+        };
+        self.toker.offset = inner.toker.offset;
+        return ret
     }
 
-    fn next_comment(&mut self) -> Result<Option<Event<'a>>> {
+    fn next_comment(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
         let comment_body_beginning = self.toker.offset;
         let mut i = comment_body_beginning + 2;
 
@@ -437,9 +378,9 @@ impl<'a> Tokenizer<'a> {
 
             if self.toker.eat("*/").is_ok() {
                 return Ok(Some(
-                    Event::Comment(Borrowed(
+                    TopLevelEvent::Comment(SassComment { comment: Event::Comment(Borrowed(
                         &self.toker.inner_str[comment_body_beginning..self.toker.offset]
-                    ))
+                    ))})
                 ))
             } else {
                 i += 1;
