@@ -34,7 +34,7 @@ impl<'a> InnerTokenizer<'a> {
         self.toker.limit()
     }
 
-    fn start_something(&mut self) -> Result<Option<Event<'a>>> {
+    fn parse(&mut self) -> Result<Option<Event<'a>>> {
         self.toker.skip_leading_whitespace();
 
         if self.toker.at_eof() {
@@ -162,7 +162,7 @@ impl<'a> Iterator for InnerTokenizer<'a> {
 
     fn next(&mut self) -> Option<Result<Event<'a>>> {
         if !self.toker.at_eof() {
-            return match self.start_something() {
+            return match self.parse() {
                 Ok(Some(t)) => Some(Ok(t)),
                 Ok(None) => None,
                 Err(e) => Some(Err(e)),
@@ -171,7 +171,6 @@ impl<'a> Iterator for InnerTokenizer<'a> {
         None
     }
 }
-
 
 impl<'a> Tokenizer<'a> {
     pub fn new(inner_str: &'a str) -> Tokenizer<'a> {
@@ -188,7 +187,7 @@ impl<'a> Tokenizer<'a> {
         self.toker.limit()
     }
 
-    fn start_something(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
+    fn parse(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
         self.toker.skip_leading_whitespace();
 
         if self.toker.at_eof() {
@@ -291,7 +290,7 @@ impl<'a> Iterator for Tokenizer<'a> {
 
     fn next(&mut self) -> Option<Result<TopLevelEvent<'a>>> {
         if !self.toker.at_eof() {
-            return match self.start_something() {
+            return match self.parse() {
                 Ok(Some(t)) => Some(Ok(t)),
                 Ok(None) => None,
                 Err(e) => Some(Err(e)),
