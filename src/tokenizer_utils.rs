@@ -221,4 +221,33 @@ impl<'a> Toker<'a> {
             ),
         })
     }
+
+    pub fn tokenize_list<F>(&mut self, separator: &str, end_list: &str, valid_char_fn: &F) -> Result<Vec<Cow<'a, str>>>
+        where F: Fn(u8) -> bool {
+        let mut list = Vec::new();
+
+        let mut i = self.offset;
+        while i < self.limit() {
+            self.skip_leading_whitespace();
+            i = self.offset;
+            let beginning = self.offset;
+            i += self.scan_while_or_end(i, valid_char_fn);
+
+            let n = scan_trailing_whitespace(&self.inner_str[beginning..i]);
+            let end = i - n;
+
+            if end > beginning {
+                list.push(Borrowed(&self.inner_str[beginning..end]));
+            }
+
+            self.offset = i;
+            if self.eat(end_list).is_ok() {
+                break;
+            } else {
+                try!(self.eat(separator));
+            }
+        }
+
+        Ok(list)
+    }
 }
