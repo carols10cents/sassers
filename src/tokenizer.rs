@@ -4,11 +4,8 @@ use sass::comment::SassComment;
 use sass::rule::SassRule;
 use sass::selector::SassSelector;
 use sass::variable::SassVariable;
-use sass::mixin::{SassMixin, SassMixinCall, SassMixinArgument};
 use top_level_event::TopLevelEvent;
 use tokenizer_utils::*;
-
-use std::borrow::Cow::{self, Borrowed};
 
 #[derive(Debug)]
 pub struct Tokenizer<'a> {
