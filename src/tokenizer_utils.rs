@@ -1,4 +1,6 @@
 use error::{SassError, ErrorKind, Result};
+use event::Event;
+use sass::mixin::{SassMixin, SassMixinCall, SassMixinArgument};
 use std::cmp;
 use std::borrow::Cow::{self, Borrowed};
 
@@ -249,5 +251,84 @@ impl<'a> Toker<'a> {
         }
 
         Ok(list)
+    }
+
+    pub fn next_mixin(&mut self) -> Result<Option<Event<'a>>> {
+        let name_beginning = self.offset;
+        let mut i = name_beginning;
+
+        while i < self.limit() {
+            i += self.scan_while_or_end(i, valid_name_char);
+            let name_end = i;
+
+            self.offset = i;
+            try!(self.eat("("));
+
+            let arguments = try!(self.tokenize_list(",", ")", &valid_mixin_arg_char));
+
+            self.skip_leading_whitespace();
+            try!(self.eat("{"));
+            self.skip_leading_whitespace();
+            i = self.offset;
+            let body_beginning = i;
+            i += self.scan_while_or_end(i, isnt_end_curly_brace);
+            let body_end = i;
+            self.offset = i;
+            try!(self.eat("}"));
+
+            let mixin = Event::Mixin(SassMixin {
+                name: Borrowed(&self.inner_str[name_beginning..name_end]),
+                arguments: arguments.into_iter().map(|a|
+                    SassMixinArgument::new(a)
+                ).collect(),
+                body: Borrowed(&self.inner_str[body_beginning..body_end]),
+            });
+
+            return Ok(Some(mixin))
+        }
+        self.offset = self.limit();
+        Err(SassError {
+            kind: ErrorKind::UnexpectedEof,
+            message: String::from(
+                "Expected mixin declaration; reached EOF instead."
+            ),
+        })
+    }
+
+    pub fn next_mixin_call(&mut self) -> Result<Option<Event<'a>>> {
+        self.skip_leading_whitespace();
+        let name_beginning = self.offset;
+        let mut i = name_beginning;
+
+        while i < self.limit() {
+            i += self.scan_while_or_end(i, valid_name_char);
+            let name_end = i;
+            let name = Borrowed(&self.inner_str[name_beginning..name_end]);
+
+            self.offset = i;
+
+            let arguments = if self.eat("(").is_ok() {
+                try!(self.tokenize_list(",", ")", &valid_mixin_arg_char))
+            } else {
+                Vec::new()
+            };
+
+            try!(self.eat(";"));
+
+            let mixin_call = Event::MixinCall(SassMixinCall {
+                name: name,
+                arguments: arguments,
+            });
+
+            return Ok(Some(mixin_call))
+
+        }
+        self.offset = self.limit();
+        Err(SassError {
+            kind: ErrorKind::UnexpectedEof,
+            message: String::from(
+                "Expected mixin call; reached EOF instead."
+            ),
+        })
     }
 }
