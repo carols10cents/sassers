@@ -331,4 +331,31 @@ impl<'a> Toker<'a> {
             ),
         })
     }
+
+    pub fn next_comment(&mut self) -> Result<Option<Event<'a>>> {
+        let comment_body_beginning = self.offset;
+        let mut i = comment_body_beginning + 2;
+
+        while i < self.limit() {
+            i += self.scan_while_or_end(i, isnt_asterisk);
+            self.offset = i;
+
+            if self.eat("*/").is_ok() {
+                return Ok(Some(
+                    Event::Comment(Borrowed(
+                        &self.inner_str[comment_body_beginning..self.offset]
+                    ))
+                ))
+            } else {
+                i += 1;
+            }
+        }
+        self.offset = self.limit();
+        Err(SassError {
+            kind: ErrorKind::UnexpectedEof,
+            message: String::from(
+                "Expected comment; reached EOF instead."
+            ),
+        })
+    }
 }

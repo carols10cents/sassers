@@ -49,7 +49,7 @@ impl<'a> InnerTokenizer<'a> {
         if c == b'/' && (self.toker.offset + 1) < self.limit() {
             let d = self.toker.bytes[self.toker.offset + 1];
             if d == b'*' {
-                return self.next_comment()
+                return self.toker.next_comment()
             }
         }
 
@@ -85,33 +85,6 @@ impl<'a> InnerTokenizer<'a> {
         try!(self.toker.eat("}"));
 
         Ok(Some(Event::ChildRule(current_sass_rule)))
-    }
-
-    fn next_comment(&mut self) -> Result<Option<Event<'a>>> {
-        let comment_body_beginning = self.toker.offset;
-        let mut i = comment_body_beginning + 2;
-
-        while i < self.limit() {
-            i += self.toker.scan_while_or_end(i, isnt_asterisk);
-            self.toker.offset = i;
-
-            if self.toker.eat("*/").is_ok() {
-                return Ok(Some(
-                    Event::Comment(Borrowed(
-                        &self.toker.inner_str[comment_body_beginning..self.toker.offset]
-                    ))
-                ))
-            } else {
-                i += 1;
-            }
-        }
-        self.toker.offset = self.limit();
-        Err(SassError {
-            kind: ErrorKind::UnexpectedEof,
-            message: String::from(
-                "Expected comment; reached EOF instead."
-            ),
-        })
     }
 
     fn next_property(&mut self) -> Result<Option<Event<'a>>> {
@@ -266,30 +239,13 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn next_comment(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
-        let comment_body_beginning = self.toker.offset;
-        let mut i = comment_body_beginning + 2;
-
-        while i < self.limit() {
-            i += self.toker.scan_while_or_end(i, isnt_asterisk);
-            self.toker.offset = i;
-
-            if self.toker.eat("*/").is_ok() {
-                return Ok(Some(
-                    TopLevelEvent::Comment(SassComment { comment: Event::Comment(Borrowed(
-                        &self.toker.inner_str[comment_body_beginning..self.toker.offset]
-                    ))})
-                ))
-            } else {
-                i += 1;
-            }
+        match self.toker.next_comment() {
+            Ok(Some(comment)) => {
+                Ok(Some(TopLevelEvent::Comment(SassComment { comment: comment })))
+            },
+            Err(e) => Err(e),
+            _ => unreachable!(),
         }
-        self.toker.offset = self.limit();
-        Err(SassError {
-            kind: ErrorKind::UnexpectedEof,
-            message: String::from(
-                "Expected comment; reached EOF instead."
-            ),
-        })
     }
 
     fn next_variable(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
