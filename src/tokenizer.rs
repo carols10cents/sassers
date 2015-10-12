@@ -240,7 +240,7 @@ impl<'a> Tokenizer<'a> {
 
     fn next_comment(&mut self) -> Result<Option<TopLevelEvent<'a>>> {
         match self.toker.next_comment() {
-            Ok(Some(comment)) => {
+            Ok(Some(Event::Comment(comment))) => {
                 Ok(Some(TopLevelEvent::Comment(SassComment { comment: comment })))
             },
             Err(e) => Err(e),

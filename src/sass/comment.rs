@@ -1,30 +1,21 @@
-use event::Event;
+use std::borrow::Cow;
 
 #[derive(Debug,Clone)]
 pub struct SassComment<'a> {
-    pub comment: Event<'a>,
+    pub comment: Cow<'a, str>,
 }
 
 impl <'a> SassComment<'a> {
     pub fn expanded(&self) -> String {
-        match &self.comment {
-            &Event::Comment(ref c) => (*c).to_string(),
-            _ => unreachable!(),
-        }
+      self.comment.to_string()
     }
 
     pub fn nested(&self) -> String {
-        match &self.comment {
-            &Event::Comment(ref c) => (*c).to_string(),
-            _ => unreachable!(),
-        }
+      self.comment.to_string()
     }
 
     pub fn compact(&self) -> String {
-        match &self.comment {
-            &Event::Comment(ref c) => (*c).to_string().lines().map(|s| s.trim()).collect::<Vec<_>>().join(" "),
-            _ => unreachable!(),
-        }
+      self.comment.to_string().lines().map(|s| s.trim()).collect::<Vec<_>>().join(" ")
     }
 
     // Comments are never output in the compressed format.
