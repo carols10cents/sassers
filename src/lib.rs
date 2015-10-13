@@ -15,11 +15,11 @@ mod event;
 mod inner_tokenizer;
 mod output;
 mod sass;
+mod substituter;
 mod tokenizer;
 mod tokenizer_utils;
 mod top_level_event;
 mod value_tokenizer;
-mod variable_mapper;
 
 use error::{SassError, ErrorKind, Result};
 use tokenizer::Tokenizer;

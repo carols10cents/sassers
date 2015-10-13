@@ -9,21 +9,21 @@ use sass::value_part::ValuePart;
 use std::collections::HashMap;
 use std::borrow::Cow;
 
-pub struct VariableMapper<'vm, I> {
+pub struct Substituter<'vm, I> {
     tokenizer: I,
     variables: HashMap<String, ValuePart<'vm>>,
 }
 
-impl<'vm, I> VariableMapper<'vm, I> {
-    pub fn new(tokenizer: I) -> VariableMapper<'vm, I> {
-        VariableMapper {
+impl<'vm, I> Substituter<'vm, I> {
+    pub fn new(tokenizer: I) -> Substituter<'vm, I> {
+        Substituter {
             tokenizer: tokenizer,
             variables: HashMap::new(),
         }
     }
 }
 
-impl<'a, I> Iterator for VariableMapper<'a, I>
+impl<'a, I> Iterator for Substituter<'a, I>
     where I: Iterator<Item = Result<TopLevelEvent<'a>>>
 {
     type Item = Result<TopLevelEvent<'a>>;

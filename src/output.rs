@@ -1,15 +1,15 @@
 use error::Result;
 use tokenizer::Tokenizer;
 use top_level_event::TopLevelEvent;
-use variable_mapper::VariableMapper;
+use substituter::Substituter;
 
 pub fn expanded<'a, I>(tokenizer: &mut I) -> Result<String>
     where I: Iterator<Item = Result<TopLevelEvent<'a>>>
 {
-    let mut vm = VariableMapper::new(tokenizer);
+    let mut subber = Substituter::new(tokenizer);
     let mut output = String::new();
 
-    while let Some(event) = vm.next() {
+    while let Some(event) = subber.next() {
         match event {
             Ok(TopLevelEvent::Rule(rule)) => {
                 output.push_str(&rule.expanded());
@@ -34,10 +34,10 @@ pub fn expanded<'a, I>(tokenizer: &mut I) -> Result<String>
 pub fn nested<'a, I>(tokenizer: &mut I) -> Result<String>
     where I: Iterator<Item = Result<TopLevelEvent<'a>>>
 {
-    let mut vm = VariableMapper::new(tokenizer);
+    let mut subber = Substituter::new(tokenizer);
     let mut output = String::new();
 
-    while let Some(event) = vm.next() {
+    while let Some(event) = subber.next() {
         match event {
             Ok(TopLevelEvent::Rule(rule)) => {
                 output.push_str(&rule.nested());
@@ -62,10 +62,10 @@ pub fn nested<'a, I>(tokenizer: &mut I) -> Result<String>
 pub fn compact<'a, I>(tokenizer: &mut I) -> Result<String>
     where I: Iterator<Item = Result<TopLevelEvent<'a>>>
 {
-    let mut vm = VariableMapper::new(tokenizer);
+    let mut subber = Substituter::new(tokenizer);
     let mut output = String::new();
 
-    while let Some(event) = vm.next() {
+    while let Some(event) = subber.next() {
         match event {
             Ok(TopLevelEvent::Rule(rule)) => {
                 output.push_str(&rule.compact());
@@ -90,10 +90,10 @@ pub fn compact<'a, I>(tokenizer: &mut I) -> Result<String>
 pub fn compressed<'a, I>(tokenizer: &mut I) -> Result<String>
     where I: Iterator<Item = Result<TopLevelEvent<'a>>>
 {
-    let mut vm = VariableMapper::new(tokenizer);
+    let mut subber = Substituter::new(tokenizer);
     let mut output = String::new();
 
-    while let Some(event) = vm.next() {
+    while let Some(event) = subber.next() {
         match event {
             Ok(TopLevelEvent::Rule(rule)) => {
                 output.push_str(&rule.compressed());
