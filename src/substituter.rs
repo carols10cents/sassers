@@ -6,12 +6,15 @@ use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
+use sass::mixin::{SassMixin, SassMixinCall};
+
 use std::collections::HashMap;
 use std::borrow::Cow;
 
 pub struct Substituter<'vm, I> {
     tokenizer: I,
     variables: HashMap<String, ValuePart<'vm>>,
+    mixins:    HashMap<String, SassMixin<'vm>>,
 }
 
 impl<'vm, I> Substituter<'vm, I> {
@@ -19,6 +22,7 @@ impl<'vm, I> Substituter<'vm, I> {
         Substituter {
             tokenizer: tokenizer,
             variables: HashMap::new(),
+            mixins:    HashMap::new(),
         }
     }
 }
@@ -38,6 +42,10 @@ impl<'a, I> Iterator for Substituter<'a, I>
                 self.variables.insert((*name).to_string(), val);
                 self.next()
             },
+            Some(Ok(TopLevelEvent::Mixin(mixin))) => {
+                self.mixins.insert((mixin.name).to_string(), mixin);
+                self.next()
+            },
             Some(Ok(TopLevelEvent::Rule(sass_rule))) => {
                 let replaced = match replace_children_in_scope(
                     sass_rule.children, self.variables.clone()
@@ -50,6 +58,7 @@ impl<'a, I> Iterator for Substituter<'a, I>
                     children: replaced, ..sass_rule
                 })))
             },
+            Some(Ok(TopLevelEvent::MixinCall(mixin_call))) => unimplemented!(),
             other => other,
         }
     }
