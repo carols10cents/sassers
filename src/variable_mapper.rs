@@ -21,63 +21,6 @@ impl<'vm, I> VariableMapper<'vm, I> {
             variables: HashMap::new(),
         }
     }
-
-    fn replace_children_in_scope<'b>(&self, children: Vec<Event<'b>>, mut local_variables: HashMap<String, ValuePart<'b>>) -> Result<Vec<Event<'b>>> {
-        children.into_iter().filter_map(|c|
-            match c {
-                Event::Variable(SassVariable { name, value }) => {
-                    let val = match owned_evaluated_value(value, &local_variables) {
-                        Ok(v) => v,
-                        Err(e) => return Some(Err(e)),
-                    };
-                    local_variables.insert((*name).to_string(), val);
-                    None
-                },
-                Event::UnevaluatedProperty(name, value) => {
-                    let mut ev = Evaluator::new_from_string(&value);
-                    let ev_res = match ev.evaluate(&local_variables) {
-                        Ok(s)  => s.into_owned(),
-                        Err(e) => return Some(Err(e)),
-                    };
-
-                    Some(Ok(Event::Property(
-                        name,
-                        ev_res,
-                    )))
-                },
-                Event::ChildRule(rule) => {
-                    let res = match self.replace_children_in_scope(
-                        rule.children, local_variables.clone()
-                    ) {
-                        Ok(children) => children,
-                        Err(e) => return Some(Err(e)),
-                    };
-                    Some(Ok(Event::ChildRule(SassRule {
-                        children: res, ..rule
-                    })))
-                },
-                other => Some(Ok(other))
-            }
-        ).collect()
-    }
-}
-
-fn owned_evaluated_value<'a>(
-    value: Cow<'a, str>,
-    variables: &HashMap<String, ValuePart<'a>>) -> Result<ValuePart<'a>> {
-
-    let value_part = match value {
-        Cow::Borrowed(v) => {
-            try!(Evaluator::new_from_string(&v).evaluate(variables))
-        },
-        Cow::Owned(v) => {
-            try!(Evaluator::new_from_string(&v).evaluate(variables)).into_owned()
-        },
-    };
-    Ok(match value_part {
-        ValuePart::Number(nv) => ValuePart::Number(NumberValue { computed: true, ..nv }),
-        other => other,
-    })
 }
 
 impl<'a, I> Iterator for VariableMapper<'a, I>
@@ -96,7 +39,7 @@ impl<'a, I> Iterator for VariableMapper<'a, I>
                 self.next()
             },
             Some(Ok(TopLevelEvent::Rule(sass_rule))) => {
-                let replaced = match self.replace_children_in_scope(
+                let replaced = match replace_children_in_scope(
                     sass_rule.children, self.variables.clone()
                 ) {
                     Ok(children) => children,
@@ -110,4 +53,61 @@ impl<'a, I> Iterator for VariableMapper<'a, I>
             other => other,
         }
     }
+}
+
+fn replace_children_in_scope<'b>(children: Vec<Event<'b>>, mut local_variables: HashMap<String, ValuePart<'b>>) -> Result<Vec<Event<'b>>> {
+    children.into_iter().filter_map(|c|
+        match c {
+            Event::Variable(SassVariable { name, value }) => {
+                let val = match owned_evaluated_value(value, &local_variables) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
+                local_variables.insert((*name).to_string(), val);
+                None
+            },
+            Event::UnevaluatedProperty(name, value) => {
+                let mut ev = Evaluator::new_from_string(&value);
+                let ev_res = match ev.evaluate(&local_variables) {
+                    Ok(s)  => s.into_owned(),
+                    Err(e) => return Some(Err(e)),
+                };
+
+                Some(Ok(Event::Property(
+                    name,
+                    ev_res,
+                )))
+            },
+            Event::ChildRule(rule) => {
+                let res = match replace_children_in_scope(
+                    rule.children, local_variables.clone()
+                ) {
+                    Ok(children) => children,
+                    Err(e) => return Some(Err(e)),
+                };
+                Some(Ok(Event::ChildRule(SassRule {
+                    children: res, ..rule
+                })))
+            },
+            other => Some(Ok(other))
+        }
+    ).collect()
+}
+
+fn owned_evaluated_value<'a>(
+    value: Cow<'a, str>,
+    variables: &HashMap<String, ValuePart<'a>>) -> Result<ValuePart<'a>> {
+
+    let value_part = match value {
+        Cow::Borrowed(v) => {
+            try!(Evaluator::new_from_string(&v).evaluate(variables))
+        },
+        Cow::Owned(v) => {
+            try!(Evaluator::new_from_string(&v).evaluate(variables)).into_owned()
+        },
+    };
+    Ok(match value_part {
+        ValuePart::Number(nv) => ValuePart::Number(NumberValue { computed: true, ..nv }),
+        other => other,
+    })
 }
