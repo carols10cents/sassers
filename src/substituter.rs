@@ -1,4 +1,4 @@
-use error::Result;
+use error::{Result, SassError, ErrorKind};
 use evaluator::Evaluator;
 use event::Event;
 use top_level_event::TopLevelEvent;
@@ -48,7 +48,7 @@ impl<'a, I> Iterator for Substituter<'a, I>
             },
             Some(Ok(TopLevelEvent::Rule(sass_rule))) => {
                 let replaced = match replace_children_in_scope(
-                    sass_rule.children, self.variables.clone()
+                    sass_rule.children, self.variables.clone(), self.mixins.clone()
                 ) {
                     Ok(children) => children,
                     Err(e) => return Some(Err(e)),
@@ -64,43 +64,52 @@ impl<'a, I> Iterator for Substituter<'a, I>
     }
 }
 
-fn replace_children_in_scope<'b>(children: Vec<Event<'b>>, mut local_variables: HashMap<String, ValuePart<'b>>) -> Result<Vec<Event<'b>>> {
-    children.into_iter().filter_map(|c|
+fn replace_children_in_scope<'b>(
+    children: Vec<Event<'b>>,
+    mut local_variables: HashMap<String, ValuePart<'b>>,
+    local_mixins: HashMap<String, SassMixin<'b>>) -> Result<Vec<Event<'b>>> {
+
+    let mut results = Vec::new();
+
+    for c in children.into_iter() {
         match c {
             Event::Variable(SassVariable { name, value }) => {
-                let val = match owned_evaluated_value(value, &local_variables) {
-                    Ok(v) => v,
-                    Err(e) => return Some(Err(e)),
-                };
+                let val = try!(owned_evaluated_value(value, &local_variables));
                 local_variables.insert((*name).to_string(), val);
-                None
             },
             Event::UnevaluatedProperty(name, value) => {
                 let mut ev = Evaluator::new_from_string(&value);
-                let ev_res = match ev.evaluate(&local_variables) {
-                    Ok(s)  => s.into_owned(),
-                    Err(e) => return Some(Err(e)),
-                };
+                let ev_res = try!(ev.evaluate(&local_variables)).into_owned();
 
-                Some(Ok(Event::Property(
+                results.push(Event::Property(
                     name,
                     ev_res,
-                )))
+                ));
             },
             Event::ChildRule(rule) => {
-                let res = match replace_children_in_scope(
-                    rule.children, local_variables.clone()
-                ) {
-                    Ok(children) => children,
-                    Err(e) => return Some(Err(e)),
-                };
-                Some(Ok(Event::ChildRule(SassRule {
+                let res = try!(replace_children_in_scope(
+                    rule.children, local_variables.clone(), local_mixins.clone()
+                ));
+                results.push(Event::ChildRule(SassRule {
                     children: res, ..rule
-                })))
+                }));
             },
-            other => Some(Ok(other))
+            Event::MixinCall(mixin_call) => {
+                let mixin_name = mixin_call.name.into_owned();
+                let mixin_definition = match local_mixins.get(&mixin_name) {
+                    Some(mixin) => mixin,
+                    None => return Err(SassError {
+                        kind: ErrorKind::ExpectedMixin,
+                        message: format!("Cannot find mixin named `{}`", mixin_name),
+                    }),
+                };
+
+                results.append(&mut mixin_definition.children.clone());
+            },
+            other => results.push(other),
         }
-    ).collect()
+    }
+    Ok(results)
 }
 
 fn owned_evaluated_value<'a>(

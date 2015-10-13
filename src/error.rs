@@ -23,6 +23,7 @@ pub enum ErrorKind {
     TokenizerError,
     ExpectedValue,
     ExpectedOperator,
+    ExpectedMixin,
     UnexpectedEof,
     InvalidOperator,
     InvalidApplyListArgs,
