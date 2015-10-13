@@ -1,6 +1,8 @@
 use error::{SassError, ErrorKind, Result};
 use event::Event;
 use sass::mixin::{SassMixin, SassMixinCall, SassMixinArgument};
+use inner_tokenizer::{InnerTokenizer, State};
+
 use std::cmp;
 use std::borrow::Cow::{self, Borrowed};
 
@@ -65,10 +67,6 @@ pub fn isnt_asterisk(c: u8) -> bool {
 
 pub fn isnt_semicolon(c: u8) -> bool {
     c != b';'
-}
-
-pub fn isnt_end_curly_brace(c: u8) -> bool {
-    c != b'}'
 }
 
 pub fn is_operator(c: u8) -> bool {
@@ -269,11 +267,21 @@ impl<'a> Toker<'a> {
             self.skip_leading_whitespace();
             try!(self.eat("{"));
             self.skip_leading_whitespace();
-            i = self.offset;
-            let body_beginning = i;
-            i += self.scan_while_or_end(i, isnt_end_curly_brace);
-            let body_end = i;
-            self.offset = i;
+
+            let mut children = Vec::new();
+            let mut inner = InnerTokenizer {
+                toker: Toker {
+                    inner_str: &self.inner_str,
+                    bytes: &self.bytes,
+                    offset: self.offset,
+                },
+                state: State::InProperties,
+            };
+            while let Some(Ok(e)) = inner.next() {
+                children.push(e);
+            }
+            self.offset = inner.toker.offset;
+
             try!(self.eat("}"));
 
             let mixin = Event::Mixin(SassMixin {
@@ -281,7 +289,7 @@ impl<'a> Toker<'a> {
                 arguments: arguments.into_iter().map(|a|
                     SassMixinArgument::new(a)
                 ).collect(),
-                body: Borrowed(&self.inner_str[body_beginning..body_end]),
+                children: children,
             });
 
             return Ok(Some(mixin))

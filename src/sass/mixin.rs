@@ -1,11 +1,12 @@
-use std::borrow::Cow;
-use std::borrow::Cow::Owned;
+use event::Event;
+
+use std::borrow::Cow::{self, Owned};
 
 #[derive(Clone, Debug)]
 pub struct SassMixin<'a> {
     pub name: Cow<'a, str>,
     pub arguments: Vec<SassMixinArgument<'a>>,
-    pub body: Cow<'a, str>,
+    pub children: Vec<Event<'a>>,
 }
 
 #[derive(Clone, Debug)]
