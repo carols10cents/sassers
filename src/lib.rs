@@ -12,6 +12,7 @@ use regex::Regex;
 mod error;
 mod evaluator;
 mod event;
+mod inner_tokenizer;
 mod output;
 mod sass;
 mod tokenizer;
