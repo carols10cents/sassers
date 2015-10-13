@@ -5,7 +5,7 @@ use std::borrow::Cow::{self, Owned};
 #[derive(Clone, Debug)]
 pub struct SassMixin<'a> {
     pub name: Cow<'a, str>,
-    pub arguments: Vec<SassMixinArgument<'a>>,
+    pub parameters: Vec<SassMixinParameter<'a>>,
     pub children: Vec<Event<'a>>,
 }
 
@@ -16,19 +16,19 @@ pub struct SassMixinCall<'a> {
 }
 
 #[derive(Clone, Debug)]
-pub struct SassMixinArgument<'a> {
+pub struct SassMixinParameter<'a> {
     pub name: Cow<'a, str>,
     pub default: Option<Cow<'a, str>>,
 }
 
-impl<'a> SassMixinArgument<'a> {
-    pub fn new(arg_str: Cow<'a, str>) -> SassMixinArgument<'a> {
-        let mut parts = arg_str.split(":");
+impl<'a> SassMixinParameter<'a> {
+    pub fn new(param_str: Cow<'a, str>) -> SassMixinParameter<'a> {
+        let mut parts = param_str.split(":");
         let name = Owned(parts.next().unwrap().into());
         let default = match parts.next() {
             Some(d) => Some(Owned(d.trim().into())),
             None => None,
         };
-        SassMixinArgument { name: name, default: default }
+        SassMixinParameter { name: name, default: default }
     }
 }

@@ -1,6 +1,6 @@
 use error::{SassError, ErrorKind, Result};
 use event::Event;
-use sass::mixin::{SassMixin, SassMixinCall, SassMixinArgument};
+use sass::mixin::{SassMixin, SassMixinCall, SassMixinParameter};
 use inner_tokenizer::{InnerTokenizer, State};
 
 use std::cmp;
@@ -262,7 +262,7 @@ impl<'a> Toker<'a> {
             self.offset = i;
             try!(self.eat("("));
 
-            let arguments = try!(self.tokenize_list(",", ")", &valid_mixin_arg_char));
+            let parameters = try!(self.tokenize_list(",", ")", &valid_mixin_arg_char));
 
             self.skip_leading_whitespace();
             try!(self.eat("{"));
@@ -286,8 +286,8 @@ impl<'a> Toker<'a> {
 
             let mixin = Event::Mixin(SassMixin {
                 name: Borrowed(&self.inner_str[name_beginning..name_end]),
-                arguments: arguments.into_iter().map(|a|
-                    SassMixinArgument::new(a)
+                parameters: parameters.into_iter().map(|a|
+                    SassMixinParameter::new(a)
                 ).collect(),
                 children: children,
             });
