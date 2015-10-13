@@ -1,6 +1,6 @@
 use error::{SassError, ErrorKind, Result};
 use event::Event;
-use sass::mixin::{SassMixin, SassMixinCall, SassMixinParameter};
+use sass::mixin::{SassMixin, SassMixinCall, SassMixinParameter, SassMixinArgument};
 use inner_tokenizer::{InnerTokenizer, State};
 
 use std::cmp;
@@ -325,7 +325,9 @@ impl<'a> Toker<'a> {
 
             let mixin_call = Event::MixinCall(SassMixinCall {
                 name: name,
-                arguments: arguments,
+                arguments: arguments.into_iter().map(|a|
+                    SassMixinArgument::new(a)
+                ).collect(),
             });
 
             return Ok(Some(mixin_call))
