@@ -6,10 +6,10 @@ use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
-use sass::mixin::{SassMixin, SassMixinCall};
+use sass::mixin::{SassMixin, SassMixinParameter, SassMixinCall, SassMixinArgument};
 
 use std::collections::HashMap;
-use std::borrow::Cow;
+use std::borrow::Cow::{self, Borrowed, Owned};
 
 pub struct Substituter<'vm, I> {
     tokenizer: I,
@@ -104,12 +104,73 @@ fn replace_children_in_scope<'b>(
                     }),
                 };
 
+                let mixin_replacements = try!(collate_mixin_args(
+                    &mixin_definition.parameters,
+                    &mixin_call.arguments,
+                ));
+
+                println!("mixin_replacements = {:?}", mixin_replacements);
+
+                let res = try!(replace_children_in_scope(
+                    mixin_definition.children.clone(), mixin_replacements, local_mixins.clone()
+                ));
+
+                println!("res = {:?}", res);
+
                 results.append(&mut mixin_definition.children.clone());
             },
             other => results.push(other),
         }
     }
     Ok(results)
+}
+
+fn collate_mixin_args<'a>(
+    parameters: &Vec<SassMixinParameter<'a>>,
+    arguments: &Vec<SassMixinArgument<'a>>) -> Result<HashMap<String, ValuePart<'a>>> {
+
+    let mut named_arguments = HashMap::new();
+
+    for a in arguments.iter() {
+        match a.name {
+            Some(ref name) => {
+                named_arguments.insert(name.clone(), a.value.clone().into_owned());
+            },
+            None => {},
+        }
+    }
+
+    let mut replacements = HashMap::new();
+
+    for (i, p) in parameters.iter().enumerate() {
+        match named_arguments.get(&p.name) {
+            Some(ref value) => {
+                replacements.insert(p.name.to_string(), ValuePart::String(Owned(value.to_string())));
+            },
+            None => {
+                match arguments.get(i) {
+                    Some(ref arg) => {
+                        replacements.insert(p.name.to_string(), ValuePart::String(Owned(arg.value.clone().into_owned())));
+                    },
+                    None => {
+                        match p.default {
+                            Some(ref default) => {
+                                replacements.insert(p.name.to_string(), ValuePart::String(Owned(default.clone().into_owned())));
+                            },
+                            None => {
+                                return Err(SassError {
+                                    kind: ErrorKind::ExpectedMixinArgument,
+                                    message: format!("Cannot find argument for mixin parameter named `{}` in arguments `{:?}`", p.name, arguments),
+                                })
+                            }
+                        }
+                    },
+                }
+            },
+        }
+    }
+
+    Ok(replacements)
 }
 
 fn owned_evaluated_value<'a>(
