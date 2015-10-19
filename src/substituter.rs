@@ -141,33 +141,16 @@ fn collate_mixin_args<'a>(
     for (i, p) in parameters.iter().enumerate() {
         let replacement_name = p.name.to_string();
 
-        let replacement_value = match named_arguments.get(&p.name) {
-            Some(ref value) => {
-                ValuePart::String(Owned(value.to_string()))
-            },
-            None => {
-                match arguments.get(i) {
-                    Some(ref arg) => {
-                        ValuePart::String(Owned(arg.value.clone().into_owned()))
-                    },
-                    None => {
-                        match p.default {
-                            Some(ref default) => {
-                                ValuePart::String(Owned(default.clone().into_owned()))
-                            },
-                            None => {
-                                return Err(SassError {
-                                    kind: ErrorKind::ExpectedMixinArgument,
-                                    message: format!("Cannot find argument for mixin parameter named `{}` in arguments `{:?}`", p.name, arguments),
-                                })
-                            }
-                        }
-                    },
-                }
-            },
-        };
+        let replacement_value =
+            try!(named_arguments.get(&p.name).and_then( |v| Some(v.to_string()) )
+                .or(arguments.get(i).and_then( |a| Some(a.value.clone().into_owned()) ))
+                .or(p.default.clone().and_then( |d| Some(d.into_owned()) ))
+                .ok_or(SassError {
+                    kind: ErrorKind::ExpectedMixinArgument,
+                    message: format!("Cannot find argument for mixin parameter named `{}` in arguments `{:?}`", p.name, arguments),
+                }));
 
-        replacements.insert(replacement_name, replacement_value);
+        replacements.insert(replacement_name, ValuePart::String(Owned(replacement_value)));
     }
 
     Ok(replacements)
