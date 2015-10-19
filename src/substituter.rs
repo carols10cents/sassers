@@ -139,19 +139,21 @@ fn collate_mixin_args<'a>(
     let mut replacements = HashMap::new();
 
     for (i, p) in parameters.iter().enumerate() {
-        match named_arguments.get(&p.name) {
+        let replacement_name = p.name.to_string();
+
+        let replacement_value = match named_arguments.get(&p.name) {
             Some(ref value) => {
-                replacements.insert(p.name.to_string(), ValuePart::String(Owned(value.to_string())));
+                ValuePart::String(Owned(value.to_string()))
             },
             None => {
                 match arguments.get(i) {
                     Some(ref arg) => {
-                        replacements.insert(p.name.to_string(), ValuePart::String(Owned(arg.value.clone().into_owned())));
+                        ValuePart::String(Owned(arg.value.clone().into_owned()))
                     },
                     None => {
                         match p.default {
                             Some(ref default) => {
-                                replacements.insert(p.name.to_string(), ValuePart::String(Owned(default.clone().into_owned())));
+                                ValuePart::String(Owned(default.clone().into_owned()))
                             },
                             None => {
                                 return Err(SassError {
@@ -163,7 +165,9 @@ fn collate_mixin_args<'a>(
                     },
                 }
             },
-        }
+        };
+
+        replacements.insert(replacement_name, replacement_value);
     }
 
     Ok(replacements)
