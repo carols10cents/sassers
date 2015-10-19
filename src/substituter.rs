@@ -109,15 +109,11 @@ fn replace_children_in_scope<'b>(
                     &mixin_call.arguments,
                 ));
 
-                println!("mixin_replacements = {:?}", mixin_replacements);
-
-                let res = try!(replace_children_in_scope(
+                let mut res = try!(replace_children_in_scope(
                     mixin_definition.children.clone(), mixin_replacements, local_mixins.clone()
                 ));
 
-                println!("res = {:?}", res);
-
-                results.append(&mut mixin_definition.children.clone());
+                results.append(&mut res);
             },
             other => results.push(other),
         }
