@@ -57,7 +57,16 @@ impl<'a, I> Iterator for Substituter<'a, I>
                     children: replaced, ..sass_rule
                 })))
             },
-            Some(Ok(Event::MixinCall(..))) => unimplemented!(),
+            Some(Ok(Event::MixinCall(mixin_call))) => {
+                let replaced = match replace_children_in_scope(
+                    vec![Event::MixinCall(mixin_call)], self.variables.clone(), self.mixins.clone()
+                ) {
+                    Ok(children) => children,
+                    Err(e) => return Some(Err(e)),
+                };
+
+                Some(Ok(Event::List(replaced)))
+            },
             other => other,
         }
     }

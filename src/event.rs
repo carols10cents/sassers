@@ -14,6 +14,7 @@ pub enum Event<'a> {
     Variable(SassVariable<'a>),
     Mixin(SassMixin<'a>),
     MixinCall(SassMixinCall<'a>),
+    List(Vec<Event<'a>>),
 }
 
 impl<'a> Event<'a> {
