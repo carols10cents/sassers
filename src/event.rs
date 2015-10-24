@@ -10,7 +10,7 @@ pub enum Event<'a> {
     Property(Cow<'a, str>, ValuePart<'a>),
     UnevaluatedProperty(Cow<'a, str>, Cow<'a, str>),
     Comment(Cow<'a, str>),
-    ChildRule(SassRule<'a>),
+    Rule(SassRule<'a>),
     Variable(SassVariable<'a>),
     Mixin(SassMixin<'a>),
     MixinCall(SassMixinCall<'a>),
@@ -21,7 +21,7 @@ impl<'a> Event<'a> {
         match *self {
             Event::Property(ref name, ref value) => format!("  {}: {};", name, value.expanded()),
             Event::Comment(ref comment) => format!("  {}", comment),
-            Event::ChildRule(ref sass_rule) => sass_rule.expanded(),
+            Event::Rule(ref sass_rule) => sass_rule.expanded(),
             ref other => format!("other = {:?}", other),
         }
     }
@@ -30,7 +30,7 @@ impl<'a> Event<'a> {
         match *self {
             Event::Property(ref name, ref value) => format!("  {}: {};", name, value.nested()),
             Event::Comment(ref comment) => format!("  {}", comment),
-            Event::ChildRule(ref sass_rule) => sass_rule.nested(),
+            Event::Rule(ref sass_rule) => sass_rule.nested(),
             ref other => format!("other = {:?}", other),
         }
     }
@@ -39,7 +39,7 @@ impl<'a> Event<'a> {
         match *self {
             Event::Property(ref name, ref value) => format!("{}: {};", name, value.compact()),
             Event::Comment(ref comment) => (*comment).to_string(),
-            Event::ChildRule(ref sass_rule) => sass_rule.compact(),
+            Event::Rule(ref sass_rule) => sass_rule.compact(),
             ref other => format!("other = {:?}", other),
         }
     }
@@ -49,15 +49,15 @@ impl<'a> Event<'a> {
             Event::Property(ref name, ref value) => {
                 format!("{}:{}", name, value.compressed())
             },
-            Event::Comment(..) => unreachable!(),
-            Event::ChildRule(ref sass_rule) => sass_rule.compressed(),
+            Event::Comment(..) => String::from(""),
+            Event::Rule(ref sass_rule) => sass_rule.compressed(),
             ref other => format!("other = {:?}", other),
         }
     }
 
     pub fn is_child_rule(&self) -> bool {
         match self {
-            &Event::ChildRule(..) => true,
+            &Event::Rule(..) => true,
             _ => false,
         }
     }

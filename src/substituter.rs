@@ -1,7 +1,6 @@
 use error::{Result, SassError, ErrorKind};
 use evaluator::Evaluator;
 use event::Event;
-use top_level_event::TopLevelEvent;
 use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::number_value::NumberValue;
@@ -28,13 +27,13 @@ impl<'vm, I> Substituter<'vm, I> {
 }
 
 impl<'a, I> Iterator for Substituter<'a, I>
-    where I: Iterator<Item = Result<TopLevelEvent<'a>>>
+    where I: Iterator<Item = Result<Event<'a>>>
 {
-    type Item = Result<TopLevelEvent<'a>>;
+    type Item = Result<Event<'a>>;
 
-    fn next(&mut self) -> Option<Result<TopLevelEvent<'a>>> {
+    fn next(&mut self) -> Option<Result<Event<'a>>> {
         match self.tokenizer.next() {
-            Some(Ok(TopLevelEvent::Variable(SassVariable { name, value }))) => {
+            Some(Ok(Event::Variable(SassVariable { name, value }))) => {
                 let val = match owned_evaluated_value(value, &self.variables) {
                     Ok(v) => v,
                     Err(e) => return Some(Err(e)),
@@ -42,11 +41,11 @@ impl<'a, I> Iterator for Substituter<'a, I>
                 self.variables.insert((*name).to_string(), val);
                 self.next()
             },
-            Some(Ok(TopLevelEvent::Mixin(mixin))) => {
+            Some(Ok(Event::Mixin(mixin))) => {
                 self.mixins.insert((mixin.name).to_string(), mixin);
                 self.next()
             },
-            Some(Ok(TopLevelEvent::Rule(sass_rule))) => {
+            Some(Ok(Event::Rule(sass_rule))) => {
                 let replaced = match replace_children_in_scope(
                     sass_rule.children, self.variables.clone(), self.mixins.clone()
                 ) {
@@ -54,11 +53,11 @@ impl<'a, I> Iterator for Substituter<'a, I>
                     Err(e) => return Some(Err(e)),
                 };
 
-                Some(Ok(TopLevelEvent::Rule(SassRule {
+                Some(Ok(Event::Rule(SassRule {
                     children: replaced, ..sass_rule
                 })))
             },
-            Some(Ok(TopLevelEvent::MixinCall(..))) => unimplemented!(),
+            Some(Ok(Event::MixinCall(..))) => unimplemented!(),
             other => other,
         }
     }
@@ -86,11 +85,11 @@ fn replace_children_in_scope<'b>(
                     ev_res,
                 ));
             },
-            Event::ChildRule(rule) => {
+            Event::Rule(rule) => {
                 let res = try!(replace_children_in_scope(
                     rule.children, local_variables.clone(), local_mixins.clone()
                 ));
-                results.push(Event::ChildRule(SassRule {
+                results.push(Event::Rule(SassRule {
                     children: res, ..rule
                 }));
             },

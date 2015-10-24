@@ -58,7 +58,7 @@ impl<'a> SassRule<'a> {
 
         let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
             match c {
-                &Event::ChildRule(ref rule) => rule.expanded_with_parent(&selector_string),
+                &Event::Rule(ref rule) => rule.expanded_with_parent(&selector_string),
                 _ => unreachable!(),
             }
         }).collect::<Vec<_>>().join("\n");
@@ -95,7 +95,7 @@ impl<'a> SassRule<'a> {
 
         let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
             match c {
-                &Event::ChildRule(ref rule) => rule.nested_with_parent(&selector_string),
+                &Event::Rule(ref rule) => rule.nested_with_parent(&selector_string),
                 _ => unreachable!(),
             }
         }).collect::<Vec<_>>().join("\n");
@@ -130,7 +130,7 @@ impl<'a> SassRule<'a> {
 
         let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
             match c {
-                &Event::ChildRule(ref rule) => rule.compact_with_parent(&selector_string),
+                &Event::Rule(ref rule) => rule.compact_with_parent(&selector_string),
                 _ => unreachable!(),
             }
         }).collect::<Vec<_>>().join("\n");
@@ -165,7 +165,7 @@ impl<'a> SassRule<'a> {
 
         let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
             match c {
-                &Event::ChildRule(ref rule) => rule.compressed_with_parent(&selector_string),
+                &Event::Rule(ref rule) => rule.compressed_with_parent(&selector_string),
                 _ => unreachable!(),
             }
         }).collect::<Vec<_>>().join("");

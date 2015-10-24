@@ -17,7 +17,6 @@ mod sass;
 mod substituter;
 mod tokenizer;
 mod tokenizer_utils;
-mod top_level_event;
 mod value_tokenizer;
 
 use error::Result;

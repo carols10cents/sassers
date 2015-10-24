@@ -74,7 +74,7 @@ impl<'a> InnerTokenizer<'a> {
         }
         try!(self.toker.eat("}"));
 
-        Ok(Some(Event::ChildRule(current_sass_rule)))
+        Ok(Some(Event::Rule(current_sass_rule)))
     }
 
     fn next_property(&mut self) -> Result<Option<Event<'a>>> {
