@@ -34,7 +34,7 @@ impl<'vm, I> Substituter<'vm, I> {
         let mut results = Vec::new();
         let mut local_variables = match passed_variables {
             Some(v) => v,
-            None => self.variables.clone(),
+            None => HashMap::new(),
         };
         let local_mixins = match passed_mixins {
             Some(m) => m,
@@ -44,13 +44,40 @@ impl<'vm, I> Substituter<'vm, I> {
         for c in children.into_iter() {
             match c {
                 Event::Variable(SassVariable { name, value }) => {
-                    let val = try!(owned_evaluated_value(value, &local_variables));
-                    debug!("variable name: {:?}, val: {:?}", name, val);
+                    let mut lvs = self.variables.clone();
+                    lvs.extend(local_variables.clone());
+                    let val = try!(owned_evaluated_value(value, &lvs));
+
+                    let val = match val {
+                        ValuePart::List(mut list) => {
+                            match list.pop() {
+                                Some(ValuePart::String(s)) => {
+                                    if s == "!global" {
+                                        self.variables.insert((*name).to_string(), ValuePart::List(list.clone()));
+                                        ValuePart::List(list)
+                                    } else {
+                                        list.push(ValuePart::String(s));
+                                        ValuePart::List(list)
+                                    }
+                                },
+                                Some(other) => {
+                                    list.push(other);
+                                    ValuePart::List(list)
+                                },
+                                None => ValuePart::List(list)
+                            }
+                        }
+                        other => other,
+                    };
+
                     local_variables.insert((*name).to_string(), val);
                 },
                 Event::UnevaluatedProperty(name, value) => {
+                    let mut lvs = self.variables.clone();
+                    lvs.extend(local_variables.clone());
+
                     let mut ev = Evaluator::new_from_string(&value);
-                    let ev_res = try!(ev.evaluate(&local_variables)).into_owned();
+                    let ev_res = try!(ev.evaluate(&lvs)).into_owned();
 
                     results.push(Event::Property(
                         name,
@@ -58,8 +85,11 @@ impl<'vm, I> Substituter<'vm, I> {
                     ));
                 },
                 Event::Rule(rule) => {
+                    let mut lvs = self.variables.clone();
+                    lvs.extend(local_variables.clone());
+
                     let res = try!(self.replace_children_in_scope(
-                        rule.children, Some(local_variables.clone()), Some(local_mixins.clone())
+                        rule.children, Some(lvs), Some(local_mixins.clone())
                     ));
                     results.push(Event::Rule(SassRule {
                         children: res, ..rule
@@ -75,7 +105,8 @@ impl<'vm, I> Substituter<'vm, I> {
                         }),
                     };
 
-                    let mut mixin_replacements = local_variables.clone();
+                    let mut mixin_replacements = self.variables.clone();
+                    mixin_replacements.extend(local_variables.clone());
                     mixin_replacements.extend(try!(collate_mixin_args(
                         &mixin_definition.parameters,
                         &mixin_call.arguments,
@@ -120,7 +151,6 @@ impl<'a, I> Iterator for Substituter<'a, I>
                     Ok(children) => children,
                     Err(e) => return Some(Err(e)),
                 };
-                debug!("variables now {:?}", self.variables);
 
                 Some(Ok(Event::Rule(SassRule {
                     children: replaced, ..sass_rule
