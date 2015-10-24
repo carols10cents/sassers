@@ -24,6 +24,74 @@ impl<'vm, I> Substituter<'vm, I> {
             mixins:    HashMap::new(),
         }
     }
+
+    fn replace_children_in_scope(
+        &mut self,
+        children: Vec<Event<'vm>>,
+        passed_variables: Option<HashMap<String, ValuePart<'vm>>>,
+        passed_mixins: Option<HashMap<String, SassMixin<'vm>>>) -> Result<Vec<Event<'vm>>> {
+
+        let mut results = Vec::new();
+        let mut local_variables = match passed_variables {
+            Some(v) => v,
+            None => self.variables.clone(),
+        };
+        let local_mixins = match passed_mixins {
+            Some(m) => m,
+            None => self.mixins.clone(),
+        };
+
+        for c in children.into_iter() {
+            match c {
+                Event::Variable(SassVariable { name, value }) => {
+                    let val = try!(owned_evaluated_value(value, &local_variables));
+                    debug!("variable name: {:?}, val: {:?}", name, val);
+                    local_variables.insert((*name).to_string(), val);
+                },
+                Event::UnevaluatedProperty(name, value) => {
+                    let mut ev = Evaluator::new_from_string(&value);
+                    let ev_res = try!(ev.evaluate(&local_variables)).into_owned();
+
+                    results.push(Event::Property(
+                        name,
+                        ev_res,
+                    ));
+                },
+                Event::Rule(rule) => {
+                    let res = try!(self.replace_children_in_scope(
+                        rule.children, Some(local_variables.clone()), Some(local_mixins.clone())
+                    ));
+                    results.push(Event::Rule(SassRule {
+                        children: res, ..rule
+                    }));
+                },
+                Event::MixinCall(mixin_call) => {
+                    let mixin_name = mixin_call.name.into_owned();
+                    let mixin_definition = match local_mixins.get(&mixin_name) {
+                        Some(mixin) => mixin,
+                        None => return Err(SassError {
+                            kind: ErrorKind::ExpectedMixin,
+                            message: format!("Cannot find mixin named `{}`", mixin_name),
+                        }),
+                    };
+
+                    let mut mixin_replacements = local_variables.clone();
+                    mixin_replacements.extend(try!(collate_mixin_args(
+                        &mixin_definition.parameters,
+                        &mixin_call.arguments,
+                    )));
+
+                    let mut res = try!(self.replace_children_in_scope(
+                        mixin_definition.children.clone(), Some(mixin_replacements), Some(local_mixins.clone())
+                    ));
+
+                    results.append(&mut res);
+                },
+                other => results.push(other),
+            }
+        }
+        Ok(results)
+    }
 }
 
 impl<'a, I> Iterator for Substituter<'a, I>
@@ -46,20 +114,21 @@ impl<'a, I> Iterator for Substituter<'a, I>
                 self.next()
             },
             Some(Ok(Event::Rule(sass_rule))) => {
-                let replaced = match replace_children_in_scope(
-                    sass_rule.children, &mut self.variables, self.mixins.clone()
+                let replaced = match self.replace_children_in_scope(
+                    sass_rule.children, None, None
                 ) {
                     Ok(children) => children,
                     Err(e) => return Some(Err(e)),
                 };
+                debug!("variables now {:?}", self.variables);
 
                 Some(Ok(Event::Rule(SassRule {
                     children: replaced, ..sass_rule
                 })))
             },
             Some(Ok(Event::MixinCall(mixin_call))) => {
-                let replaced = match replace_children_in_scope(
-                    vec![Event::MixinCall(mixin_call)], &mut self.variables, self.mixins.clone()
+                let replaced = match self.replace_children_in_scope(
+                    vec![Event::MixinCall(mixin_call)], None, None
                 ) {
                     Ok(children) => children,
                     Err(e) => return Some(Err(e)),
@@ -70,64 +139,6 @@ impl<'a, I> Iterator for Substituter<'a, I>
             other => other,
         }
     }
-}
-
-fn replace_children_in_scope<'b>(
-    children: Vec<Event<'b>>,
-    local_variables: &mut HashMap<String, ValuePart<'b>>,
-    local_mixins: HashMap<String, SassMixin<'b>>) -> Result<Vec<Event<'b>>> {
-
-    let mut results = Vec::new();
-
-    for c in children.into_iter() {
-        match c {
-            Event::Variable(SassVariable { name, value }) => {
-                let val = try!(owned_evaluated_value(value, &local_variables));
-                local_variables.insert((*name).to_string(), val);
-            },
-            Event::UnevaluatedProperty(name, value) => {
-                let mut ev = Evaluator::new_from_string(&value);
-                let ev_res = try!(ev.evaluate(&local_variables)).into_owned();
-
-                results.push(Event::Property(
-                    name,
-                    ev_res,
-                ));
-            },
-            Event::Rule(rule) => {
-                let res = try!(replace_children_in_scope(
-                    rule.children, local_variables, local_mixins.clone()
-                ));
-                results.push(Event::Rule(SassRule {
-                    children: res, ..rule
-                }));
-            },
-            Event::MixinCall(mixin_call) => {
-                let mixin_name = mixin_call.name.into_owned();
-                let mixin_definition = match local_mixins.get(&mixin_name) {
-                    Some(mixin) => mixin,
-                    None => return Err(SassError {
-                        kind: ErrorKind::ExpectedMixin,
-                        message: format!("Cannot find mixin named `{}`", mixin_name),
-                    }),
-                };
-
-                let mut mixin_replacements = local_variables.clone();
-                mixin_replacements.extend(try!(collate_mixin_args(
-                    &mixin_definition.parameters,
-                    &mixin_call.arguments,
-                )));
-
-                let mut res = try!(replace_children_in_scope(
-                    mixin_definition.children.clone(), &mut mixin_replacements, local_mixins.clone()
-                ));
-
-                results.append(&mut res);
-            },
-            other => results.push(other),
-        }
-    }
-    Ok(results)
 }
 
 fn collate_mixin_args<'a>(
