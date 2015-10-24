@@ -47,7 +47,7 @@ impl<'a, I> Iterator for Substituter<'a, I>
             },
             Some(Ok(Event::Rule(sass_rule))) => {
                 let replaced = match replace_children_in_scope(
-                    sass_rule.children, self.variables.clone(), self.mixins.clone()
+                    sass_rule.children, &mut self.variables, self.mixins.clone()
                 ) {
                     Ok(children) => children,
                     Err(e) => return Some(Err(e)),
@@ -59,7 +59,7 @@ impl<'a, I> Iterator for Substituter<'a, I>
             },
             Some(Ok(Event::MixinCall(mixin_call))) => {
                 let replaced = match replace_children_in_scope(
-                    vec![Event::MixinCall(mixin_call)], self.variables.clone(), self.mixins.clone()
+                    vec![Event::MixinCall(mixin_call)], &mut self.variables, self.mixins.clone()
                 ) {
                     Ok(children) => children,
                     Err(e) => return Some(Err(e)),
@@ -74,7 +74,7 @@ impl<'a, I> Iterator for Substituter<'a, I>
 
 fn replace_children_in_scope<'b>(
     children: Vec<Event<'b>>,
-    mut local_variables: HashMap<String, ValuePart<'b>>,
+    local_variables: &mut HashMap<String, ValuePart<'b>>,
     local_mixins: HashMap<String, SassMixin<'b>>) -> Result<Vec<Event<'b>>> {
 
     let mut results = Vec::new();
@@ -96,7 +96,7 @@ fn replace_children_in_scope<'b>(
             },
             Event::Rule(rule) => {
                 let res = try!(replace_children_in_scope(
-                    rule.children, local_variables.clone(), local_mixins.clone()
+                    rule.children, local_variables, local_mixins.clone()
                 ));
                 results.push(Event::Rule(SassRule {
                     children: res, ..rule
@@ -119,7 +119,7 @@ fn replace_children_in_scope<'b>(
                 )));
 
                 let mut res = try!(replace_children_in_scope(
-                    mixin_definition.children.clone(), mixin_replacements, local_mixins.clone()
+                    mixin_definition.children.clone(), &mut mixin_replacements, local_mixins.clone()
                 ));
 
                 results.append(&mut res);
