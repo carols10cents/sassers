@@ -112,10 +112,11 @@ fn replace_children_in_scope<'b>(
                     }),
                 };
 
-                let mixin_replacements = try!(collate_mixin_args(
+                let mut mixin_replacements = local_variables.clone();
+                mixin_replacements.extend(try!(collate_mixin_args(
                     &mixin_definition.parameters,
                     &mixin_call.arguments,
-                ));
+                )));
 
                 let mut res = try!(replace_children_in_scope(
                     mixin_definition.children.clone(), mixin_replacements, local_mixins.clone()
