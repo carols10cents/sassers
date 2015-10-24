@@ -21,7 +21,7 @@ mod tokenizer_utils;
 mod top_level_event;
 mod value_tokenizer;
 
-use error::{SassError, ErrorKind, Result};
+use error::Result;
 use tokenizer::Tokenizer;
 
 fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
@@ -53,17 +53,5 @@ pub fn compile(inputfile: &str, style: &str) -> Result<String> {
     let imports_resolved = try!(resolve_imports(&inputpath));
 
     let mut tokenizer = Tokenizer::new(&imports_resolved);
-    match style {
-        "nested"     => Ok(try!(output::nested(&mut tokenizer))),
-        "compressed" => Ok(try!(output::compressed(&mut tokenizer))),
-        "expanded"   => Ok(try!(output::expanded(&mut tokenizer))),
-        "compact"    => Ok(try!(output::compact(&mut tokenizer))),
-        "debug"      => Ok(try!(output::debug(&mut tokenizer))),
-        _            => {
-            Err(SassError {
-                kind: ErrorKind::InvalidStyle,
-                message: format!("Unknown style {:?}. Please specify one of nested, compressed, expanded, or compact.", style),
-            })
-        },
-    }
+    Ok(try!(tokenizer.output(try!(style.parse()))))
 }

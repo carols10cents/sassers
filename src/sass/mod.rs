@@ -3,6 +3,7 @@ pub mod comment;
 pub mod mixin;
 pub mod number_value;
 pub mod op;
+pub mod output_style;
 pub mod rule;
 pub mod selector;
 pub mod value_part;

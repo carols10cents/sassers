@@ -18,7 +18,7 @@ impl From<io::Error> for SassError {
 #[derive(Debug,PartialEq)]
 pub enum ErrorKind {
     IoError,
-    InvalidStyle,
+    InvalidOutputStyle,
     InvalidColor,
     TokenizerError,
     ExpectedValue,

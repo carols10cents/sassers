@@ -1,6 +1,7 @@
 use error::{SassError, ErrorKind,Result};
 use event::Event;
 use sass::comment::SassComment;
+use sass::output_style::SassOutputStyle;
 use sass::variable::SassVariable;
 use top_level_event::TopLevelEvent;
 use tokenizer_utils::*;
@@ -20,6 +21,10 @@ impl<'a> Tokenizer<'a> {
                 offset: 0,
             },
         }
+    }
+
+    pub fn output(&self, style: SassOutputStyle) -> Result<String> {
+        Ok(String::from(""))
     }
 
     fn limit(&self) -> usize {
