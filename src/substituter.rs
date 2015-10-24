@@ -6,7 +6,7 @@ use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
-use sass::mixin::{SassMixin, SassMixinParameter, SassMixinCall, SassMixinArgument};
+use sass::mixin::{SassMixin, SassMixinParameter, SassMixinArgument};
 
 use std::collections::HashMap;
 use std::borrow::Cow::{self, Borrowed, Owned};
@@ -58,7 +58,7 @@ impl<'a, I> Iterator for Substituter<'a, I>
                     children: replaced, ..sass_rule
                 })))
             },
-            Some(Ok(TopLevelEvent::MixinCall(mixin_call))) => unimplemented!(),
+            Some(Ok(TopLevelEvent::MixinCall(..))) => unimplemented!(),
             other => other,
         }
     }

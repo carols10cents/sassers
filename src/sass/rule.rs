@@ -1,5 +1,6 @@
 use event::Event;
 use sass::selector::SassSelector;
+use sass::output_style::SassOutputStyle;
 
 use std::fmt;
 
@@ -29,6 +30,16 @@ impl<'a> SassRule<'a> {
                     }
                 }).collect::<Vec<_>>().join(separator)
             }).collect::<Vec<_>>().join(separator),
+        }
+    }
+
+    pub fn output(&self, style: SassOutputStyle) -> String {
+        match style {
+            SassOutputStyle::Nested => self.nested(),
+            SassOutputStyle::Compressed => self.compressed(),
+            SassOutputStyle::Expanded => self.expanded(),
+            SassOutputStyle::Compact => self.compact(),
+            SassOutputStyle::Debug => format!("{:?}\n", self),
         }
     }
 

@@ -1,3 +1,5 @@
+use sass::output_style::SassOutputStyle;
+
 use std::borrow::Cow;
 
 #[derive(Debug,Clone)]
@@ -6,6 +8,16 @@ pub struct SassComment<'a> {
 }
 
 impl <'a> SassComment<'a> {
+    pub fn output(&self, style: SassOutputStyle) -> String {
+        match style {
+            SassOutputStyle::Nested => self.nested(),
+            SassOutputStyle::Compressed => self.compressed(),
+            SassOutputStyle::Expanded => self.expanded(),
+            SassOutputStyle::Compact => self.compact(),
+            SassOutputStyle::Debug => format!("{:?}\n", self),
+        }
+    }
+
     pub fn expanded(&self) -> String {
         format!("{}\n", self.comment)
     }

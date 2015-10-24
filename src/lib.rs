@@ -13,7 +13,6 @@ mod error;
 mod evaluator;
 mod event;
 mod inner_tokenizer;
-mod output;
 mod sass;
 mod substituter;
 mod tokenizer;

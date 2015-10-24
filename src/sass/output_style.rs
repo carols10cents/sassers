@@ -1,7 +1,7 @@
 use error::{Result, SassError, ErrorKind};
 use std::str::FromStr;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SassOutputStyle {
     Expanded,
     Nested,

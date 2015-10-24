@@ -6,6 +6,7 @@ use sass::variable::SassVariable;
 use top_level_event::TopLevelEvent;
 use tokenizer_utils::*;
 use inner_tokenizer::{InnerTokenizer, State};
+use substituter::Substituter;
 
 #[derive(Debug)]
 pub struct Tokenizer<'a> {
@@ -23,8 +24,27 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    pub fn output(&self, style: SassOutputStyle) -> Result<String> {
-        Ok(String::from(""))
+    pub fn output(&mut self, style: SassOutputStyle) -> Result<String> {
+        let mut subber = Substituter::new(self);
+        let mut output = String::new();
+
+        while let Some(event) = subber.next() {
+            match event {
+                Ok(TopLevelEvent::Rule(rule)) => {
+                    output.push_str(&rule.output(style));
+                },
+                Ok(TopLevelEvent::Comment(comment)) => {
+                    output.push_str(&comment.output(style));
+                },
+                Ok(TopLevelEvent::MixinCall(..)) => {
+                    // TODO
+                },
+                Ok(TopLevelEvent::Variable(..)) => {},
+                Ok(TopLevelEvent::Mixin(..))    => {},
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(output)
     }
 
     fn limit(&self) -> usize {
