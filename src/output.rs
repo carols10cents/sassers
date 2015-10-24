@@ -13,13 +13,11 @@ pub fn expanded<'a, I>(tokenizer: &mut I) -> Result<String>
         match event {
             Ok(TopLevelEvent::Rule(rule)) => {
                 output.push_str(&rule.expanded());
-                output.push_str("\n\n");
             },
             Ok(TopLevelEvent::Comment(comment)) => {
                 output.push_str(&comment.expanded());
-                output.push_str("\n");
             },
-            Ok(TopLevelEvent::MixinCall(mixin_call)) => {
+            Ok(TopLevelEvent::MixinCall(..)) => {
                 // TODO
             },
             Ok(TopLevelEvent::Variable(..)) => {},
@@ -41,13 +39,11 @@ pub fn nested<'a, I>(tokenizer: &mut I) -> Result<String>
         match event {
             Ok(TopLevelEvent::Rule(rule)) => {
                 output.push_str(&rule.nested());
-                output.push_str("\n\n");
             },
             Ok(TopLevelEvent::Comment(comment)) => {
                 output.push_str(&comment.nested());
-                output.push_str("\n");
             },
-            Ok(TopLevelEvent::MixinCall(mixin_call)) => {
+            Ok(TopLevelEvent::MixinCall(..)) => {
                 // TODO
             },
             Ok(TopLevelEvent::Variable(..)) => {},
@@ -69,13 +65,11 @@ pub fn compact<'a, I>(tokenizer: &mut I) -> Result<String>
         match event {
             Ok(TopLevelEvent::Rule(rule)) => {
                 output.push_str(&rule.compact());
-                output.push_str("\n\n");
             },
             Ok(TopLevelEvent::Comment(comment)) => {
                 output.push_str(&comment.compact());
-                output.push_str("\n");
             },
-            Ok(TopLevelEvent::MixinCall(mixin_call)) => {
+            Ok(TopLevelEvent::MixinCall(..)) => {
                 // TODO
             },
             Ok(TopLevelEvent::Variable(..)) => {},
@@ -98,10 +92,12 @@ pub fn compressed<'a, I>(tokenizer: &mut I) -> Result<String>
             Ok(TopLevelEvent::Rule(rule)) => {
                 output.push_str(&rule.compressed());
             },
-            Ok(TopLevelEvent::MixinCall(mixin_call)) => {
+            Ok(TopLevelEvent::MixinCall(..)) => {
                 // TODO
             },
-            Ok(TopLevelEvent::Comment(..)) => {},
+            Ok(TopLevelEvent::Comment(comment)) => {
+                output.push_str(&comment.compressed());
+            },
             Ok(TopLevelEvent::Variable(..)) => {},
             Ok(TopLevelEvent::Mixin(..))    => {},
             Err(e) => return Err(e),

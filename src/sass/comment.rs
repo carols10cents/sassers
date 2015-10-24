@@ -7,20 +7,18 @@ pub struct SassComment<'a> {
 
 impl <'a> SassComment<'a> {
     pub fn expanded(&self) -> String {
-      self.comment.to_string()
+        format!("{}\n", self.comment)
     }
 
     pub fn nested(&self) -> String {
-      self.comment.to_string()
+        format!("{}\n", self.comment)
     }
 
     pub fn compact(&self) -> String {
-      self.comment.to_string().lines().map(|s| s.trim()).collect::<Vec<_>>().join(" ")
+      format!("{}\n", self.comment.to_string().lines().map(|s| s.trim()).collect::<Vec<_>>().join(" "))
     }
 
-    // Comments are never output in the compressed format.
-    #[allow(dead_code)]
     pub fn compressed(&self) -> String {
-        unreachable!()
+        String::from("")
     }
 }

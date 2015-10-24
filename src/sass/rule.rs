@@ -33,7 +33,7 @@ impl<'a> SassRule<'a> {
     }
 
     pub fn expanded(&self) -> String {
-        self.expanded_with_parent("")
+        format!("{}\n\n", self.expanded_with_parent(""))
     }
 
     pub fn expanded_with_parent(&self, parents: &str) -> String {
@@ -70,7 +70,7 @@ impl<'a> SassRule<'a> {
     }
 
     pub fn nested(&self) -> String {
-        self.nested_with_parent("")
+        format!("{}\n\n", self.nested_with_parent(""))
     }
 
     pub fn nested_with_parent(&self, parents: &str) -> String {
@@ -105,7 +105,7 @@ impl<'a> SassRule<'a> {
     }
 
     pub fn compact(&self) -> String {
-        self.compact_with_parent("")
+        format!("{}\n\n", self.compact_with_parent(""))
     }
 
     pub fn compact_with_parent(&self, parents: &str) -> String {
