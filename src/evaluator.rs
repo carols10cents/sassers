@@ -5,7 +5,7 @@ use sass::op::Op;
 use value_tokenizer::ValueTokenizer;
 
 use std::collections::HashMap;
-extern crate collections;
+use std::vec;
 
 #[derive(Debug)]
 pub struct Evaluator<'a, T> {
@@ -27,8 +27,8 @@ impl<'a> Evaluator<'a, ValueTokenizer<'a>> {
     }
 }
 
-impl<'a> Evaluator<'a, collections::vec::IntoIter<Result<ValuePart<'a>>>> {
-    pub fn new(value_tokens: Vec<Result<ValuePart<'a>>>) -> Evaluator<'a, collections::vec::IntoIter<Result<ValuePart<'a>>>>
+impl<'a> Evaluator<'a, vec::IntoIter<Result<ValuePart<'a>>>> {
+    pub fn new(value_tokens: Vec<Result<ValuePart<'a>>>) -> Evaluator<'a, vec::IntoIter<Result<ValuePart<'a>>>>
     {
         Evaluator {
             value_tokens: value_tokens.into_iter(),
