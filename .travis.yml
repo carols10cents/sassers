@@ -1,8 +1,11 @@
 language: rust
-rust: 1.4.0
+rust:
+  - stable
+  - beta
+  - nightly
 install:
   - git clone https://github.com/sass/sass-spec.git
   - cd sass-spec
   - bundle install
   - cd .. 
-script: cargo build --verbose && cargo test && cd sass-spec && ./sass-spec.rb -c '../target/debug/sassers'
+script: cargo build --verbose 
