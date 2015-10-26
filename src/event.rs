@@ -2,6 +2,7 @@ use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::value_part::ValuePart;
 use sass::mixin::{SassMixinCall, SassMixin};
+use sass::output_style::SassOutputStyle;
 
 use std::borrow::Cow;
 
@@ -18,6 +19,16 @@ pub enum Event<'a> {
 }
 
 impl<'a> Event<'a> {
+    pub fn output(&self, style: SassOutputStyle) -> String {
+        match style {
+            SassOutputStyle::Nested => self.nested(),
+            SassOutputStyle::Compressed => self.compressed(),
+            SassOutputStyle::Expanded => self.expanded(),
+            SassOutputStyle::Compact => self.compact(),
+            SassOutputStyle::Debug => format!("{:?}\n", self),
+        }
+    }
+
     pub fn expanded(&self) -> String {
         match *self {
             Event::Property(ref name, ref value) => format!("  {}: {};", name, value.expanded()),

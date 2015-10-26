@@ -26,6 +26,7 @@ pub enum ErrorKind {
     ExpectedMixin,
     ExpectedMixinArgument,
     UnexpectedEof,
+    UnexpectedTopLevelElement,
     InvalidOperator,
     InvalidApplyListArgs,
     InvalidApplyMathArgs,

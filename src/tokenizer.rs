@@ -41,10 +41,18 @@ impl<'a> Tokenizer<'a> {
                         output.push_str("\n");
                     }
                 },
-                Ok(Event::MixinCall(..)) => {
-                    // TODO
+                Ok(Event::List(events)) => {
+                    for e in events {
+                        output.push_str(&e.output(style));
+                    }
                 },
-                Ok(..) => {},
+                Ok(other) => return Err(SassError {
+                    kind: ErrorKind::UnexpectedTopLevelElement,
+                    message: format!(
+                        "Expceted one of Rule, Comment, or List at the top level of the file; got: `{:?}`",
+                        other
+                    ),
+                }),
                 Err(e) => return Err(e),
             }
         }
