@@ -46,10 +46,10 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
         debug!("=====new evaluate call=======");
         let mut last_was_an_operator = true;
 
-        while let Some(Ok(part)) = self.value_tokens.next() {
+        while let Some(part) = self.value_tokens.next() {
             debug!("evaluate processing {:?}", part);
             match part {
-                ValuePart::Variable(name) => {
+                Ok(ValuePart::Variable(name)) => {
                     let value = match variables.get(&(*name).to_string()) {
                         Some(v) => {
                             debug!("evaluate substituting Variable {:?} with {:?}", name, v);
@@ -69,7 +69,7 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
                     }
                     last_was_an_operator = false;
                 },
-                s @ ValuePart::String(..) => {
+                Ok(s @ ValuePart::String(..)) => {
                     if last_was_an_operator {
                         self.value_stack.push(s);
                     } else {
@@ -77,7 +77,7 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
                     }
                     last_was_an_operator = false;
                 },
-                n @ ValuePart::Number(..) => {
+                Ok(n @ ValuePart::Number(..)) => {
                     if last_was_an_operator {
                         self.value_stack.push(n);
                     } else {
@@ -89,7 +89,7 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
                     }
                     last_was_an_operator = false;
                 },
-                ValuePart::Operator(ref o) => {
+                Ok(ValuePart::Operator(ref o)) => {
                     if *o == Op::RightParen {
                         let mut last_operator = self.op_stack.last().unwrap_or(&Op::LeftParen).clone();
                         while last_operator != Op::LeftParen {
@@ -113,14 +113,15 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
                         last_was_an_operator = true;
                     }
                 },
-                list @ ValuePart::List(..) => {
+                Ok(list @ ValuePart::List(..)) => {
                     self.value_stack.push(list);
                     last_was_an_operator = false;
                 },
-                color @ ValuePart::Color(..) => {
+                Ok(color @ ValuePart::Color(..)) => {
                     self.value_stack.push(color);
                     last_was_an_operator = false;
                 },
+                Err(e) => return Err(e),
             }
         }
 
