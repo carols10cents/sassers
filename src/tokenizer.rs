@@ -1,4 +1,4 @@
-use error::{SassError, ErrorKind,Result};
+use error::{SassError, ErrorKind, Result};
 use event::Event;
 use sass::output_style::SassOutputStyle;
 use sass::variable::SassVariable;
@@ -28,32 +28,19 @@ impl<'a> Tokenizer<'a> {
 
         while let Some(event) = subber.next() {
             match event {
-                Ok(Event::Rule(rule)) => {
-                    output.push_str(&rule.output(style));
-                },
-                Ok(Event::Comment(ref comment)) => {
-                    if style != SassOutputStyle::Compressed {
-                        if style == SassOutputStyle::Compact {
-                            output.push_str(&comment.lines().map(|s| s.trim()).collect::<Vec<_>>().join(" "));
-                        } else {
-                            output.push_str(comment);
-                        }
-                        output.push_str("\n");
+                Ok(ev) => {
+                    match ev.output(style) {
+                        Ok(s) => output.push_str(&s),
+                        Err(e) => return Err(SassError {
+                            message: format!("{}\n{}", output, e.message),
+                            ..e
+                        }),
                     }
                 },
-                Ok(Event::List(events)) => {
-                    for e in events {
-                        output.push_str(&e.output(style));
-                    }
-                },
-                Ok(other) => return Err(SassError {
-                    kind: ErrorKind::UnexpectedTopLevelElement,
-                    message: format!(
-                        "Expceted one of Rule, Comment, or List at the top level of the file; got: `{:?}`",
-                        other
-                    ),
+                Err(e) => return Err(SassError {
+                    message: format!("{}\n{}", output, e.message),
+                    ..e
                 }),
-                Err(e) => return Err(e),
             }
         }
         Ok(output)

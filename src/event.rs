@@ -3,6 +3,7 @@ use sass::variable::SassVariable;
 use sass::value_part::ValuePart;
 use sass::mixin::{SassMixinCall, SassMixin};
 use sass::output_style::SassOutputStyle;
+use error::{SassError, ErrorKind, Result};
 
 use std::borrow::Cow;
 
@@ -19,13 +20,42 @@ pub enum Event<'a> {
 }
 
 impl<'a> Event<'a> {
-    pub fn output(&self, style: SassOutputStyle) -> String {
-        match style {
-            SassOutputStyle::Nested => self.nested(),
-            SassOutputStyle::Compressed => self.compressed(),
-            SassOutputStyle::Expanded => self.expanded(),
-            SassOutputStyle::Compact => self.compact(),
-            SassOutputStyle::Debug => format!("{:?}\n", self),
+    pub fn output(&self, style: SassOutputStyle) -> Result<String> {
+        match *self {
+            Event::Rule(ref rule) => Ok(rule.output(style)),
+            Event::Comment(ref comment) => {
+                let result = match style {
+                    SassOutputStyle::Nested |
+                    SassOutputStyle::Expanded => format!("{}\n", comment),
+                    SassOutputStyle::Compressed => String::from(""),
+                    SassOutputStyle::Compact => {
+                        let c = comment.lines().map(|s| s.trim()).collect::<Vec<_>>().join(" ");
+                        format!("{}\n", c)
+                    },
+                    SassOutputStyle::Debug => format!("{:?}\n", self),
+                };
+                Ok(result)
+            },
+            Event::List(ref events) => {
+                let mut result = String::new();
+                for event in events {
+                    match event.output(style) {
+                        Ok(s) => result.push_str(&s),
+                        Err(e) => return Err(SassError {
+                            message: format!("{}\n{}", result, e.message),
+                            ..e
+                        })
+                    }
+                }
+                Ok(result)
+            },
+            ref other => Err(SassError {
+                kind: ErrorKind::UnexpectedTopLevelElement,
+                message: format!(
+                    "Expceted one of Rule, Comment, or List at the top level of the file; got: `{:?}`",
+                    other
+                ),
+            }),
         }
     }
 
