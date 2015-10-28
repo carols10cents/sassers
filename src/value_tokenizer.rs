@@ -60,8 +60,8 @@ impl<'a> ValueTokenizer<'a> {
             i += self.toker.scan_while_or_end(i, isnt_space);
             self.toker.offset = i;
             Some(ValuePart::Variable(Borrowed(&self.toker.inner_str[start..i])))
-        } else if self.toker.bytes[start] == b'#' {
-            i += 1;
+        } else if self.toker.eat("#").is_ok() {
+            i = self.toker.offset;
             i += self.toker.scan_while_or_end(i, valid_hex_char);
             self.toker.offset = i;
             match ColorValue::from_hex(Borrowed(&self.toker.inner_str[start..i])) {
