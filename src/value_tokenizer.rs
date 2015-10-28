@@ -61,12 +61,23 @@ impl<'a> ValueTokenizer<'a> {
             self.toker.offset = i;
             Some(ValuePart::Variable(Borrowed(&self.toker.inner_str[start..i])))
         } else if self.toker.eat("#").is_ok() {
-            i = self.toker.offset;
-            i += self.toker.scan_while_or_end(i, valid_hex_char);
-            self.toker.offset = i;
-            match ColorValue::from_hex(Borrowed(&self.toker.inner_str[start..i])) {
-                Ok(v) => Some(ValuePart::Color(v)),
-                Err(e) => return Err(e),
+            if self.toker.eat("{").is_ok() {
+                i = self.toker.offset;
+                let start_interpolation = i;
+                i += self.toker.scan_while_or_end(i, (|c| c != b'}' ));
+                self.toker.offset = i;
+                try!(self.toker.eat("}"));
+                Some(ValuePart::String(Borrowed(
+                    &self.toker.inner_str[start_interpolation..i]
+                )))
+            } else {
+                i = self.toker.offset;
+                i += self.toker.scan_while_or_end(i, valid_hex_char);
+                self.toker.offset = i;
+                match ColorValue::from_hex(Borrowed(&self.toker.inner_str[start..i])) {
+                    Ok(v) => Some(ValuePart::Color(v)),
+                    Err(e) => return Err(e),
+                }
             }
         } else if self.toker.eat("rgb(").is_ok() {
             let r = self.eat_color_u8();
