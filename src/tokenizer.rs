@@ -28,11 +28,12 @@ impl<'a> Tokenizer<'a> {
         let subber = Substituter::new(self);
 
         for event in subber.into_iter() {
-            try!(event.unwrap().output(style).and_then(|s| {
-                write!(output, "{}", s).map_err(|e| {
-                    SassError::from(e)
-                })
-            }));
+            match event {
+                Ok(ev) => {
+                    try!(ev.stream(output, style));
+                },
+                Err(e) => return Err(e),
+            }
         }
         Ok(())
     }

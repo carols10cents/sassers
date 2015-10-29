@@ -6,6 +6,7 @@ use sass::output_style::SassOutputStyle;
 use error::{SassError, ErrorKind, Result};
 
 use std::borrow::Cow;
+use std::io::Write;
 
 #[derive(Debug, Clone)]
 pub enum Event<'a> {
@@ -20,11 +21,15 @@ pub enum Event<'a> {
 }
 
 impl<'a> Event<'a> {
-    pub fn output(&self, style: SassOutputStyle) -> Result<String> {
+    pub fn stream<W: Write>(&self, output: &mut W, style: SassOutputStyle) -> Result<()> {
         match *self {
-            Event::Rule(ref rule) => Ok(rule.output(style)),
+            Event::Rule(ref rule) => {
+                write!(output, "{}", rule.output(style)).map_err(|e| {
+                    SassError::from(e)
+                })
+            },
             Event::Comment(ref comment) => {
-                let result = match style {
+                let s = match style {
                     SassOutputStyle::Nested |
                     SassOutputStyle::Expanded => format!("{}\n", comment),
                     SassOutputStyle::Compressed => String::from(""),
@@ -34,22 +39,17 @@ impl<'a> Event<'a> {
                     },
                     SassOutputStyle::Debug => format!("{:?}\n", self),
                 };
-                Ok(result)
+                write!(output, "{}", s).map_err(|e| {
+                    SassError::from(e)
+                })
             },
             Event::List(ref events) => {
-                let mut result = String::new();
                 for event in events {
-                    match event.output(style) {
-                        Ok(s) => result.push_str(&s),
-                        Err(e) => return Err(SassError {
-                            message: format!("{}\n{}", result, e.message),
-                            ..e
-                        })
-                    }
+                    try!(event.stream(output, style))
                 }
-                Ok(result)
+                Ok(())
             },
-            ref other => Err(SassError {
+            ref other => return Err(SassError {
                 kind: ErrorKind::UnexpectedTopLevelElement,
                 message: format!(
                     "Expceted one of Rule, Comment, or List at the top level of the file; got: `{:?}`",
