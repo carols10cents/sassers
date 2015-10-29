@@ -25,18 +25,14 @@ impl<'a> Tokenizer<'a> {
     }
 
     pub fn stream<W: Write>(&mut self, output: &mut W, style: SassOutputStyle) -> Result<()> {
-        let mut subber = Substituter::new(self);
+        let subber = Substituter::new(self);
 
-        while let Some(event) = subber.next() {
-            match event {
-                Ok(ev) => {
-                    match ev.output(style) {
-                        Ok(s) =>  try!(write!(output, "{}", s)),
-                        Err(e) => return Err(e),
-                    }
-                },
-                Err(e) => return Err(e),
-            }
+        for event in subber.into_iter() {
+            try!(event.unwrap().output(style).and_then(|s| {
+                write!(output, "{}", s).map_err(|e| {
+                    SassError::from(e)
+                })
+            }));
         }
         Ok(())
     }
