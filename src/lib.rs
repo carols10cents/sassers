@@ -18,7 +18,7 @@ mod tokenizer;
 mod tokenizer_utils;
 mod value_tokenizer;
 
-use error::{Result, SassError};
+use error::Result;
 use tokenizer::Tokenizer;
 
 fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
@@ -50,8 +50,7 @@ pub fn compile<W: Write>(inputfile: &str, output: &mut W, style: &str) -> Result
     let imports_resolved = try!(resolve_imports(&inputpath));
 
     let mut tokenizer = Tokenizer::new(&imports_resolved);
+    let style = try!(style.parse());
 
-    write!(output, "{}", try!(tokenizer.output(try!(style.parse())))).map_err(|e| {
-        SassError::from(e)
-    })
+    tokenizer.stream(output, style)
 }

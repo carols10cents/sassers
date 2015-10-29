@@ -6,6 +6,8 @@ use tokenizer_utils::*;
 use inner_tokenizer::{InnerTokenizer, State};
 use substituter::Substituter;
 
+use std::io::Write;
+
 #[derive(Debug)]
 pub struct Tokenizer<'a> {
     toker: Toker<'a>,
@@ -22,28 +24,21 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    pub fn output(&mut self, style: SassOutputStyle) -> Result<String> {
+    pub fn stream<W: Write>(&mut self, output: &mut W, style: SassOutputStyle) -> Result<()> {
         let mut subber = Substituter::new(self);
-        let mut output = String::new();
 
         while let Some(event) = subber.next() {
             match event {
                 Ok(ev) => {
                     match ev.output(style) {
-                        Ok(s) => output.push_str(&s),
-                        Err(e) => return Err(SassError {
-                            message: format!("{}\n{}", output, e.message),
-                            ..e
-                        }),
+                        Ok(s) =>  try!(write!(output, "{}", s)),
+                        Err(e) => return Err(e),
                     }
                 },
-                Err(e) => return Err(SassError {
-                    message: format!("{}\n{}", output, e.message),
-                    ..e
-                }),
+                Err(e) => return Err(e),
             }
         }
-        Ok(output)
+        Ok(())
     }
 
     fn limit(&self) -> usize {
