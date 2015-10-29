@@ -36,154 +36,54 @@ impl<'a> SassRule<'a> {
     }
 
     pub fn stream<W: Write>(&self, output: &mut W, style: SassOutputStyle) -> Result<()> {
-        let s = match style {
-            SassOutputStyle::Nested => self.nested(),
-            SassOutputStyle::Compressed => self.compressed(),
-            SassOutputStyle::Expanded => self.expanded(),
-            SassOutputStyle::Compact => self.compact(),
-            SassOutputStyle::Debug => format!("{:?}\n", self),
-        };
-        Ok(try!(write!(output, "{}", s)))
+        try!(self.recursive_stream(output, style, "", ""));
+        Ok(try!(write!(output, "{}", style.rule_separator())))
     }
 
-    pub fn expanded(&self) -> String {
-        format!("{}\n\n", self.expanded_with_parent(""))
-    }
+    pub fn recursive_stream<W: Write>(&self, output: &mut W, style: SassOutputStyle, parents: &str, nesting: &str) -> Result<()> {
+        let mut selector_string = self.selector_distribution(parents, &style.selector_separator());
+        if style == SassOutputStyle::Compressed {
+            selector_string = compress_selectors(selector_string);
+        }
 
-    pub fn expanded_with_parent(&self, parents: &str) -> String {
-        let mut output = String::new();
+        let mut properties = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
+            c.to_string(style)
+        });
+        let mut has_properties = false;
 
-        let selector_string = self.selector_distribution(parents, ", ");
+        // TODO: peek?
+        if let Some(prop) = properties.next() {
+            has_properties = true;
+            try!(write!(output, "{}{}{{{}{}",
+              selector_string,
+              style.selector_brace_separator(),
+              style.brace_property_separator(),
+              prop,
+            ));
+            for prop in properties {
+                try!(write!(output, "{}{}", style.property_separator(nesting), prop));
+            }
+            try!(write!(output, "{}}}", style.property_brace_separator()));
+        }
 
-        let properties_string = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
-            c.expanded()
-        }).collect::<Vec<_>>().join("\n");
-
-        let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
+        let mut child_rules = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
             match c {
-                &Event::Rule(ref rule) => rule.expanded_with_parent(&selector_string),
+                &Event::Rule(ref rule) => rule,
                 _ => unreachable!(),
             }
-        }).collect::<Vec<_>>().join("\n");
+        });
 
-        if properties_string.len() > 0 {
-            output.push_str(&selector_string);
-            output.push_str(" ");
-            output.push_str(&format!("{{\n{}\n}}", properties_string));
-        }
-
-        if properties_string.len() > 0 && child_rules_string.len() > 0 {
-            output.push_str("\n");
-        }
-
-        if child_rules_string.len() > 0 {
-            output.push_str(&child_rules_string);
-        }
-
-        output
-    }
-
-    pub fn nested(&self) -> String {
-        format!("{}\n\n", self.nested_with_parent(""))
-    }
-
-    pub fn nested_with_parent(&self, parents: &str) -> String {
-        let mut output = String::new();
-
-        let selector_string = self.selector_distribution(parents, ", ");
-
-        let properties_string = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
-            c.nested()
-        }).collect::<Vec<_>>().join("\n");
-
-        let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
-            match c {
-                &Event::Rule(ref rule) => rule.nested_with_parent(&selector_string),
-                _ => unreachable!(),
+        if let Some(child_rule) = child_rules.next() {
+            if has_properties {
+                try!(write!(output, "{}", style.rule_and_child_rules_separator()));
             }
-        }).collect::<Vec<_>>().join("\n");
-
-        if properties_string.len() > 0 {
-            output.push_str(&selector_string);
-            output.push_str(" ");
-            output.push_str(&format!("{{\n{} }}", properties_string));
-            if child_rules_string.len() > 0 {
-                output.push_str("\n  ");
-                output.push_str(&child_rules_string.split('\n').collect::<Vec<_>>().join("\n  "));
+            try!(child_rule.recursive_stream(output, style, &selector_string, &format!("  {}", nesting)));
+            for child_rule in child_rules {
+                try!(write!(output, "{}", style.child_rule_separator(has_properties)));
+                try!(child_rule.recursive_stream(output, style, &selector_string, &format!("  {}", nesting)));
             }
-        } else {
-            output.push_str(&child_rules_string);
         }
-
-        output
-    }
-
-    pub fn compact(&self) -> String {
-        format!("{}\n\n", self.compact_with_parent(""))
-    }
-
-    pub fn compact_with_parent(&self, parents: &str) -> String {
-        let mut output = String::new();
-
-        let selector_string = self.selector_distribution(parents, ", ");
-
-        let properties_string = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
-            c.compact()
-        }).collect::<Vec<_>>().join(" ");
-
-        let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
-            match c {
-                &Event::Rule(ref rule) => rule.compact_with_parent(&selector_string),
-                _ => unreachable!(),
-            }
-        }).collect::<Vec<_>>().join("\n");
-
-        if properties_string.len() > 0 {
-            output.push_str(&selector_string);
-            output.push_str(" ");
-            output.push_str(&format!("{{ {} }}", properties_string));
-            if child_rules_string.len() > 0 {
-                output.push_str("\n");
-                output.push_str(&child_rules_string);
-            }
-        } else {
-            output.push_str(&child_rules_string);
-        }
-
-        output
-    }
-
-    pub fn compressed(&self) -> String {
-        self.compressed_with_parent("")
-    }
-
-    pub fn compressed_with_parent(&self, parents: &str) -> String {
-        let mut output = String::new();
-
-        let selector_string = compress_selectors(self.selector_distribution(parents, ","));
-
-        let properties_string = self.children.iter().filter(|c| !c.is_child_rule() && !c.is_comment() ).map(|c| {
-            c.compressed()
-        }).collect::<Vec<_>>().join(";");
-
-        let child_rules_string = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
-            match c {
-                &Event::Rule(ref rule) => rule.compressed_with_parent(&selector_string),
-                _ => unreachable!(),
-            }
-        }).collect::<Vec<_>>().join("");
-
-        if properties_string.len() > 0 {
-            output.push_str(&selector_string);
-            output.push_str(&format!("{{{}}}", properties_string));
-            if child_rules_string.len() > 0 {
-                output.push_str(&child_rules_string);
-            }
-        } else {
-            output.push_str(&child_rules_string);
-        }
-
-        output
+        Ok(())
     }
 }
 
