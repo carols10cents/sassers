@@ -31,9 +31,8 @@ Options:
         let inputfile = args.get_str("<inputfile>");
         debug!("input filename = {:?}", inputfile);
 
-        match sassers::compile(&inputfile, style) {
-            Ok(compiled) => println!("{}", compiled),
-            Err(e) => println!("Compilation failed: {}", e.message),
-        }
+        sassers::compile(&inputfile, &mut std::io::stdout(), style).unwrap_or_else(|e| {
+            println!("Compilation failed: {}", e.message);
+        });
     }
 }

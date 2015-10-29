@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::fs::File;
 use std::io::Read;
 use regex::Regex;
+use std::io::Write;
 
 mod error;
 mod evaluator;
@@ -17,7 +18,7 @@ mod tokenizer;
 mod tokenizer_utils;
 mod value_tokenizer;
 
-use error::Result;
+use error::{Result, SassError};
 use tokenizer::Tokenizer;
 
 fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
@@ -44,10 +45,13 @@ fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
     Ok(imports_resolved)
 }
 
-pub fn compile(inputfile: &str, style: &str) -> Result<String> {
+pub fn compile<W: Write>(inputfile: &str, output: &mut W, style: &str) -> Result<()> {
     let inputpath = PathBuf::from(inputfile);
     let imports_resolved = try!(resolve_imports(&inputpath));
 
     let mut tokenizer = Tokenizer::new(&imports_resolved);
-    Ok(try!(tokenizer.output(try!(style.parse()))))
+
+    write!(output, "{}", try!(tokenizer.output(try!(style.parse())))).map_err(|e| {
+        SassError::from(e)
+    })
 }
