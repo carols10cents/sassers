@@ -24,9 +24,7 @@ impl<'a> Event<'a> {
     pub fn stream<W: Write>(&self, output: &mut W, style: SassOutputStyle) -> Result<()> {
         match *self {
             Event::Rule(ref rule) => {
-                write!(output, "{}", rule.output(style)).map_err(|e| {
-                    SassError::from(e)
-                })
+                Ok(try!(rule.stream(output, style)))
             },
             Event::Comment(ref comment) => {
                 let s = match style {
@@ -39,9 +37,7 @@ impl<'a> Event<'a> {
                     },
                     SassOutputStyle::Debug => format!("{:?}\n", self),
                 };
-                write!(output, "{}", s).map_err(|e| {
-                    SassError::from(e)
-                })
+                Ok(try!(write!(output, "{}", s)))
             },
             Event::List(ref events) => {
                 for event in events {

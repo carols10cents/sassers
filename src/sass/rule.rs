@@ -1,8 +1,10 @@
 use event::Event;
 use sass::selector::SassSelector;
 use sass::output_style::SassOutputStyle;
+use error::Result;
 
 use std::fmt;
+use std::io::Write;
 
 #[derive(Clone)]
 pub struct SassRule<'a> {
@@ -33,14 +35,15 @@ impl<'a> SassRule<'a> {
         }
     }
 
-    pub fn output(&self, style: SassOutputStyle) -> String {
-        match style {
+    pub fn stream<W: Write>(&self, output: &mut W, style: SassOutputStyle) -> Result<()> {
+        let s = match style {
             SassOutputStyle::Nested => self.nested(),
             SassOutputStyle::Compressed => self.compressed(),
             SassOutputStyle::Expanded => self.expanded(),
             SassOutputStyle::Compact => self.compact(),
             SassOutputStyle::Debug => format!("{:?}\n", self),
-        }
+        };
+        Ok(try!(write!(output, "{}", s)))
     }
 
     pub fn expanded(&self) -> String {
