@@ -55,14 +55,19 @@ impl<'a> SassRule<'a> {
         // TODO: peek?
         if let Some(prop) = properties.next() {
             has_properties = true;
-            try!(write!(output, "{}{}{{{}{}",
+            try!(write!(output, "{}{}{{{}{}{}",
               selector_string,
               style.selector_brace_separator(),
               style.brace_property_separator(),
+              style.before_property(nesting),
               prop,
             ));
             for prop in properties {
-                try!(write!(output, "{}{}", style.property_separator(nesting), prop));
+                try!(write!(output, "{}{}{}",
+                    style.after_property(),
+                    style.before_property(nesting),
+                    prop
+                ));
             }
             try!(write!(output, "{}}}", style.property_brace_separator()));
         }
@@ -75,13 +80,15 @@ impl<'a> SassRule<'a> {
         });
 
         if let Some(child_rule) = child_rules.next() {
+            let mut recursive_nesting = String::from(nesting);
             if has_properties {
-                try!(write!(output, "{}", style.rule_and_child_rules_separator()));
+                recursive_nesting.push_str("  ");
+                try!(write!(output, "{}", style.rule_and_child_rules_separator(&recursive_nesting)));
             }
-            try!(child_rule.recursive_stream(output, style, &selector_string, &format!("  {}", nesting)));
+            try!(child_rule.recursive_stream(output, style, &selector_string, &recursive_nesting));
             for child_rule in child_rules {
                 try!(write!(output, "{}", style.child_rule_separator(has_properties)));
-                try!(child_rule.recursive_stream(output, style, &selector_string, &format!("  {}", nesting)));
+                try!(child_rule.recursive_stream(output, style, &selector_string, &recursive_nesting));
             }
         }
         Ok(())

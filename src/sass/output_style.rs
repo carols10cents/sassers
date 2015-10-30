@@ -58,11 +58,19 @@ impl SassOutputStyle {
         })
     }
 
-    pub fn property_separator(&self, parents: &str) -> String {
+    pub fn before_property(&self, nesting: &str) -> String {
+        match *self {
+            SassOutputStyle::Compact => String::from(""),
+            SassOutputStyle::Compressed => String::from(""),
+            SassOutputStyle::Nested => String::from(nesting),
+            _ => String::from("\n"),
+        }
+    }
+
+    pub fn after_property(&self) -> String {
         match *self {
             SassOutputStyle::Compact => String::from(" "),
             SassOutputStyle::Compressed => String::from(";"),
-            SassOutputStyle::Nested => format!("\n{}", parents),
             _ => String::from("\n"),
         }
     }
@@ -76,13 +84,13 @@ impl SassOutputStyle {
         })
     }
 
-    pub fn rule_and_child_rules_separator(&self) -> String {
-        String::from(match *self {
-            SassOutputStyle::Nested => "\n  ",
-            SassOutputStyle::Expanded => "\n",
-            SassOutputStyle::Compact => "\n",
-            _ => "",
-        })
+    pub fn rule_and_child_rules_separator(&self, nesting: &str) -> String {
+        match *self {
+            SassOutputStyle::Nested => format!("\n{}", nesting),
+            SassOutputStyle::Expanded => String::from("\n"),
+            SassOutputStyle::Compact => String::from("\n"),
+            _ => String::from(""),
+        }
     }
 
     pub fn child_rule_separator(&self, has_properties: bool) -> String {
