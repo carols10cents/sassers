@@ -46,8 +46,9 @@ impl<'a> SassRule<'a> {
             selector_string = compress_selectors(selector_string);
         }
 
-        let mut properties = self.children.iter().filter(|c| !c.is_child_rule() ).map(|c| {
-            c.to_string(style)
+        let mut properties = self.children.iter().filter(|c| !c.is_child_rule() ).filter_map(|c| {
+            let s = c.to_string(style);
+            if s.len() > 0 { Some(s) } else { None }
         });
         let mut has_properties = false;
 
