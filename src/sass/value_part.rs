@@ -1,7 +1,8 @@
-use error::{Result}; //, SassError, ErrorKind};
+use error::Result;
 use sass::op::Op;
 use sass::color_value::ColorValue;
 use sass::number_value::NumberValue;
+use sass::function::SassFunctionCall;
 
 use std::fmt;
 use std::borrow::Cow;
@@ -14,6 +15,7 @@ pub enum ValuePart<'a> {
     Operator(Op),
     List(Vec<ValuePart<'a>>),
     Color(ColorValue<'a>),
+    Function(SassFunctionCall<'a>),
 }
 
 impl<'a> ValuePart<'a> {
@@ -47,6 +49,7 @@ impl<'a> ValuePart<'a> {
             ValuePart::List(v) => ValuePart::List(v.into_iter().map(|p| p.into_owned().into()).collect::<Vec<_>>()),
             ValuePart::Operator(o) => ValuePart::Operator(o),
             ValuePart::Color(c) => ValuePart::Color(c.into_owned().into()),
+            _ => unimplemented!(),
         }
     }
 
@@ -127,6 +130,7 @@ impl<'a> fmt::Display for ValuePart<'a> {
             ValuePart::Operator(Op::Comma) => write!(f, ","),
             ValuePart::Operator(Op::Minus) => write!(f, "-"),
             ValuePart::Operator(..) => unreachable!(),
+            _ => unimplemented!(),
         }
     }
 }

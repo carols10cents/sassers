@@ -49,6 +49,10 @@ pub fn valid_name_char(c: u8) -> bool {
     c != b':' && c != b'{' && c != b'(' && c != b')' && c != b';'
 }
 
+pub fn valid_string_char(c: u8) -> bool {
+    c != b'(' && isnt_space(c)
+}
+
 pub fn valid_mixin_arg_char(c: u8) -> bool {
     c != b',' && c != b')'
 }

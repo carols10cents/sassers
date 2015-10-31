@@ -121,6 +121,7 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
                     self.value_stack.push(color);
                     last_was_an_operator = false;
                 },
+                Ok(ValuePart::Function(..)) => unimplemented!(),
                 Err(e) => return Err(e),
             }
         }

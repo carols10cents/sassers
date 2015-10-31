@@ -1,4 +1,5 @@
 pub mod color_value;
+pub mod function;
 pub mod mixin;
 pub mod number_value;
 pub mod op;

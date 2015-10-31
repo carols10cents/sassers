@@ -1,6 +1,7 @@
 use sass::color_value::ColorValue;
 use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
+use sass::function::{SassFunctionCall, SassFunctionArgument};
 use sass::op::Op;
 
 use error::Result;
@@ -97,9 +98,28 @@ impl<'a> ValueTokenizer<'a> {
                 }
             ))
         } else {
-            i += self.toker.scan_while_or_end(start, isnt_space);
+            i += self.toker.scan_while_or_end(start, valid_string_char);
             self.toker.offset = i;
-            Some(ValuePart::String(Borrowed(&self.toker.inner_str[start..i])))
+
+            if self.toker.eat("(").is_ok() {
+                let name = Borrowed(&self.toker.inner_str[start..i]);
+                let arguments = try!(self.toker.tokenize_list(",", ")", &valid_mixin_arg_char));
+
+                if name == "url" {
+                    Some(ValuePart::String(
+                        Borrowed(&self.toker.inner_str[start..self.toker.offset])
+                    ))
+                } else {
+                    Some(ValuePart::Function(SassFunctionCall {
+                        name: name,
+                        arguments: arguments.into_iter().map(|a|
+                            SassFunctionArgument::new(a)
+                        ).collect(),
+                    }))
+                }
+            } else {
+                Some(ValuePart::String(Borrowed(&self.toker.inner_str[start..i])))
+            }
         };
 
         Ok(ret)
@@ -136,6 +156,7 @@ mod tests {
     use sass::color_value::ColorValue;
     use sass::value_part::ValuePart;
     use sass::number_value::NumberValue;
+    use sass::function::{SassFunctionCall, SassFunctionArgument};
     use sass::op::Op;
     use std::borrow::Cow::Borrowed;
 
@@ -327,6 +348,22 @@ mod tests {
             Some(Ok(ValuePart::Color(ColorValue {
                 red: 10, green: 100, blue: 73,
                 computed: false, original: Borrowed("rgb(10, 100, 73)"),
+            }))),
+            vt.next()
+        );
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_recognizes_arbitrary_functions() {
+        let mut vt = ValueTokenizer::new("some-func(10, 73)");
+        assert_eq!(
+            Some(Ok(ValuePart::Function(SassFunctionCall {
+                name: Borrowed("some-func"),
+                arguments: vec![
+                    SassFunctionArgument { name: None, value: Borrowed("10") },
+                    SassFunctionArgument { name: None, value: Borrowed("73") },
+                ],
             }))),
             vt.next()
         );

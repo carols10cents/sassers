@@ -79,10 +79,12 @@ impl<'vm, I> Substituter<'vm, I> {
                     let mut ev = Evaluator::new_from_string(&value);
                     let ev_res = try!(ev.evaluate(&lvs)).into_owned();
 
-                    results.push(Event::Property(
+                    let resulting_property = Event::Property(
                         name,
                         ev_res,
-                    ));
+                    );
+                    debug!("Resulting property: {:?}", resulting_property);
+                    results.push(resulting_property);
                 },
                 Event::Rule(rule) => {
                     let mut lvs = self.variables.clone();
@@ -91,9 +93,11 @@ impl<'vm, I> Substituter<'vm, I> {
                     let res = try!(self.replace_children_in_scope(
                         rule.children, Some(lvs), Some(local_mixins.clone())
                     ));
-                    results.push(Event::Rule(SassRule {
+                    let resulting_rule = Event::Rule(SassRule {
                         children: res, ..rule
-                    }));
+                    });
+                    debug!("Resulting rule: {:?}", resulting_rule);
+                    results.push(resulting_rule);
                 },
                 Event::MixinCall(mixin_call) => {
                     let mixin_name = mixin_call.name.into_owned();
@@ -117,10 +121,13 @@ impl<'vm, I> Substituter<'vm, I> {
                     let mut res = try!(self.replace_children_in_scope(
                         mixin_definition.children.clone(), Some(mixin_replacements), Some(local_mixins.clone())
                     ));
-
+                    debug!("Resulting mixin replacements: {:?}", res);
                     results.append(&mut res);
                 },
-                other => results.push(other),
+                other => {
+                    debug!("Resulting other: {:?}", other);
+                    results.push(other);
+                },
             }
         }
         Ok(results)
