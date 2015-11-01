@@ -122,7 +122,7 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
                     last_was_an_operator = false;
                 },
                 Ok(ValuePart::Function(sass_function_call)) => {
-                    self.value_stack.push(try!(sass_function_call.evaluate()));
+                    self.value_stack.push(try!(sass_function_call.evaluate(&variables)));
                     last_was_an_operator = false;
                 },
                 Err(e) => return Err(e),

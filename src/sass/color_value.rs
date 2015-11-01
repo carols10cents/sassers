@@ -1,10 +1,12 @@
 use error::{SassError, ErrorKind, Result};
 use sass::op::Op;
 use sass::number_value::NumberValue;
+use sass::value_part::ValuePart;
 
-use std::borrow::Cow;
+use std::borrow::Cow::{self, Owned};
 use std::fmt;
 use std::cmp;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColorValue<'a> {
@@ -15,7 +17,39 @@ pub struct ColorValue<'a> {
     pub original: Cow<'a, str>,
 }
 
+fn variable_to_u8<'a>(variables: &HashMap<String, ValuePart<'a>>, name: &str) -> Result<u8> {
+    let value_part = try!(variables.get(name.into()).ok_or(SassError {
+        kind: ErrorKind::ArgumentNotFound,
+        message: format!("Could not find value for argument `{}`.", name),
+    }));
+    match *value_part {
+        ValuePart::String(ref s) => s.parse().map_err(|_| SassError {
+            kind: ErrorKind::ParseError,
+            message: format!("Could not parse `{}` into u8 for color value.", s),
+        }),
+        ValuePart::Number(ref nv) => Ok(nv.scalar as u8),
+        ref other => Err(SassError {
+            kind: ErrorKind::UnexpectedValuePartType,
+            message: format!("Cannot turn this ValuePart into a color: `{:?}`", other),
+        })
+    }
+}
+
 impl<'a, 'b> ColorValue<'a> {
+    pub fn from_variables(variables: &HashMap<String, ValuePart<'a>>) -> Result<ColorValue<'a>> {
+        let red = try!(variable_to_u8(&variables, "$red"));
+        let green = try!(variable_to_u8(&variables, "$green"));
+        let blue = try!(variable_to_u8(&variables, "$blue"));
+
+        Ok(ColorValue {
+            red: red,
+            green: green,
+            blue: blue,
+            computed: true,
+            original: Owned(format!("rgb({}, {}, {})", red, green, blue)),
+        })
+    }
+
     pub fn from_hex(hex: Cow<'a, str>) -> Result<ColorValue<'a>> {
         if hex.len() == 4 {
             Ok(ColorValue {

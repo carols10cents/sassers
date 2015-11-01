@@ -33,4 +33,7 @@ pub enum ErrorKind {
     InvalidSquareUnits,
     IncompatibleUnits,
     UnknownFunction,
+    ArgumentNotFound,
+    ParseError,
+    UnexpectedValuePartType,
 }
