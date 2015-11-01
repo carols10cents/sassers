@@ -121,7 +121,10 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
                     self.value_stack.push(color);
                     last_was_an_operator = false;
                 },
-                Ok(ValuePart::Function(..)) => unimplemented!(),
+                Ok(ValuePart::Function(sass_function_call)) => {
+                    self.value_stack.push(try!(sass_function_call.evaluate()));
+                    last_was_an_operator = false;
+                },
                 Err(e) => return Err(e),
             }
         }

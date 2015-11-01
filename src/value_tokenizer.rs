@@ -80,23 +80,6 @@ impl<'a> ValueTokenizer<'a> {
                     Err(e) => return Err(e),
                 }
             }
-        } else if self.toker.eat("rgb(").is_ok() {
-            let r = self.eat_color_u8();
-            try!(self.toker.eat(","));
-            self.toker.skip_leading_whitespace();
-            let g = self.eat_color_u8();
-            try!(self.toker.eat(","));
-            self.toker.skip_leading_whitespace();
-            let b = self.eat_color_u8();
-            try!(self.toker.eat(")"));
-
-            Some(ValuePart::Color(
-                ColorValue {
-                    red: r, green: g, blue: b,
-                    computed: false,
-                    original: Borrowed(&self.toker.inner_str[start..self.toker.offset]),
-                }
-            ))
         } else {
             i += self.toker.scan_while_or_end(start, valid_string_char);
             self.toker.offset = i;
@@ -123,15 +106,6 @@ impl<'a> ValueTokenizer<'a> {
         };
 
         Ok(ret)
-    }
-
-    fn eat_color_u8(&mut self) -> u8 {
-        let mut i = self.toker.offset;
-        let color_start = i;
-
-        i += self.toker.scan_while_or_end(i, is_number);
-        self.toker.offset = i;
-        self.toker.inner_str[color_start..i].parse().unwrap_or(0)
     }
 }
 
@@ -332,9 +306,13 @@ mod tests {
     fn it_recognizes_rgb() {
         let mut vt = ValueTokenizer::new("rgb(10,100,73)");
         assert_eq!(
-            Some(Ok(ValuePart::Color(ColorValue {
-                red: 10, green: 100, blue: 73,
-                computed: false, original: Borrowed("rgb(10,100,73)"),
+            Some(Ok(ValuePart::Function(SassFunctionCall {
+                name: Borrowed("rgb"),
+                arguments: vec![
+                    SassFunctionArgument { name: None, value: Borrowed("10") },
+                    SassFunctionArgument { name: None, value: Borrowed("100") },
+                    SassFunctionArgument { name: None, value: Borrowed("73") },
+                ],
             }))),
             vt.next()
         );
@@ -345,9 +323,30 @@ mod tests {
     fn it_recognizes_rgb_with_spaces() {
         let mut vt = ValueTokenizer::new("rgb(10, 100, 73)");
         assert_eq!(
-            Some(Ok(ValuePart::Color(ColorValue {
-                red: 10, green: 100, blue: 73,
-                computed: false, original: Borrowed("rgb(10, 100, 73)"),
+            Some(Ok(ValuePart::Function(SassFunctionCall {
+                name: Borrowed("rgb"),
+                arguments: vec![
+                    SassFunctionArgument { name: None, value: Borrowed("10") },
+                    SassFunctionArgument { name: None, value: Borrowed("100") },
+                    SassFunctionArgument { name: None, value: Borrowed("73") },
+                ],
+            }))),
+            vt.next()
+        );
+        assert_eq!(None, vt.next());
+    }
+
+    #[test]
+    fn it_recognizes_rgb_with_named_arguments() {
+        let mut vt = ValueTokenizer::new("rgb(255, $blue: 0, $green: 255)");
+        assert_eq!(
+            Some(Ok(ValuePart::Function(SassFunctionCall {
+                name: Borrowed("rgb"),
+                arguments: vec![
+                    SassFunctionArgument { name: None, value: Borrowed("255") },
+                    SassFunctionArgument { name: Some(Borrowed("$blue")), value: Borrowed("0") },
+                    SassFunctionArgument { name: Some(Borrowed("$green")), value: Borrowed("255") },
+                ],
             }))),
             vt.next()
         );

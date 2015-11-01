@@ -32,4 +32,5 @@ pub enum ErrorKind {
     InvalidApplyMathArgs,
     InvalidSquareUnits,
     IncompatibleUnits,
+    UnknownFunction,
 }
