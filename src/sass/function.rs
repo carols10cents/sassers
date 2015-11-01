@@ -1,5 +1,6 @@
 use sass::value_part::ValuePart;
 use sass::color_value::*;
+use sass::number_value::NumberValue;
 use error::{SassError, ErrorKind, Result};
 use sass::parameters::*;
 
@@ -91,6 +92,15 @@ impl<'a> SassFunctionCall<'a> {
                     })
                 }
             },
+            Borrowed("red") => {
+                self.extract_color_part("red", variables)
+            },
+            Borrowed("green") => {
+                self.extract_color_part("green", variables)
+            },
+            Borrowed("blue") => {
+                self.extract_color_part("blue", variables)
+            },
             _ => {
                 Err(SassError {
                     kind: ErrorKind::UnknownFunction,
@@ -102,6 +112,35 @@ impl<'a> SassFunctionCall<'a> {
             }
         }
     }
+
+    fn extract_color_part(&self, which_color: &str, variables: &HashMap<String, ValuePart<'a>>) -> Result<ValuePart<'a>> {
+        let params = vec![
+            SassParameter { name: Owned("$color".into()), default: None},
+        ];
+        let resolved = try!(collate_args_parameters(
+            &params,
+            &self.arguments,
+            variables,
+        ));
+
+        match resolved.get("$color".into()) {
+            Some(&ValuePart::Color(ref cv)) => {
+                let extracted = match which_color {
+                    "red" => cv.red,
+                    "green" => cv.green,
+                    "blue" => cv.blue,
+                    _ => unreachable!(),
+                };
+                Ok(ValuePart::Number(NumberValue::from_scalar(extracted as f32)))
+            },
+            ref e => Err(SassError {
+                kind: ErrorKind::UnexpectedValuePartType,
+                message: format!(
+                    "Expected color argument to {} to be a Color; instead got `{:?}`", which_color, e
+                )
+            }),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -109,6 +148,7 @@ mod tests {
     use super::*;
     use sass::color_value::ColorValue;
     use sass::value_part::ValuePart;
+    use sass::number_value::NumberValue;
     use sass::parameters::SassArgument;
     use std::borrow::Cow::Borrowed;
     use std::collections::HashMap;
@@ -167,6 +207,20 @@ mod tests {
                 red: 255, green: 0, blue: 238, alpha: Some(0.6),
                 computed: true, original: Borrowed("rgba(255, 0, 238, 0.6)"),
             })),
+            sfc.evaluate(&HashMap::new())
+        );
+    }
+
+    #[test]
+    fn it_returns_red_part_of_color_for_red() {
+        let sfc = SassFunctionCall {
+            name: Borrowed("red"),
+            arguments: vec![
+                SassArgument { name: None, value: Borrowed("#cba") },
+            ],
+        };
+        assert_eq!(
+            Ok(ValuePart::Number(NumberValue::from_scalar(204.0))),
             sfc.evaluate(&HashMap::new())
         );
     }
