@@ -4,6 +4,7 @@ pub mod mixin;
 pub mod number_value;
 pub mod op;
 pub mod output_style;
+pub mod parameters;
 pub mod rule;
 pub mod selector;
 pub mod value_part;

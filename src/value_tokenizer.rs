@@ -1,7 +1,8 @@
 use sass::color_value::ColorValue;
 use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
-use sass::function::{SassFunctionCall, SassFunctionArgument};
+use sass::function::SassFunctionCall;
+use sass::parameters::SassArgument;
 use sass::op::Op;
 
 use error::Result;
@@ -96,7 +97,7 @@ impl<'a> ValueTokenizer<'a> {
                     Some(ValuePart::Function(SassFunctionCall {
                         name: name,
                         arguments: arguments.into_iter().map(|a|
-                            SassFunctionArgument::new(a)
+                            SassArgument::new(a)
                         ).collect(),
                     }))
                 }
@@ -130,7 +131,8 @@ mod tests {
     use sass::color_value::ColorValue;
     use sass::value_part::ValuePart;
     use sass::number_value::NumberValue;
-    use sass::function::{SassFunctionCall, SassFunctionArgument};
+    use sass::function::SassFunctionCall;
+    use sass::parameters::SassArgument;
     use sass::op::Op;
     use std::borrow::Cow::Borrowed;
 
@@ -309,9 +311,9 @@ mod tests {
             Some(Ok(ValuePart::Function(SassFunctionCall {
                 name: Borrowed("rgb"),
                 arguments: vec![
-                    SassFunctionArgument { name: None, value: Borrowed("10") },
-                    SassFunctionArgument { name: None, value: Borrowed("100") },
-                    SassFunctionArgument { name: None, value: Borrowed("73") },
+                    SassArgument { name: None, value: Borrowed("10") },
+                    SassArgument { name: None, value: Borrowed("100") },
+                    SassArgument { name: None, value: Borrowed("73") },
                 ],
             }))),
             vt.next()
@@ -326,9 +328,9 @@ mod tests {
             Some(Ok(ValuePart::Function(SassFunctionCall {
                 name: Borrowed("rgb"),
                 arguments: vec![
-                    SassFunctionArgument { name: None, value: Borrowed("10") },
-                    SassFunctionArgument { name: None, value: Borrowed("100") },
-                    SassFunctionArgument { name: None, value: Borrowed("73") },
+                    SassArgument { name: None, value: Borrowed("10") },
+                    SassArgument { name: None, value: Borrowed("100") },
+                    SassArgument { name: None, value: Borrowed("73") },
                 ],
             }))),
             vt.next()
@@ -343,9 +345,9 @@ mod tests {
             Some(Ok(ValuePart::Function(SassFunctionCall {
                 name: Borrowed("rgb"),
                 arguments: vec![
-                    SassFunctionArgument { name: None, value: Borrowed("255") },
-                    SassFunctionArgument { name: Some(Borrowed("$blue")), value: Borrowed("0") },
-                    SassFunctionArgument { name: Some(Borrowed("$green")), value: Borrowed("255") },
+                    SassArgument { name: None, value: Borrowed("255") },
+                    SassArgument { name: Some(Borrowed("$blue")), value: Borrowed("0") },
+                    SassArgument { name: Some(Borrowed("$green")), value: Borrowed("255") },
                 ],
             }))),
             vt.next()
@@ -360,8 +362,8 @@ mod tests {
             Some(Ok(ValuePart::Function(SassFunctionCall {
                 name: Borrowed("some-func"),
                 arguments: vec![
-                    SassFunctionArgument { name: None, value: Borrowed("10") },
-                    SassFunctionArgument { name: None, value: Borrowed("73") },
+                    SassArgument { name: None, value: Borrowed("10") },
+                    SassArgument { name: None, value: Borrowed("73") },
                 ],
             }))),
             vt.next()

@@ -5,7 +5,8 @@ use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
-use sass::mixin::{SassMixin, SassMixinParameter, SassMixinArgument};
+use sass::mixin::SassMixin;
+use sass::parameters::*;
 
 use std::collections::HashMap;
 use std::borrow::Cow::{self, Borrowed, Owned};
@@ -111,7 +112,7 @@ impl<'vm, I> Substituter<'vm, I> {
 
                     let mut mixin_replacements = self.variables.clone();
                     mixin_replacements.extend(local_variables.clone());
-                    let collated_args = try!(collate_mixin_args(
+                    let collated_args = try!(collate_args_parameters(
                         &mixin_definition.parameters,
                         &mixin_call.arguments,
                         &mixin_replacements,
@@ -178,46 +179,6 @@ impl<'a, I> Iterator for Substituter<'a, I>
             other => other,
         }
     }
-}
-
-fn collate_mixin_args<'a>(
-    parameters: &Vec<SassMixinParameter<'a>>,
-    arguments: &Vec<SassMixinArgument<'a>>,
-    passed_variables: &HashMap<String, ValuePart<'a>>,
-) -> Result<HashMap<String, ValuePart<'a>>> {
-
-    let mut named_arguments = HashMap::new();
-
-    for a in arguments.iter() {
-        match a.name {
-            Some(ref name) => {
-                named_arguments.insert(name.clone(), a.value.clone().into_owned());
-            },
-            None => {},
-        }
-    }
-
-    let mut replacements = HashMap::new();
-
-    for (i, p) in parameters.iter().enumerate() {
-        let replacement_name = p.name.to_string();
-
-        let replacement_value =
-            try!(named_arguments.get(&p.name).and_then( |v| Some(v.to_string()) )
-                .or(arguments.get(i).and_then( |a| Some(a.value.clone().into_owned()) ))
-                .or(p.default.clone().and_then( |d| Some(d.into_owned()) ))
-                .ok_or(SassError {
-                    kind: ErrorKind::ExpectedMixinArgument,
-                    message: format!("Cannot find argument for mixin parameter named `{}` in arguments `{:?}`", p.name, arguments),
-                }));
-
-        let mut ev = Evaluator::new_from_string(&replacement_value);
-        let ev_res = try!(ev.evaluate(&passed_variables)).into_owned();
-
-        replacements.insert(replacement_name, ev_res);
-    }
-
-    Ok(replacements)
 }
 
 fn owned_evaluated_value<'a>(
