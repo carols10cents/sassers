@@ -13,6 +13,7 @@ pub struct ColorValue<'a> {
     pub red: u8,
     pub green: u8,
     pub blue: u8,
+    pub alpha: Option<f32>,
     pub computed: bool,
     pub original: Cow<'a, str>,
 }
@@ -40,13 +41,34 @@ impl<'a, 'b> ColorValue<'a> {
         let red = try!(variable_to_u8(&variables, "$red"));
         let green = try!(variable_to_u8(&variables, "$green"));
         let blue = try!(variable_to_u8(&variables, "$blue"));
+        let alpha = try!(match variables.get("$alpha".into()) {
+            Some(&ValuePart::Number(ref nv)) => Ok(Some(nv.scalar)),
+            Some(ref other) => Err(SassError {
+                kind: ErrorKind::UnexpectedValuePartType,
+                message: format!("Cannot turn this ValuePart into a color alpha: `{:?}`", other),
+            }),
+            None => Ok(None),
+        });
+
+        let original_representation = format!("rgb{}({}, {}, {}{})",
+            match alpha {
+                Some(..) => "a",
+                None => "",
+            },
+            red, green, blue,
+            match alpha {
+                Some(ref a) => format!(", {}", a),
+                None => "".into(),
+            },
+        );
 
         Ok(ColorValue {
             red: red,
             green: green,
             blue: blue,
+            alpha: alpha,
             computed: true,
-            original: Owned(format!("rgb({}, {}, {})", red, green, blue)),
+            original: Owned(original_representation),
         })
     }
 
@@ -56,6 +78,7 @@ impl<'a, 'b> ColorValue<'a> {
                 red:   u8::from_str_radix(&hex[1..2], 16).unwrap() * 17,
                 green: u8::from_str_radix(&hex[2..3], 16).unwrap() * 17,
                 blue:  u8::from_str_radix(&hex[3..4], 16).unwrap() * 17,
+                alpha: None,
                 computed: false,
                 original: hex,
             })
@@ -64,6 +87,7 @@ impl<'a, 'b> ColorValue<'a> {
                 red:   u8::from_str_radix(&hex[1..3], 16).unwrap(),
                 green: u8::from_str_radix(&hex[3..5], 16).unwrap(),
                 blue:  u8::from_str_radix(&hex[5..7], 16).unwrap(),
+                alpha: None,
                 computed: false,
                 original: hex,
             })
@@ -78,6 +102,7 @@ impl<'a, 'b> ColorValue<'a> {
     pub fn from_computed(r: u8, g: u8, b: u8) -> ColorValue<'a> {
         ColorValue {
             red: r, green: g, blue: b,
+            alpha: None,
             computed: true,
             original: hex_format(r, g, b).into(),
         }
@@ -86,6 +111,7 @@ impl<'a, 'b> ColorValue<'a> {
     pub fn into_owned(self) -> ColorValue<'b> {
         ColorValue {
             red: self.red, green: self.green, blue: self.blue,
+            alpha: self.alpha,
             computed: self.computed,
             original: self.original.into_owned().into(),
         }

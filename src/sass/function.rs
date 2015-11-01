@@ -32,6 +32,24 @@ impl<'a> SassFunctionCall<'a> {
                     try!(ColorValue::from_variables(&resolved))
                 ))
             },
+            Borrowed("rgba") => {
+                let params = vec![
+                    SassParameter { name: Owned("$red".into()), default: None},
+                    SassParameter { name: Owned("$green".into()), default: None},
+                    SassParameter { name: Owned("$blue".into()), default: None},
+                    SassParameter { name: Owned("$alpha".into()), default: None},
+                ];
+
+                let resolved = try!(collate_args_parameters(
+                    &params,
+                    &self.arguments,
+                    variables,
+                ));
+
+                Ok(ValuePart::Color(
+                    try!(ColorValue::from_variables(&resolved))
+                ))
+            },
             _ => {
                 Err(SassError {
                     kind: ErrorKind::UnknownFunction,
@@ -67,7 +85,28 @@ mod tests {
         assert_eq!(
             Ok(ValuePart::Color(ColorValue {
                 red: 10, green: 100, blue: 73,
+                alpha: None,
                 computed: true, original: Borrowed("rgb(10, 100, 73)"),
+            })),
+            sfc.evaluate(&HashMap::new())
+        );
+    }
+
+    #[test]
+    fn it_returns_color_with_alpha_for_rgba() {
+        let sfc = SassFunctionCall {
+            name: Borrowed("rgba"),
+            arguments: vec![
+                SassArgument { name: None, value: Borrowed("10") },
+                SassArgument { name: None, value: Borrowed("100") },
+                SassArgument { name: None, value: Borrowed("73") },
+                SassArgument { name: None, value: Borrowed(".5") },
+            ],
+        };
+        assert_eq!(
+            Ok(ValuePart::Color(ColorValue {
+                red: 10, green: 100, blue: 73, alpha: Some(0.5),
+                computed: true, original: Borrowed("rgba(10, 100, 73, 0.5)"),
             })),
             sfc.evaluate(&HashMap::new())
         );

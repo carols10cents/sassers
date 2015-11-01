@@ -272,7 +272,8 @@ mod tests {
         let mut vt = ValueTokenizer::new("#aabbcc");
         assert_eq!(
             Some(Ok(ValuePart::Color(ColorValue {
-                red: 170, green: 187, blue: 204, computed: false, original: Borrowed("#aabbcc"),
+                red: 170, green: 187, blue: 204, alpha: None,
+                computed: false, original: Borrowed("#aabbcc"),
             }))),
             vt.next()
         );
@@ -284,7 +285,8 @@ mod tests {
         let mut vt = ValueTokenizer::new("#cba");
         assert_eq!(
             Some(Ok(ValuePart::Color(ColorValue {
-                red: 204, green: 187, blue: 170, computed: false, original: Borrowed("#cba"),
+                red: 204, green: 187, blue: 170, alpha: None,
+                computed: false, original: Borrowed("#cba"),
             }))),
             vt.next()
         );
@@ -296,7 +298,8 @@ mod tests {
         let mut vt = ValueTokenizer::new("#cba)");
         assert_eq!(
             Some(Ok(ValuePart::Color(ColorValue {
-                red: 204, green: 187, blue: 170, computed: false, original: Borrowed("#cba"),
+                red: 204, green: 187, blue: 170, alpha: None,
+                computed: false, original: Borrowed("#cba"),
             }))),
             vt.next()
         );
