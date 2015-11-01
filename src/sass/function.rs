@@ -1,5 +1,5 @@
 use sass::value_part::ValuePart;
-use sass::color_value::ColorValue;
+use sass::color_value::*;
 use error::{SassError, ErrorKind, Result};
 use sass::parameters::*;
 
@@ -33,22 +33,63 @@ impl<'a> SassFunctionCall<'a> {
                 ))
             },
             Borrowed("rgba") => {
-                let params = vec![
-                    SassParameter { name: Owned("$red".into()), default: None},
-                    SassParameter { name: Owned("$green".into()), default: None},
-                    SassParameter { name: Owned("$blue".into()), default: None},
-                    SassParameter { name: Owned("$alpha".into()), default: None},
-                ];
+                match self.arguments.len() {
+                    4 => {
+                        let params = vec![
+                            SassParameter { name: Owned("$red".into()), default: None},
+                            SassParameter { name: Owned("$green".into()), default: None},
+                            SassParameter { name: Owned("$blue".into()), default: None},
+                            SassParameter { name: Owned("$alpha".into()), default: None},
+                        ];
 
-                let resolved = try!(collate_args_parameters(
-                    &params,
-                    &self.arguments,
-                    variables,
-                ));
+                        let resolved = try!(collate_args_parameters(
+                            &params,
+                            &self.arguments,
+                            variables,
+                        ));
 
-                Ok(ValuePart::Color(
-                    try!(ColorValue::from_variables(&resolved))
-                ))
+                        Ok(ValuePart::Color(
+                            try!(ColorValue::from_variables(&resolved))
+                        ))
+                    },
+                    2 => {
+                        let params = vec![
+                            SassParameter { name: Owned("$color".into()), default: None},
+                            SassParameter { name: Owned("$alpha".into()), default: None},
+                        ];
+
+                        let resolved = try!(collate_args_parameters(
+                            &params,
+                            &self.arguments,
+                            variables,
+                        ));
+
+                        let color = try!(match resolved.get("$color".into()) {
+                            Some(&ValuePart::Color(ref cv)) => Ok(cv.clone()),
+                            Some(&ValuePart::String(ref s)) => ColorValue::from_hex(s.clone()),
+                            ref e @ Some(_) | ref e @ None => Err(SassError {
+                                kind: ErrorKind::UnexpectedValuePartType,
+                                message: format!(
+                                    "Expected color argument to rgba to be a color-like ValuePart; instead got `{:?}`", e
+                                )
+                            }),
+                        });
+                        let alpha = try!(alpha_from_variables(&resolved));
+
+                        Ok(ValuePart::Color(
+                            ColorValue::from_color_and_alpha(
+                                color, alpha
+                            )
+                        ))
+                    },
+                    _ => Err(SassError {
+                        kind: ErrorKind::WrongNumberOfArguments,
+                        message: format!(
+                            "Expected 2 or 4 arguments to rgba; got {}: `{:?}`",
+                            self.arguments.len(), self.arguments
+                        ),
+                    })
+                }
             },
             _ => {
                 Err(SassError {
@@ -107,6 +148,24 @@ mod tests {
             Ok(ValuePart::Color(ColorValue {
                 red: 10, green: 100, blue: 73, alpha: Some(0.5),
                 computed: true, original: Borrowed("rgba(10, 100, 73, 0.5)"),
+            })),
+            sfc.evaluate(&HashMap::new())
+        );
+    }
+
+    #[test]
+    fn it_returns_color_with_alpha_from_color_argument_for_rgba() {
+        let sfc = SassFunctionCall {
+            name: Borrowed("rgba"),
+            arguments: vec![
+                SassArgument { name: None, value: Borrowed("#f0e") },
+                SassArgument { name: Some(Borrowed("$alpha")), value: Borrowed(".6") },
+            ],
+        };
+        assert_eq!(
+            Ok(ValuePart::Color(ColorValue {
+                red: 255, green: 0, blue: 238, alpha: Some(0.6),
+                computed: true, original: Borrowed("rgba(255, 0, 238, 0.6)"),
             })),
             sfc.evaluate(&HashMap::new())
         );

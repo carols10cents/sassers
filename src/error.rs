@@ -34,6 +34,7 @@ pub enum ErrorKind {
     IncompatibleUnits,
     UnknownFunction,
     ArgumentNotFound,
+    WrongNumberOfArguments,
     ParseError,
     UnexpectedValuePartType,
 }

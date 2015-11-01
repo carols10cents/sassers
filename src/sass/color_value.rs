@@ -36,31 +36,37 @@ fn variable_to_u8<'a>(variables: &HashMap<String, ValuePart<'a>>, name: &str) ->
     }
 }
 
+pub fn alpha_from_variables<'a>(variables: &HashMap<String, ValuePart<'a>>) -> Result<Option<f32>> {
+    match variables.get("$alpha".into()) {
+        Some(&ValuePart::Number(ref nv)) => Ok(Some(nv.scalar)),
+        Some(ref other) => Err(SassError {
+            kind: ErrorKind::UnexpectedValuePartType,
+            message: format!("Cannot turn this ValuePart into a color alpha: `{:?}`", other),
+        }),
+        None => Ok(None),
+    }
+}
+
+fn rgba_string(red: u8, green: u8, blue: u8, alpha: Option<f32>) -> String {
+    format!("rgb{}({}, {}, {}{})",
+        match alpha {
+            Some(..) => "a",
+            None => "",
+        },
+        red, green, blue,
+        match alpha {
+            Some(ref a) => format!(", {}", a),
+            None => "".into(),
+        },
+    )
+}
+
 impl<'a, 'b> ColorValue<'a> {
     pub fn from_variables(variables: &HashMap<String, ValuePart<'a>>) -> Result<ColorValue<'a>> {
         let red = try!(variable_to_u8(&variables, "$red"));
         let green = try!(variable_to_u8(&variables, "$green"));
         let blue = try!(variable_to_u8(&variables, "$blue"));
-        let alpha = try!(match variables.get("$alpha".into()) {
-            Some(&ValuePart::Number(ref nv)) => Ok(Some(nv.scalar)),
-            Some(ref other) => Err(SassError {
-                kind: ErrorKind::UnexpectedValuePartType,
-                message: format!("Cannot turn this ValuePart into a color alpha: `{:?}`", other),
-            }),
-            None => Ok(None),
-        });
-
-        let original_representation = format!("rgb{}({}, {}, {}{})",
-            match alpha {
-                Some(..) => "a",
-                None => "",
-            },
-            red, green, blue,
-            match alpha {
-                Some(ref a) => format!(", {}", a),
-                None => "".into(),
-            },
-        );
+        let alpha = try!(alpha_from_variables(&variables));
 
         Ok(ColorValue {
             red: red,
@@ -68,7 +74,7 @@ impl<'a, 'b> ColorValue<'a> {
             blue: blue,
             alpha: alpha,
             computed: true,
-            original: Owned(original_representation),
+            original: Owned(rgba_string(red, green, blue, alpha)),
         })
     }
 
@@ -96,6 +102,14 @@ impl<'a, 'b> ColorValue<'a> {
                 kind: ErrorKind::InvalidColor,
                 message: format!("Invalid hex color: {}", hex),
             })
+        }
+    }
+
+    pub fn from_color_and_alpha(c: ColorValue<'a>, a: Option<f32>) -> ColorValue<'a> {
+        ColorValue {
+            red: c.red, green: c.green, blue: c.blue,
+            alpha: a, computed: true,
+            original: Owned(rgba_string(c.red, c.green, c.blue, a)),
         }
     }
 
