@@ -92,6 +92,32 @@ impl<'a> SassFunctionCall<'a> {
                     })
                 }
             },
+            Borrowed("mix") => {
+                let params = vec![
+                    SassParameter { name: Owned("$color1".into()), default: None},
+                    SassParameter { name: Owned("$color2".into()), default: None},
+                ];
+
+                let resolved = try!(collate_args_parameters(
+                    &params,
+                    &self.arguments,
+                    variables,
+                ));
+
+                match (resolved.get("$color1".into()), resolved.get("$color2".into())) {
+                    (Some(&ValuePart::Color(ref cv1)), Some(&ValuePart::Color(ref cv2))) => {
+                        Ok(ValuePart::Color(try!(cv1.mix(cv2))))
+                    },
+                    (other1, other2) => {
+                        Err(SassError {
+                            kind: ErrorKind::UnexpectedValuePartType,
+                            message: format!(
+                                "Expected arguments to mix to be Colors; instead got `{:?}` and `{:?}`", other1, other2
+                            )
+                        })
+                    }
+                }
+            },
             Borrowed("red") => {
                 self.extract_color_part("red", variables)
             },

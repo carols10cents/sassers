@@ -146,6 +146,13 @@ impl<'a, 'b> ColorValue<'a> {
         Ok(ColorValue::from_computed(red, green, blue))
     }
 
+    pub fn mix(&self, c: &ColorValue<'a>) -> Result<ColorValue<'a>> {
+        let red   = (self.red + c.red) / 2;
+        let green = (self.green + c.green) / 2;
+        let blue  = (self.blue + c.blue) / 2;
+        Ok(ColorValue::from_computed(red, green, blue))
+    }
+
     pub fn to_short_hex(&self) -> String {
         if self.red % 17 == 0 && self.green % 17 == 0 && self.blue % 17 == 0 {
             format!("#{:x}{:x}{:x}", self.red / 17, self.green / 17, self.blue / 17)
