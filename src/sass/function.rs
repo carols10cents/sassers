@@ -118,6 +118,27 @@ impl<'a> SassFunctionCall<'a> {
                     }
                 }
             },
+            Borrowed("type-of") => {
+                let params = vec![
+                    SassParameter { name: Owned("$value".into()), default: None},
+                ];
+                let resolved = try!(collate_args_parameters(
+                    &params,
+                    &self.arguments,
+                    variables,
+                ));
+                match resolved.get("$value".into()) {
+                    Some(&ValuePart::Color(..)) => Ok(ValuePart::String(Borrowed("color"))),
+                    Some(&ValuePart::Number(..)) => Ok(ValuePart::String(Borrowed("number"))),
+                    Some(&ValuePart::String(..)) => Ok(ValuePart::String(Borrowed("string"))),
+                    other => Err(SassError {
+                        kind: ErrorKind::UnexpectedValuePartType,
+                        message: format!(
+                            "Don't know type-of value `{:?}`", other
+                        )
+                    }),
+                }
+            },
             Borrowed("red") => {
                 self.extract_color_part("red", variables)
             },
