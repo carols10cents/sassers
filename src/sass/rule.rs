@@ -7,13 +7,13 @@ use std::fmt;
 use std::io::Write;
 
 #[derive(Clone)]
-pub struct SassRule<'a> {
-    pub selectors: Vec<SassSelector<'a>>,
-    pub children: Vec<Event<'a>>,
+pub struct SassRule {
+    pub selectors: Vec<SassSelector>,
+    pub children: Vec<Event>,
 }
 
-impl<'a> SassRule<'a> {
-    pub fn new() -> SassRule<'a> {
+impl SassRule {
+    pub fn new() -> SassRule {
         SassRule {
             selectors: Vec::new(),
             children: Vec::new(),
@@ -99,7 +99,7 @@ fn compress_selectors(selector_string: String) -> String {
     selector_string.replace(" > ", ">").replace(" + ", "+")
 }
 
-impl<'a> fmt::Debug for SassRule<'a> {
+impl fmt::Debug for SassRule {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let children = self.children.iter().map(|c| format!("{:?}", c)).collect::<Vec<_>>().join("\n");
         let indented_children = children.split("\n").collect::<Vec<_>>().join("\n  ");

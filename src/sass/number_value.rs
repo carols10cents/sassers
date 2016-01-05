@@ -1,19 +1,17 @@
 use sass::op::Op;
 use error::{Result, SassError, ErrorKind};
 
-use std::borrow::Cow::*;
-use std::borrow::Cow;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct NumberValue<'a> {
+pub struct NumberValue {
     pub scalar:   f32,
-    pub unit:     Option<Cow<'a, str>>,
+    pub unit:     Option<String>,
     pub computed: bool,
 }
 
-impl<'a, 'b> NumberValue<'a> {
-    pub fn from_scalar(num: f32) -> NumberValue<'a> {
+impl<'b> NumberValue {
+    pub fn from_scalar(num: f32) -> NumberValue {
         NumberValue {
             scalar:   num,
             unit:     None,
@@ -22,7 +20,7 @@ impl<'a, 'b> NumberValue<'a> {
     }
 
     #[cfg(test)]
-    pub fn computed(num: f32) -> NumberValue<'a> {
+    pub fn computed(num: f32) -> NumberValue {
         NumberValue {
             scalar:   num,
             unit:     None,
@@ -30,7 +28,7 @@ impl<'a, 'b> NumberValue<'a> {
         }
     }
 
-    pub fn with_units(num: f32, unit: Cow<'a, str>) -> NumberValue<'a> {
+    pub fn with_units(num: f32, unit: String) -> NumberValue {
         NumberValue {
             scalar:   num,
             unit:     Some(unit),
@@ -38,26 +36,7 @@ impl<'a, 'b> NumberValue<'a> {
         }
     }
 
-    pub fn into_owned(self) -> NumberValue<'b> {
-        NumberValue {
-            scalar: self.scalar,
-            unit: match self.unit {
-                Some(u) => Some(u.into_owned().into()),
-                None => None,
-            },
-            computed: self.computed,
-        }
-    }
-
-    pub fn unit_string(&self) -> &str {
-        match self.unit {
-            Some(Borrowed(ref b)) => b,
-            Some(Owned(ref o))    => o,
-            None                  => "",
-        }
-    }
-
-    pub fn apply_math(self, op: Op, nv: NumberValue<'a>) -> Result<NumberValue<'a>> {
+    pub fn apply_math(self, op: Op, nv: NumberValue) -> Result<NumberValue> {
         let result       = try!(self.compute_number(op, &nv));
         let result_units = try!(self.compute_units(op, nv));
 
@@ -68,13 +47,13 @@ impl<'a, 'b> NumberValue<'a> {
         })
     }
 
-    fn compute_number(&self, op: Op, nv: &NumberValue<'a>) -> Result<f32> {
+    fn compute_number(&self, op: Op, nv: &NumberValue) -> Result<f32> {
         op.math(self.scalar, nv.scalar)
     }
 
-    fn compute_units(self, op: Op, nv: NumberValue<'a>) -> Result<Option<Cow<'a, str>>> {
+    fn compute_units(self, op: Op, nv: NumberValue) -> Result<Option<String>> {
         let unit = match (self.unit, nv.unit) {
-            (Some(u), None) | (None, Some(u)) => Some(u.into_owned().into()),
+            (Some(u), None) | (None, Some(u)) => Some(u),
             (Some(ref u1), Some(ref u2)) if u1 == u2 => {
                 match op {
                     Op::Slash => None, // Divide out the units
@@ -85,7 +64,7 @@ impl<'a, 'b> NumberValue<'a> {
                             u1, u2
                         ),
                     }),
-                    _ => Some(u1.clone().into_owned().into()),
+                    _ => Some(u1.clone()),
                 }
             },
             (None, None) => None,
@@ -103,8 +82,8 @@ impl<'a, 'b> NumberValue<'a> {
     }
 }
 
-impl<'a> fmt::Display for NumberValue<'a> {
+impl fmt::Display for NumberValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.scalar, self.unit_string())
+        write!(f, "{}{}", self.scalar, self.unit.clone().unwrap_or(String::from("")))
     }
 }

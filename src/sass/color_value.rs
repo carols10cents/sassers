@@ -3,22 +3,21 @@ use sass::op::Op;
 use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
 
-use std::borrow::Cow::{self, Owned};
 use std::fmt;
 use std::cmp;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ColorValue<'a> {
+pub struct ColorValue {
     pub red: u8,
     pub green: u8,
     pub blue: u8,
     pub alpha: Option<f32>,
     pub computed: bool,
-    pub original: Cow<'a, str>,
+    pub original: String,
 }
 
-fn variable_to_u8<'a>(variables: &HashMap<String, ValuePart<'a>>, name: &str) -> Result<u8> {
+fn variable_to_u8(variables: &HashMap<String, ValuePart>, name: &str) -> Result<u8> {
     let value_part = try!(variables.get(name.into()).ok_or(SassError {
         kind: ErrorKind::ArgumentNotFound,
         message: format!("Could not find value for argument `{}`.", name),
@@ -36,7 +35,7 @@ fn variable_to_u8<'a>(variables: &HashMap<String, ValuePart<'a>>, name: &str) ->
     }
 }
 
-pub fn alpha_from_variables<'a>(variables: &HashMap<String, ValuePart<'a>>) -> Result<Option<f32>> {
+pub fn alpha_from_variables(variables: &HashMap<String, ValuePart>) -> Result<Option<f32>> {
     match variables.get("$alpha".into()) {
         Some(&ValuePart::Number(ref nv)) => Ok(Some(nv.scalar)),
         Some(ref other) => Err(SassError {
@@ -61,8 +60,8 @@ fn rgba_string(red: u8, green: u8, blue: u8, alpha: Option<f32>) -> String {
     )
 }
 
-impl<'a, 'b> ColorValue<'a> {
-    pub fn from_variables(variables: &HashMap<String, ValuePart<'a>>) -> Result<ColorValue<'a>> {
+impl ColorValue {
+    pub fn from_variables(variables: &HashMap<String, ValuePart>) -> Result<ColorValue> {
         let red = try!(variable_to_u8(&variables, "$red"));
         let green = try!(variable_to_u8(&variables, "$green"));
         let blue = try!(variable_to_u8(&variables, "$blue"));
@@ -74,11 +73,11 @@ impl<'a, 'b> ColorValue<'a> {
             blue: blue,
             alpha: alpha,
             computed: true,
-            original: Owned(rgba_string(red, green, blue, alpha)),
+            original: rgba_string(red, green, blue, alpha),
         })
     }
 
-    pub fn from_hex(hex: Cow<'a, str>) -> Result<ColorValue<'a>> {
+    pub fn from_hex(hex: String) -> Result<ColorValue> {
         if hex.len() == 4 {
             Ok(ColorValue {
                 red:   u8::from_str_radix(&hex[1..2], 16).unwrap() * 17,
@@ -105,15 +104,15 @@ impl<'a, 'b> ColorValue<'a> {
         }
     }
 
-    pub fn from_color_and_alpha(c: ColorValue<'a>, a: Option<f32>) -> ColorValue<'a> {
+    pub fn from_color_and_alpha(c: ColorValue, a: Option<f32>) -> ColorValue {
         ColorValue {
             red: c.red, green: c.green, blue: c.blue,
             alpha: a, computed: true,
-            original: Owned(rgba_string(c.red, c.green, c.blue, a)),
+            original: rgba_string(c.red, c.green, c.blue, a),
         }
     }
 
-    pub fn from_computed(r: u8, g: u8, b: u8) -> ColorValue<'a> {
+    pub fn from_computed(r: u8, g: u8, b: u8) -> ColorValue {
         ColorValue {
             red: r, green: g, blue: b,
             alpha: None,
@@ -122,16 +121,7 @@ impl<'a, 'b> ColorValue<'a> {
         }
     }
 
-    pub fn into_owned(self) -> ColorValue<'b> {
-        ColorValue {
-            red: self.red, green: self.green, blue: self.blue,
-            alpha: self.alpha,
-            computed: self.computed,
-            original: self.original.into_owned().into(),
-        }
-    }
-
-    pub fn apply_math(self, op: Op, nv: NumberValue<'a>) -> Result<ColorValue<'a>> {
+    pub fn apply_math(self, op: Op, nv: NumberValue) -> Result<ColorValue> {
         let num   = nv.scalar as u8;
         let red   = try!(saturating_math(op, self.red, num));
         let green = try!(saturating_math(op, self.green, num));
@@ -139,14 +129,14 @@ impl<'a, 'b> ColorValue<'a> {
         Ok(ColorValue::from_computed(red, green, blue))
     }
 
-    pub fn combine_colors(self, op: Op, c: ColorValue<'a>) -> Result<ColorValue<'a>> {
+    pub fn combine_colors(self, op: Op, c: ColorValue) -> Result<ColorValue> {
         let red   = try!(saturating_math(op, self.red, c.red));
         let green = try!(saturating_math(op, self.green, c.green));
         let blue  = try!(saturating_math(op, self.blue, c.blue));
         Ok(ColorValue::from_computed(red, green, blue))
     }
 
-    pub fn mix(&self, c: &ColorValue<'a>) -> Result<ColorValue<'a>> {
+    pub fn mix(&self, c: &ColorValue) -> Result<ColorValue> {
         let red   = (self.red + c.red) / 2;
         let green = (self.green + c.green) / 2;
         let blue  = (self.blue + c.blue) / 2;
@@ -353,7 +343,7 @@ fn hex_format(red: u8, green: u8, blue: u8) -> String {
     format!("#{:02x}{:02x}{:02x}", red, green, blue)
 }
 
-impl<'a> fmt::Display for ColorValue<'a> {
+impl fmt::Display for ColorValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let candidate = if self.computed {
             self.to_named_color()
@@ -373,11 +363,10 @@ mod tests {
     use super::*;
     use sass::number_value::NumberValue;
     use sass::op::Op;
-    use std::borrow::Cow::Borrowed;
 
     #[test]
     fn it_ignores_overflow_when_not_a_named_color() {
-        let c = ColorValue::from_hex(Borrowed("#ff0000")).unwrap();
+        let c = ColorValue::from_hex(String::from("#ff0000")).unwrap();
         let res = c.apply_math(Op::Plus, NumberValue::from_scalar(1.0)).unwrap();
         assert!(res.computed);
         assert_eq!("#ff0101", format!("{}", res));
@@ -391,8 +380,8 @@ mod tests {
 
     #[test]
     fn combining_colors_results_in_computed() {
-        let c = ColorValue::from_hex(Borrowed("#ff0000")).unwrap();
-        let d = ColorValue::from_hex(Borrowed("#00ff00")).unwrap();
+        let c = ColorValue::from_hex(String::from("#ff0000")).unwrap();
+        let d = ColorValue::from_hex(String::from("#00ff00")).unwrap();
         let res = c.combine_colors(Op::Plus, d).unwrap();
         assert!(res.computed);
         assert_eq!("yellow", format!("{}", res));

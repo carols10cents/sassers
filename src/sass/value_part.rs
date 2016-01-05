@@ -5,21 +5,20 @@ use sass::number_value::NumberValue;
 use sass::function::SassFunctionCall;
 
 use std::fmt;
-use std::borrow::Cow;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum ValuePart<'a> {
-    Variable(Cow<'a, str>),
-    String(Cow<'a, str>),
-    Number(NumberValue<'a>),
+pub enum ValuePart {
+    Variable(String),
+    String(String),
+    Number(NumberValue),
     Operator(Op),
-    List(Vec<ValuePart<'a>>),
-    Color(ColorValue<'a>),
-    Function(SassFunctionCall<'a>),
+    List(Vec<ValuePart>),
+    Color(ColorValue),
+    Function(SassFunctionCall),
 }
 
-impl<'a> ValuePart<'a> {
-    pub fn concat_into_list(left: ValuePart<'a>, right: ValuePart<'a>) -> Result<ValuePart<'static>> {
+impl ValuePart {
+    pub fn concat_into_list(left: ValuePart, right: ValuePart) -> Result<ValuePart> {
         let list_parts = match (left, right) {
             (ValuePart::List(mut l), ValuePart::List(r)) => {
                 l.extend(r);
@@ -38,19 +37,7 @@ impl<'a> ValuePart<'a> {
                 vec![l, r]
             },
         };
-        Ok(ValuePart::List(list_parts).into_owned().into())
-    }
-
-    pub fn into_owned(self) -> ValuePart<'static> {
-        match self {
-            ValuePart::Variable(name) => ValuePart::Variable(name.into_owned().into()),
-            ValuePart::String(str) => ValuePart::String(str.into_owned().into()),
-            ValuePart::Number(nv) => ValuePart::Number(nv.into_owned().into()),
-            ValuePart::List(v) => ValuePart::List(v.into_iter().map(|p| p.into_owned().into()).collect::<Vec<_>>()),
-            ValuePart::Operator(o) => ValuePart::Operator(o),
-            ValuePart::Color(c) => ValuePart::Color(c.into_owned().into()),
-            _ => unimplemented!(),
-        }
+        Ok(ValuePart::List(list_parts))
     }
 
     pub fn computed_number(&self) -> bool {
@@ -100,7 +87,7 @@ impl<'a> ValuePart<'a> {
     }
 }
 
-impl<'a> fmt::Display for ValuePart<'a> {
+impl fmt::Display for ValuePart {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             ValuePart::Variable(ref name) => write!(f, "{}", name),

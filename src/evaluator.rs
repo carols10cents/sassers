@@ -8,18 +8,18 @@ use std::collections::HashMap;
 use std::vec;
 
 #[derive(Debug)]
-pub struct Evaluator<'a, T> {
+pub struct Evaluator<T> {
     value_tokens: T,
-    value_stack: Vec<ValuePart<'a>>,
+    value_stack: Vec<ValuePart>,
     op_stack: Vec<Op>,
     paren_level: i32,
 }
 
-impl<'a> Evaluator<'a, ValueTokenizer<'a>> {
-    pub fn new_from_string(original: &'a str) -> Evaluator<'a, ValueTokenizer<'a>>
+impl Evaluator<ValueTokenizer> {
+    pub fn new_from_string(original: String) -> Evaluator<ValueTokenizer>
     {
         Evaluator {
-            value_tokens: ValueTokenizer::new(&original),
+            value_tokens: ValueTokenizer::new(original),
             value_stack: Vec::new(),
             op_stack: Vec::new(),
             paren_level: 0,
@@ -27,8 +27,8 @@ impl<'a> Evaluator<'a, ValueTokenizer<'a>> {
     }
 }
 
-impl<'a> Evaluator<'a, vec::IntoIter<Result<ValuePart<'a>>>> {
-    pub fn new(value_tokens: Vec<Result<ValuePart<'a>>>) -> Evaluator<'a, vec::IntoIter<Result<ValuePart<'a>>>>
+impl Evaluator<vec::IntoIter<Result<ValuePart>>> {
+    pub fn new(value_tokens: Vec<Result<ValuePart>>) -> Evaluator<vec::IntoIter<Result<ValuePart>>>
     {
         Evaluator {
             value_tokens: value_tokens.into_iter(),
@@ -39,10 +39,10 @@ impl<'a> Evaluator<'a, vec::IntoIter<Result<ValuePart<'a>>>> {
     }
 }
 
-impl<'a, T> Evaluator<'a, T>
-where T: Iterator<Item = Result<ValuePart<'a>>>
+impl<T> Evaluator<T>
+where T: Iterator<Item = Result<ValuePart>>
 {
-    pub fn evaluate(&mut self, variables: &HashMap<String, ValuePart<'a>>) -> Result<ValuePart<'a>> {
+    pub fn evaluate(&mut self, variables: &HashMap<String, ValuePart>) -> Result<ValuePart> {
         debug!("=====new evaluate call=======");
         let mut last_was_an_operator = true;
 
@@ -143,7 +143,7 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
         }
     }
 
-    fn push_on_list_on_value_stack(&mut self, push_val: ValuePart<'a>) -> Result<()> {
+    fn push_on_list_on_value_stack(&mut self, push_val: ValuePart) -> Result<()> {
         let list_starter = self.value_stack.pop().unwrap_or(ValuePart::List(vec![]));
         debug!("evaluate push_on_list_on_value_stack list_starter: {:?} push_val: {:?}", list_starter, push_val);
         let resulting_value = try!(ValuePart::concat_into_list(list_starter, push_val));
@@ -151,7 +151,7 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
         Ok(())
     }
 
-    fn pop_value(&mut self) -> Result<ValuePart<'a>> {
+    fn pop_value(&mut self) -> Result<ValuePart> {
         self.value_stack.pop().ok_or(SassError {
             kind: ErrorKind::ExpectedValue,
             message: String::from("Expected value to be on value stack but it was empty"),
@@ -185,27 +185,28 @@ mod tests {
     use sass::number_value::NumberValue;
     use sass::op::Op;
     use std::collections::HashMap;
-    use std::borrow::Cow::Borrowed;
 
     #[test]
     fn it_subtitutes_variable_values() {
         let mut vars = HashMap::new();
         vars.insert("$bar".to_string(), ValuePart::Number(NumberValue::from_scalar(4.0)));
         vars.insert("$quux".to_string(), ValuePart::List(vec![
-            ValuePart::Number(NumberValue::with_units(3.0, Borrowed("px"))),
-            ValuePart::Number(NumberValue::with_units(10.0, Borrowed("px"))),
+            ValuePart::Number(NumberValue::with_units(3.0, String::from("px"))),
+            ValuePart::Number(NumberValue::with_units(10.0, String::from("px"))),
         ]));
 
-        let answer = Evaluator::new_from_string("foo $bar 199.82 baz $quux").evaluate(&vars);
+        let answer = Evaluator::new_from_string(
+            String::from("foo $bar 199.82 baz $quux")
+        ).evaluate(&vars);
 
         assert_eq!(
             Ok(ValuePart::List(vec![
-                ValuePart::String(Borrowed("foo")),
+                ValuePart::String(String::from("foo")),
                 ValuePart::Number(NumberValue::computed(4.0)),
                 ValuePart::Number(NumberValue::from_scalar(199.82)),
-                ValuePart::String(Borrowed("baz")),
-                ValuePart::Number(NumberValue::with_units(3.0, Borrowed("px"))),
-                ValuePart::Number(NumberValue::with_units(10.0, Borrowed("px"))),
+                ValuePart::String(String::from("baz")),
+                ValuePart::Number(NumberValue::with_units(3.0, String::from("px"))),
+                ValuePart::Number(NumberValue::with_units(10.0, String::from("px"))),
             ])),
             answer
         );
@@ -213,17 +214,19 @@ mod tests {
 
     #[test]
     fn it_flattents_lists() {
-        let answer = Evaluator::new_from_string("80% 90%, 80% 90%, 80% 90%").evaluate(&HashMap::new());
+        let answer = Evaluator::new_from_string(
+            String::from("80% 90%, 80% 90%, 80% 90%")
+        ).evaluate(&HashMap::new());
         assert_eq!(
             Ok(ValuePart::List(vec![
-                ValuePart::Number(NumberValue { scalar: 80.0, unit: Some(Borrowed("%")), computed: false}),
-                ValuePart::Number(NumberValue { scalar: 90.0, unit: Some(Borrowed("%")), computed: false}),
+                ValuePart::Number(NumberValue { scalar: 80.0, unit: Some(String::from("%")), computed: false}),
+                ValuePart::Number(NumberValue { scalar: 90.0, unit: Some(String::from("%")), computed: false}),
                 ValuePart::Operator(Op::Comma),
-                ValuePart::Number(NumberValue { scalar: 80.0, unit: Some(Borrowed("%")), computed: false}),
-                ValuePart::Number(NumberValue { scalar: 90.0, unit: Some(Borrowed("%")), computed: false}),
+                ValuePart::Number(NumberValue { scalar: 80.0, unit: Some(String::from("%")), computed: false}),
+                ValuePart::Number(NumberValue { scalar: 90.0, unit: Some(String::from("%")), computed: false}),
                 ValuePart::Operator(Op::Comma),
-                ValuePart::Number(NumberValue { scalar: 80.0, unit: Some(Borrowed("%")), computed: false}),
-                ValuePart::Number(NumberValue { scalar: 90.0, unit: Some(Borrowed("%")), computed: false}),
+                ValuePart::Number(NumberValue { scalar: 80.0, unit: Some(String::from("%")), computed: false}),
+                ValuePart::Number(NumberValue { scalar: 90.0, unit: Some(String::from("%")), computed: false}),
             ])),
             answer
         );
@@ -234,7 +237,9 @@ mod tests {
         let mut vars = HashMap::new();
         vars.insert("$three".to_string(), ValuePart::Number(NumberValue::computed(3.0)));
 
-        let answer = Evaluator::new_from_string("15 / $three").evaluate(&vars);
+        let answer = Evaluator::new_from_string(
+            String::from("15 / $three")
+        ).evaluate(&vars);
 
         assert_eq!(
             Ok(ValuePart::Number(NumberValue::computed(5.0))),
@@ -247,7 +252,9 @@ mod tests {
         let mut vars = HashMap::new();
         vars.insert("$three".to_string(), ValuePart::Number(NumberValue::computed(3.0)));
 
-        let answer = Evaluator::new_from_string("15 / 5 / $three").evaluate(&vars);
+        let answer = Evaluator::new_from_string(
+            String::from("15 / 5 / $three")
+        ).evaluate(&vars);
 
         assert_eq!(
             Ok(ValuePart::Number(NumberValue::computed(1.0))),
@@ -260,10 +267,12 @@ mod tests {
         let mut vars = HashMap::new();
         vars.insert(
             "$three".to_string(),
-            ValuePart::Number(NumberValue::with_units(3.0, Borrowed("px")))
+            ValuePart::Number(NumberValue::with_units(3.0, String::from("px")))
         );
 
-        let answer = Evaluator::new_from_string("15px / $three").evaluate(&vars);
+        let answer = Evaluator::new_from_string(
+            String::from("15px / $three")
+        ).evaluate(&vars);
 
         assert_eq!(
             Ok(ValuePart::Number(NumberValue::computed(5.0))),
@@ -273,10 +282,12 @@ mod tests {
 
     #[test]
     fn it_concats_colors_and_literals() {
-        let answer = Evaluator::new_from_string("#abc + hello").evaluate(&HashMap::new());
+        let answer = Evaluator::new_from_string(
+            String::from("#abc + hello")
+        ).evaluate(&HashMap::new());
 
         assert_eq!(
-            Ok(ValuePart::String(Borrowed("#abchello"))),
+            Ok(ValuePart::String(String::from("#abchello"))),
             answer
         );
     }
@@ -289,7 +300,9 @@ mod tests {
             ValuePart::Number(NumberValue::computed(2.0)),
             ValuePart::Number(NumberValue::computed(3.0)),
         ]));
-        let answer = Evaluator::new_from_string("1/2, $stuff url(\"www.foo.com/blah.png\") blah blah").evaluate(&vars);
+        let answer = Evaluator::new_from_string(
+            String::from("1/2, $stuff url(\"www.foo.com/blah.png\") blah blah")
+        ).evaluate(&vars);
 
         assert_eq!(
             Ok(ValuePart::List(vec![
@@ -300,9 +313,9 @@ mod tests {
                 ValuePart::Number(NumberValue::computed(1.0)),
                 ValuePart::Number(NumberValue::computed(2.0)),
                 ValuePart::Number(NumberValue::computed(3.0)),
-                ValuePart::String(Borrowed("url(\"www.foo.com/blah.png\")")),
-                ValuePart::String(Borrowed("blah")),
-                ValuePart::String(Borrowed("blah")),
+                ValuePart::String(String::from("url(\"www.foo.com/blah.png\")")),
+                ValuePart::String(String::from("blah")),
+                ValuePart::String(String::from("blah")),
             ])),
             answer
         );
@@ -311,11 +324,11 @@ mod tests {
     #[test]
     fn it_handles_lots_of_parens_and_slashes() {
         let answer = Evaluator::new_from_string(
-            "1 + (2 + (3/4 + (4/5 6/7)))"
+            String::from("1 + (2 + (3/4 + (4/5 6/7)))")
         ).evaluate(&HashMap::new());
         assert_eq!(
             Ok(ValuePart::List(vec![
-                ValuePart::String(Borrowed("120.750.8")),
+                ValuePart::String(String::from("120.750.8")),
                 ValuePart::Number(NumberValue::from_scalar(6.0)),
                 ValuePart::Operator(Op::Slash),
                 ValuePart::Number(NumberValue::from_scalar(7.0)),
@@ -326,7 +339,7 @@ mod tests {
 
     #[test]
     fn it_handles_a_few_parens_and_slashes() {
-        let answer = Evaluator::new_from_string("(4/5 6/7)").evaluate(&HashMap::new());
+        let answer = Evaluator::new_from_string(String::from("(4/5 6/7)")).evaluate(&HashMap::new());
         assert_eq!(
             Ok(ValuePart::List(vec![
               ValuePart::Number(NumberValue::computed(0.8)),
@@ -355,7 +368,7 @@ mod tests {
     //
     //     assert_eq!(
     //         Ok(ValuePart::List(vec![
-    //             ValuePart::String(Borrowed("34")),
+    //             ValuePart::String(String::from("34")),
     //             ValuePart::Operator(Op::Comma),
     //             ValuePart::Number(NumberValue::computed(5.0)),
     //             ValuePart::Operator(Op::Comma),
@@ -378,13 +391,13 @@ mod tests {
     #[test]
     fn it_adds_with_units() {
         let answer = Evaluator::new(vec![
-            Ok(ValuePart::Number(NumberValue::with_units(1.0, Borrowed("px")))),
+            Ok(ValuePart::Number(NumberValue::with_units(1.0, String::from("px")))),
             Ok(ValuePart::Operator(Op::Plus)),
-            Ok(ValuePart::Number(NumberValue::with_units(2.0, Borrowed("px")))),
+            Ok(ValuePart::Number(NumberValue::with_units(2.0, String::from("px")))),
         ]).evaluate(&HashMap::new());
         assert_eq!(
             Ok(ValuePart::Number(
-                NumberValue { scalar: 3.0, unit: Some(Borrowed("px")), computed: true }
+                NumberValue { scalar: 3.0, unit: Some(String::from("px")), computed: true }
             )),
             answer
         );
@@ -428,7 +441,7 @@ mod tests {
         ]).evaluate(&HashMap::new());
 
         assert_eq!(Ok(ValuePart::List(vec![
-            ValuePart::String(Borrowed("23")),
+            ValuePart::String(String::from("23")),
             ValuePart::Number(NumberValue::from_scalar(4.0))
         ])), answer);
     }
@@ -448,7 +461,7 @@ mod tests {
         ]).evaluate(&HashMap::new());
 
         assert_eq!(Ok(ValuePart::List(vec![
-            ValuePart::String(Borrowed("23")),
+            ValuePart::String(String::from("23")),
             ValuePart::Number(NumberValue::from_scalar(4.0)),
             ValuePart::Number(NumberValue::from_scalar(5.0)),
         ])), answer);
@@ -469,7 +482,7 @@ mod tests {
         ]).evaluate(&HashMap::new());
 
         assert_eq!(Ok(ValuePart::List(vec![
-            ValuePart::String(Borrowed("10.5")),
+            ValuePart::String(String::from("10.5")),
             ValuePart::Number(NumberValue::from_scalar(2.0)),
             ValuePart::Number(NumberValue::from_scalar(3.0)),
         ])), answer);

@@ -49,7 +49,7 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
     let input_path = PathBuf::from(input_filename);
     let imports_resolved = try!(resolve_imports(&input_path));
 
-    let mut tokenizer = Tokenizer::new(&imports_resolved);
+    let mut tokenizer = Tokenizer::new(imports_resolved);
     let style = try!(style.parse());
 
     tokenizer.stream(output, style)

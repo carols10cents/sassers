@@ -9,16 +9,15 @@ use substituter::Substituter;
 use std::io::Write;
 
 #[derive(Debug)]
-pub struct Tokenizer<'a> {
-    toker: Toker<'a>,
+pub struct Tokenizer {
+    toker: Toker,
 }
 
-impl<'a> Tokenizer<'a> {
-    pub fn new(inner_str: &'a str) -> Tokenizer<'a> {
+impl Tokenizer {
+    pub fn new(inner_str: String) -> Tokenizer {
         Tokenizer {
             toker: Toker {
-                inner_str: &inner_str,
-                bytes: &inner_str.as_bytes(),
+                inner_str: inner_str,
                 offset: 0,
             },
         }
@@ -42,14 +41,14 @@ impl<'a> Tokenizer<'a> {
         self.toker.limit()
     }
 
-    fn parse(&mut self) -> Result<Option<Event<'a>>> {
+    fn parse(&mut self) -> Result<Option<Event>> {
         self.toker.skip_leading_whitespace();
 
         if self.toker.at_eof() {
             return Ok(None)
         }
 
-        let c = self.toker.bytes[self.toker.offset];
+        let c = self.toker.bytes()[self.toker.offset];
 
         if c == b'$' {
             return self.next_variable()
@@ -64,18 +63,14 @@ impl<'a> Tokenizer<'a> {
         }
 
         if c == b'/' && (self.toker.offset + 1) < self.limit() {
-            let d = self.toker.bytes[self.toker.offset + 1];
+            let d = self.toker.bytes()[self.toker.offset + 1];
             if d == b'*' {
                 return self.next_comment()
             }
         }
 
         let mut inner = InnerTokenizer {
-            toker: Toker {
-                inner_str: &self.toker.inner_str,
-                bytes: &self.toker.bytes,
-                offset: self.toker.offset,
-            },
+            toker: self.toker.clone(),
             state: State::InSelectors,
         };
         let ret = match inner.next_rule() {
@@ -92,11 +87,11 @@ impl<'a> Tokenizer<'a> {
         return ret
     }
 
-    fn next_comment(&mut self) -> Result<Option<Event<'a>>> {
+    fn next_comment(&mut self) -> Result<Option<Event>> {
         self.toker.next_comment()
     }
 
-    fn next_variable(&mut self) -> Result<Option<Event<'a>>> {
+    fn next_variable(&mut self) -> Result<Option<Event>> {
         let var_name = try!(self.toker.next_name());
 
         try!(self.toker.eat(":"));
@@ -113,7 +108,7 @@ impl<'a> Tokenizer<'a> {
         })))
     }
 
-    fn next_mixin(&mut self) -> Result<Option<Event<'a>>> {
+    fn next_mixin(&mut self) -> Result<Option<Event>> {
         match self.toker.next_mixin() {
             Ok(Some(Event::Mixin(sass_mixin))) => {
                  Ok(Some(Event::Mixin(sass_mixin)))
@@ -123,7 +118,7 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn next_mixin_call(&mut self) -> Result<Option<Event<'a>>> {
+    fn next_mixin_call(&mut self) -> Result<Option<Event>> {
         match self.toker.next_mixin_call() {
             Ok(Some(Event::MixinCall(sass_mixin_call))) => {
                  Ok(Some(Event::MixinCall(sass_mixin_call)))
@@ -134,10 +129,10 @@ impl<'a> Tokenizer<'a> {
     }
 }
 
-impl<'a> Iterator for Tokenizer<'a> {
-    type Item = Result<Event<'a>>;
+impl Iterator for Tokenizer {
+    type Item = Result<Event>;
 
-    fn next(&mut self) -> Option<Result<Event<'a>>> {
+    fn next(&mut self) -> Option<Result<Event>> {
         if !self.toker.at_eof() {
             return match self.parse() {
                 Ok(Some(t)) => Some(Ok(t)),

@@ -5,7 +5,6 @@ use sass::parameters::{SassParameter, SassArgument};
 use inner_tokenizer::{InnerTokenizer, State};
 
 use std::cmp;
-use std::borrow::Cow::{self, Borrowed};
 
 pub fn is_space(c: u8) -> bool {
     c == b' '
@@ -91,15 +90,18 @@ pub fn scan_trailing_whitespace(data: &str) -> usize {
 }
 
 #[derive(Debug, Clone)]
-pub struct Toker<'a> {
-    pub inner_str: &'a str,
-    pub bytes: &'a [u8],
+pub struct Toker {
+    pub inner_str: String,
     pub offset: usize,
 }
 
-impl<'a> Toker<'a> {
+impl Toker {
     pub fn limit(&self) -> usize {
         self.inner_str.len()
+    }
+
+    pub fn bytes(&self) -> &[u8] {
+        self.inner_str.as_bytes()
     }
 
     pub fn at_eof(&self) -> bool {
@@ -107,11 +109,11 @@ impl<'a> Toker<'a> {
     }
 
     pub fn curr_byte(&self) -> u8 {
-        self.bytes[self.offset]
+        self.bytes()[self.offset]
     }
 
     pub fn next_byte(&self) -> u8 {
-        self.bytes[self.offset + 1]
+        self.bytes()[self.offset + 1]
     }
 
     pub fn eat(&mut self, expected: &str) -> Result<bool> {
@@ -124,7 +126,7 @@ impl<'a> Toker<'a> {
                     message: format!(
                         "Expected: `{}`, Saw: `{}`",
                         expected,
-                        String::from_utf8_lossy(&self.bytes[
+                        String::from_utf8_lossy(&self.bytes()[
                             self.offset..cmp::min(self.offset + expected.len(), self.limit())
                         ])
                     ),
@@ -144,7 +146,7 @@ impl<'a> Toker<'a> {
                 ),
             })
         } else {
-            if self.bytes[self.offset] == *expected_char {
+            if self.bytes()[self.offset] == *expected_char {
                 self.offset += 1;
                 Ok(true)
             } else {
@@ -153,13 +155,13 @@ impl<'a> Toker<'a> {
         }
     }
 
-    pub fn scan_while_or_end<F>(&mut self, start: usize, f: F) -> usize
+    pub fn scan_while_or_end<F>(&self, start: usize, f: F) -> usize
             where F: Fn(u8) -> bool {
         let end = self.limit();
         self.scan_while(&self.inner_str[start..end], f)
     }
 
-    fn scan_while<F>(&mut self, data: &str, f: F) -> usize
+    fn scan_while<F>(&self, data: &str, f: F) -> usize
             where F: Fn(u8) -> bool {
         match data.as_bytes().iter().position(|&c| !f(c)) {
             Some(i) => i,
@@ -171,10 +173,10 @@ impl<'a> Toker<'a> {
        let mut i = self.offset;
 
        while i < self.limit() {
-           let c = self.bytes[i];
+           let c = self.bytes()[i];
            if is_ascii_whitespace(c) {
                i += self.scan_while_or_end(i, is_ascii_whitespace);
-           } else if c == b'/' && i + 1 < self.limit() && self.bytes[i + 1] == b'/' {
+           } else if c == b'/' && i + 1 < self.limit() && self.bytes()[i + 1] == b'/' {
                i += self.scan_while_or_end(i, isnt_newline);
            } else {
                self.offset = i;
@@ -184,7 +186,7 @@ impl<'a> Toker<'a> {
        self.offset = self.limit();
    }
 
-   pub fn next_name(&mut self) -> Result<Cow<'a, str>> {
+   pub fn next_name(&mut self) -> Result<String> {
        let name_beginning = self.offset;
        let mut i = name_beginning;
 
@@ -197,7 +199,7 @@ impl<'a> Toker<'a> {
            i += self.scan_while_or_end(i, valid_name_char);
            let name_end = i;
            self.offset = i;
-           return Ok(Borrowed(&self.inner_str[name_beginning..name_end]))
+           return Ok(String::from(&self.inner_str[name_beginning..name_end]))
        }
        self.offset = self.limit();
        Err(SassError {
@@ -208,7 +210,7 @@ impl<'a> Toker<'a> {
        })
    }
 
-   pub fn next_value(&mut self) -> Result<Cow<'a, str>> {
+   pub fn next_value(&mut self) -> Result<String> {
         let value_beginning = self.offset;
         let mut i = value_beginning;
 
@@ -216,7 +218,7 @@ impl<'a> Toker<'a> {
             i += self.scan_while_or_end(i, isnt_semicolon);
             let value_end = i;
             self.offset = i;
-            return Ok(Borrowed(&self.inner_str[value_beginning..value_end]))
+            return Ok(String::from(&self.inner_str[value_beginning..value_end]))
         }
         self.offset = self.limit();
         Err(SassError {
@@ -227,7 +229,7 @@ impl<'a> Toker<'a> {
         })
     }
 
-    pub fn tokenize_list<F>(&mut self, separator: &str, end_list: &str, valid_char_fn: &F) -> Result<Vec<Cow<'a, str>>>
+    pub fn tokenize_list<F>(&mut self, separator: &str, end_list: &str, valid_char_fn: &F) -> Result<Vec<String>>
         where F: Fn(u8) -> bool {
         let mut list = Vec::new();
 
@@ -242,7 +244,7 @@ impl<'a> Toker<'a> {
             let end = i - n;
 
             if end > beginning {
-                list.push(Borrowed(&self.inner_str[beginning..end]));
+                list.push(String::from(&self.inner_str[beginning..end]));
             }
 
             self.offset = i;
@@ -256,7 +258,7 @@ impl<'a> Toker<'a> {
         Ok(list)
     }
 
-    pub fn next_mixin(&mut self) -> Result<Option<Event<'a>>> {
+    pub fn next_mixin(&mut self) -> Result<Option<Event>> {
         let name_beginning = self.offset;
         let mut i = name_beginning;
 
@@ -275,11 +277,7 @@ impl<'a> Toker<'a> {
 
             let mut children = Vec::new();
             let mut inner = InnerTokenizer {
-                toker: Toker {
-                    inner_str: &self.inner_str,
-                    bytes: &self.bytes,
-                    offset: self.offset,
-                },
+                toker: self.clone(),
                 state: State::InProperties,
             };
             while let Some(Ok(e)) = inner.next() {
@@ -290,7 +288,7 @@ impl<'a> Toker<'a> {
             try!(self.eat("}"));
 
             let mixin = Event::Mixin(SassMixin {
-                name: Borrowed(&self.inner_str[name_beginning..name_end]),
+                name: String::from(&self.inner_str[name_beginning..name_end]),
                 parameters: parameters.into_iter().map(|a|
                     SassParameter::new(a)
                 ).collect(),
@@ -308,7 +306,7 @@ impl<'a> Toker<'a> {
         })
     }
 
-    pub fn next_mixin_call(&mut self) -> Result<Option<Event<'a>>> {
+    pub fn next_mixin_call(&mut self) -> Result<Option<Event>> {
         self.skip_leading_whitespace();
         let name_beginning = self.offset;
         let mut i = name_beginning;
@@ -316,7 +314,7 @@ impl<'a> Toker<'a> {
         while i < self.limit() {
             i += self.scan_while_or_end(i, valid_name_char);
             let name_end = i;
-            let name = Borrowed(&self.inner_str[name_beginning..name_end]);
+            let name = String::from(&self.inner_str[name_beginning..name_end]);
 
             self.offset = i;
 
@@ -347,7 +345,7 @@ impl<'a> Toker<'a> {
         })
     }
 
-    pub fn next_comment(&mut self) -> Result<Option<Event<'a>>> {
+    pub fn next_comment(&mut self) -> Result<Option<Event>> {
         let comment_body_beginning = self.offset;
         let mut i = comment_body_beginning + 2;
 
@@ -357,7 +355,7 @@ impl<'a> Toker<'a> {
 
             if self.eat("*/").is_ok() {
                 return Ok(Some(
-                    Event::Comment(Borrowed(
+                    Event::Comment(String::from(
                         &self.inner_str[comment_body_beginning..self.offset]
                     ))
                 ))

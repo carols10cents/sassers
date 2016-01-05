@@ -13,31 +13,31 @@ pub enum State {
 }
 
 #[derive(Debug)]
-pub struct InnerTokenizer<'a> {
-    pub toker: Toker<'a>,
+pub struct InnerTokenizer {
+    pub toker: Toker,
     pub state: State,
 }
 
-impl<'a> InnerTokenizer<'a> {
+impl InnerTokenizer {
 
     fn limit(&self) -> usize {
         self.toker.limit()
     }
 
-    fn parse(&mut self) -> Result<Option<Event<'a>>> {
+    fn parse(&mut self) -> Result<Option<Event>> {
         self.toker.skip_leading_whitespace();
 
         if self.toker.at_eof() {
             return Ok(None)
         }
 
-        let c = self.toker.bytes[self.toker.offset];
+        let c = self.toker.bytes()[self.toker.offset];
 
         if c == b'}' {
             return Ok(None)
         }
         if c == b'/' && (self.toker.offset + 1) < self.limit() {
-            let d = self.toker.bytes[self.toker.offset + 1];
+            let d = self.toker.bytes()[self.toker.offset + 1];
             if d == b'*' {
                 return self.toker.next_comment()
             }
@@ -50,16 +50,12 @@ impl<'a> InnerTokenizer<'a> {
         }
     }
 
-    pub fn next_rule(&mut self) -> Result<Option<Event<'a>>> {
+    pub fn next_rule(&mut self) -> Result<Option<Event>> {
         debug!("in next rule, offset {:?}", self.toker.offset);
         let mut current_sass_rule = SassRule::new();
         current_sass_rule.selectors = try!(self.selector_list());
         let mut inner = InnerTokenizer {
-            toker: Toker {
-                inner_str: &self.toker.inner_str,
-                bytes: &self.toker.bytes,
-                offset: self.toker.offset,
-            },
+            toker: self.toker.clone(),
             state: State::InProperties,
         };
         while let Some(Ok(e)) = inner.next() {
@@ -77,7 +73,7 @@ impl<'a> InnerTokenizer<'a> {
         Ok(Some(Event::Rule(current_sass_rule)))
     }
 
-    fn next_property(&mut self) -> Result<Option<Event<'a>>> {
+    fn next_property(&mut self) -> Result<Option<Event>> {
         self.toker.skip_leading_whitespace();
 
         if self.toker.at_eof() {
@@ -139,7 +135,7 @@ impl<'a> InnerTokenizer<'a> {
         }
     }
 
-    fn selector_list(&mut self) -> Result<Vec<SassSelector<'a>>> {
+    fn selector_list(&mut self) -> Result<Vec<SassSelector>> {
         let selectors = try!(self.toker.tokenize_list(",", "{", &valid_selector_char));
         self.state = State::InProperties;
 
@@ -147,10 +143,10 @@ impl<'a> InnerTokenizer<'a> {
     }
 }
 
-impl<'a> Iterator for InnerTokenizer<'a> {
-    type Item = Result<Event<'a>>;
+impl Iterator for InnerTokenizer {
+    type Item = Result<Event>;
 
-    fn next(&mut self) -> Option<Result<Event<'a>>> {
+    fn next(&mut self) -> Option<Result<Event>> {
         if !self.toker.at_eof() {
             return match self.parse() {
                 Ok(Some(t)) => Some(Ok(t)),

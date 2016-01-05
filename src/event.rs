@@ -5,22 +5,21 @@ use sass::mixin::{SassMixinCall, SassMixin};
 use sass::output_style::SassOutputStyle;
 use error::{SassError, ErrorKind, Result};
 
-use std::borrow::Cow;
 use std::io::Write;
 
 #[derive(Debug, Clone)]
-pub enum Event<'a> {
-    Property(Cow<'a, str>, ValuePart<'a>),
-    UnevaluatedProperty(Cow<'a, str>, Cow<'a, str>),
-    Comment(Cow<'a, str>),
-    Rule(SassRule<'a>),
-    Variable(SassVariable<'a>),
-    Mixin(SassMixin<'a>),
-    MixinCall(SassMixinCall<'a>),
-    List(Vec<Event<'a>>),
+pub enum Event {
+    Property(String, ValuePart),
+    UnevaluatedProperty(String, String),
+    Comment(String),
+    Rule(SassRule),
+    Variable(SassVariable),
+    Mixin(SassMixin),
+    MixinCall(SassMixinCall),
+    List(Vec<Event>),
 }
 
-impl<'a> Event<'a> {
+impl Event {
     pub fn stream<W: Write>(&self, output: &mut W, style: SassOutputStyle) -> Result<()> {
         match *self {
             Event::Rule(ref rule) => {

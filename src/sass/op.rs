@@ -4,7 +4,6 @@ use sass::color_value::ColorValue;
 use evaluator::Evaluator;
 
 use std::fmt;
-use std::borrow::Cow::*;
 use std::str::FromStr;
 use std::collections::HashMap;
 
@@ -40,7 +39,7 @@ impl FromStr for Op {
     }
 }
 
-impl<'a> fmt::Display for Op {
+impl fmt::Display for Op {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match *self {
             Op::Plus       => "+",
@@ -58,7 +57,7 @@ impl<'a> fmt::Display for Op {
 
 
 impl Op {
-    pub fn apply<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>, paren_level: i32) -> Result<ValuePart<'a>> {
+    pub fn apply(&self, first: ValuePart, second: ValuePart, paren_level: i32) -> Result<ValuePart> {
         match (self, second) {
             (&Op::Plus, s @ ValuePart::List(..)) => self.apply_list(first, s),
             (&Op::Plus, s @ ValuePart::String(..)) => {
@@ -77,7 +76,7 @@ impl Op {
         }
     }
 
-    fn force_list_collapse<'a>(&self, mut vp: ValuePart<'a>) -> Result<ValuePart<'a>> {
+    fn force_list_collapse(&self, mut vp: ValuePart) -> Result<ValuePart> {
         match vp {
             ValuePart::List(ref mut l) => {
                 if l.iter().any(|v| {
@@ -100,7 +99,7 @@ impl Op {
         }
     }
 
-    fn apply_list<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> Result<ValuePart<'a>> {
+    fn apply_list(&self, first: ValuePart, second: ValuePart) -> Result<ValuePart> {
         let first_collapsed  = try!(self.force_list_collapse(first));
         let second_collapsed = try!(self.force_list_collapse(second));
 
@@ -113,7 +112,7 @@ impl Op {
             },
             (ValuePart::List(mut flist), ValuePart::Number(snum)) => {
                 let new_last_item_value = format!("{}{}",
-                    flist.pop().unwrap_or(ValuePart::String(Borrowed(""))),
+                    flist.pop().unwrap_or(ValuePart::String(String::from(""))),
                     snum
                 );
                 let v = ValuePart::String(new_last_item_value.into());
@@ -137,7 +136,7 @@ impl Op {
         }
     }
 
-    fn apply_slash<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>, paren_level: i32) -> Result<ValuePart<'a>> {
+    fn apply_slash(&self, first: ValuePart, second: ValuePart, paren_level: i32) -> Result<ValuePart> {
         if paren_level == 0 {
             if first.computed_number() || second.computed_number() {
                 let first_collapsed  = try!(self.force_list_collapse(first));
@@ -165,7 +164,7 @@ impl Op {
         }
     }
 
-    fn apply_math<'a>(&self, first: ValuePart<'a>, second: ValuePart<'a>) -> Result<ValuePart<'a>> {
+    fn apply_math(&self, first: ValuePart, second: ValuePart) -> Result<ValuePart> {
         match (first, second) {
             (ValuePart::Number(f), ValuePart::Number(s)) => {
                 Ok(ValuePart::Number(try!(f.apply_math(*self, s))))
