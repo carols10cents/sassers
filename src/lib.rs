@@ -45,9 +45,9 @@ fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
     Ok(imports_resolved)
 }
 
-pub fn compile<W: Write>(inputfile: &str, output: &mut W, style: &str) -> Result<()> {
-    let inputpath = PathBuf::from(inputfile);
-    let imports_resolved = try!(resolve_imports(&inputpath));
+pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> Result<()> {
+    let input_path = PathBuf::from(input_filename);
+    let imports_resolved = try!(resolve_imports(&input_path));
 
     let mut tokenizer = Tokenizer::new(&imports_resolved);
     let style = try!(style.parse());

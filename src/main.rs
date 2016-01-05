@@ -28,10 +28,10 @@ Options:
         println!("{}", VERSION);
     } else {
         let style = args.get_str("-t");
-        let inputfile = args.get_str("<inputfile>");
-        debug!("input filename = {:?}", inputfile);
+        let input_filename = args.get_str("<inputfile>");
+        debug!("input filename = {:?}", input_filename);
 
-        sassers::compile(&inputfile, &mut std::io::stdout(), style).unwrap_or_else(|e| {
+        sassers::compile(input_filename, &mut std::io::stdout(), style).unwrap_or_else(|e| {
             println!("Compilation failed: {}", e.message);
         });
     }
