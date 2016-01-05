@@ -69,11 +69,11 @@ where T: Iterator<Item = Result<ValuePart<'a>>>
                     }
                     last_was_an_operator = false;
                 },
-                Ok(s @ ValuePart::String(..)) => {
+                Ok(ValuePart::String(s)) => {
                     if last_was_an_operator {
-                        self.value_stack.push(s);
+                        self.value_stack.push(ValuePart::String(s));
                     } else {
-                        let _ = self.push_on_list_on_value_stack(s);
+                        let _ = self.push_on_list_on_value_stack(ValuePart::String(s));
                     }
                     last_was_an_operator = false;
                 },
