@@ -19,16 +19,19 @@ pub struct ColorValue {
 
 fn variable_to_u8(variables: &HashMap<String, ValuePart>, name: &str) -> Result<u8> {
     let value_part = try!(variables.get(name.into()).ok_or(SassError {
+        offset: 0,
         kind: ErrorKind::ArgumentNotFound,
         message: format!("Could not find value for argument `{}`.", name),
     }));
     match *value_part {
         ValuePart::String(ref s) => s.parse().map_err(|_| SassError {
+            offset: 0,
             kind: ErrorKind::ParseError,
             message: format!("Could not parse `{}` into u8 for color value.", s),
         }),
         ValuePart::Number(ref nv) => Ok(nv.scalar as u8),
         ref other => Err(SassError {
+            offset: 0,
             kind: ErrorKind::UnexpectedValuePartType,
             message: format!("Cannot turn this ValuePart into a color: `{:?}`", other),
         })
@@ -39,6 +42,7 @@ pub fn alpha_from_variables(variables: &HashMap<String, ValuePart>) -> Result<Op
     match variables.get("$alpha".into()) {
         Some(&ValuePart::Number(ref nv)) => Ok(Some(nv.scalar)),
         Some(ref other) => Err(SassError {
+            offset: 0,
             kind: ErrorKind::UnexpectedValuePartType,
             message: format!("Cannot turn this ValuePart into a color alpha: `{:?}`", other),
         }),
@@ -98,6 +102,7 @@ impl ColorValue {
             })
         } else {
             Err(SassError {
+                offset: 0,
                 kind: ErrorKind::InvalidColor,
                 message: format!("Invalid hex color: {}", hex),
             })
@@ -329,6 +334,7 @@ fn saturating_math(op: Op, a: u8, b: u8) -> Result<u8> {
         Op::Slash   => cmp::max(cmp::min(a as i32 / b as i32, 255), 0) as u8,
         Op::Percent => cmp::max(cmp::min(a as i32 % b as i32, 255), 0) as u8,
         other => return Err(SassError {
+            offset: 0,
             kind: ErrorKind::InvalidOperator,
             message: format!(
                 "Cannot apply operator {:?} on color as math",

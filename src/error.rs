@@ -7,11 +7,16 @@ pub type Result<T> = result::Result<T, SassError>;
 pub struct SassError {
     pub message: String,
     pub kind: ErrorKind,
+    pub offset: usize,
 }
 
 impl From<io::Error> for SassError {
     fn from(err: io::Error) -> SassError {
-        SassError { message: format!("IO error! {}", err), kind: ErrorKind::IoError }
+        SassError {
+            offset: 0,
+            message: format!("IO error! {}", err),
+            kind: ErrorKind::IoError
+        }
     }
 }
 

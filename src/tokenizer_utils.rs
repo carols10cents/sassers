@@ -119,18 +119,26 @@ impl Toker {
     pub fn eat(&mut self, expected: &str) -> Result<bool> {
         let original_offset = self.offset;
         for c in expected.as_bytes().iter() {
-            if !try!(self.eatch(c)) {
-                self.offset = original_offset;
-                return Err(SassError {
-                    kind: ErrorKind::TokenizerError,
-                    message: format!(
-                        "Expected: `{}`, Saw: `{}`",
-                        expected,
-                        String::from_utf8_lossy(&self.bytes()[
-                            self.offset..cmp::min(self.offset + expected.len(), self.limit())
-                        ])
-                    ),
-                })
+            match self.eatch(c) {
+                Ok(true) => {},
+                Ok(false) => {
+                    let error_offset = self.offset;
+                    self.offset = original_offset;
+                    return Err(SassError {
+                        offset: error_offset,
+                        kind: ErrorKind::TokenizerError,
+                        message: format!(
+                            "Expected: `{}`, Saw: `{}`",
+                            expected,
+                            String::from_utf8_lossy(&self.bytes()[
+                                self.offset..cmp::min(self.offset + expected.len(), self.limit())
+                            ])
+                        ),
+                    })
+                }
+                Err(e) => {
+                    return Err(e)
+                },
             }
         }
         Ok(true)
@@ -138,7 +146,9 @@ impl Toker {
 
     fn eatch(&mut self, expected_char: &u8) -> Result<bool> {
         if self.at_eof() {
+            let error_offset = self.offset;
             Err(SassError {
+                offset: error_offset,
                 kind: ErrorKind::UnexpectedEof,
                 message: format!(
                     "Expected: `{}`; reached EOF instead.",
@@ -201,8 +211,10 @@ impl Toker {
            self.offset = i;
            return Ok(String::from(&self.inner_str[name_beginning..name_end]))
        }
+       let error_offset = self.offset;
        self.offset = self.limit();
        Err(SassError {
+           offset: error_offset,
            kind: ErrorKind::UnexpectedEof,
            message: String::from(
                "Expected a valid name; reached EOF instead."
@@ -220,8 +232,10 @@ impl Toker {
             self.offset = i;
             return Ok(String::from(&self.inner_str[value_beginning..value_end]))
         }
+        let error_offset = self.offset;
         self.offset = self.limit();
         Err(SassError {
+            offset: error_offset,
             kind: ErrorKind::UnexpectedEof,
             message: String::from(
                 "Expected a valid value; reached EOF instead."
@@ -297,8 +311,10 @@ impl Toker {
 
             return Ok(Some(mixin))
         }
+        let error_offset = self.offset;
         self.offset = self.limit();
         Err(SassError {
+            offset: error_offset,
             kind: ErrorKind::UnexpectedEof,
             message: String::from(
                 "Expected mixin declaration; reached EOF instead."
@@ -336,8 +352,10 @@ impl Toker {
             return Ok(Some(mixin_call))
 
         }
+        let error_offset = self.offset;
         self.offset = self.limit();
         Err(SassError {
+            offset: error_offset,
             kind: ErrorKind::UnexpectedEof,
             message: String::from(
                 "Expected mixin call; reached EOF instead."
@@ -363,8 +381,10 @@ impl Toker {
                 i += 1;
             }
         }
+        let error_offset = self.offset;
         self.offset = self.limit();
         Err(SassError {
+            offset: error_offset,
             kind: ErrorKind::UnexpectedEof,
             message: String::from(
                 "Expected comment; reached EOF instead."

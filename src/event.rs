@@ -45,6 +45,7 @@ impl Event {
                 Ok(())
             },
             ref other => return Err(SassError {
+                offset: 0,
                 kind: ErrorKind::UnexpectedTopLevelElement,
                 message: format!(
                     "Expceted one of Rule, Comment, or List at the top level of the file; got: `{:?}`",

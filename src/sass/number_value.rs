@@ -58,6 +58,7 @@ impl<'b> NumberValue {
                 match op {
                     Op::Slash => None, // Divide out the units
                     Op::Star => return Err(SassError {
+                        offset: 0,
                         kind: ErrorKind::InvalidSquareUnits,
                         message: format!(
                             "Multiplication of {:?} and {:?} would produce invalid squared units",
@@ -70,6 +71,7 @@ impl<'b> NumberValue {
             (None, None) => None,
             (other1, other2) => {
                 return Err(SassError {
+                    offset: 0,
                     kind: ErrorKind::IncompatibleUnits,
                     message: format!(
                         "Incompatible units: {:?} and {:?}",

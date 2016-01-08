@@ -20,6 +20,7 @@ impl FromStr for SassOutputStyle {
             "compact"    => Ok(SassOutputStyle::Compact),
             "debug"      => Ok(SassOutputStyle::Debug),
             style        => Err(SassError {
+                offset: 0,
                 kind: ErrorKind::InvalidOutputStyle,
                 message: format!("Unknown output style {:?}. Please specify one of nested, compressed, expanded, or compact.", style),
             }),

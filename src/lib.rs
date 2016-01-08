@@ -7,6 +7,7 @@ use std::fs::File;
 use std::io::Read;
 use regex::Regex;
 use std::io::Write;
+use std::cmp;
 
 mod error;
 mod evaluator;
@@ -18,7 +19,7 @@ mod tokenizer;
 mod tokenizer_utils;
 mod value_tokenizer;
 
-use error::Result;
+use error::{SassError, ErrorKind, Result};
 use tokenizer::Tokenizer;
 
 fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
@@ -48,9 +49,24 @@ fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
 pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> Result<()> {
     let input_path = PathBuf::from(input_filename);
     let imports_resolved = try!(resolve_imports(&input_path));
+    let max_offset = imports_resolved.len();
 
     let mut tokenizer = Tokenizer::new(imports_resolved);
     let style = try!(style.parse());
 
-    tokenizer.stream(output, style)
+    match tokenizer.stream(output, style) {
+        Err(sass_error) => {
+            let context_start = cmp::max(sass_error.offset - 20, 0);
+            let context_end = cmp::min(sass_error.offset + 20, max_offset);
+            Err(SassError {
+                message: format!("{}\nAt {}: `{}`",
+                    sass_error.message,
+                    sass_error.offset,
+                    &imports_resolved[context_start..context_end],
+                ),
+                ..sass_error
+            })
+        },
+        other => other,
+    }
 }

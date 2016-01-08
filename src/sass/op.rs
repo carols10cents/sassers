@@ -32,6 +32,7 @@ impl FromStr for Op {
             ")" => Ok(Op::RightParen),
             "," => Ok(Op::Comma),
             op  => Err(SassError {
+                offset: 0,
                 kind: ErrorKind::InvalidOperator,
                 message: format!("Invalid Operator: {}", op),
             }),
@@ -126,6 +127,7 @@ impl Op {
             },
             (unk_first, unk_second) => {
                 Err(SassError {
+                    offset: 0,
                     kind: ErrorKind::InvalidApplyListArgs,
                     message: format!(
                         "Invalid apply_list arguments:\n  first: {:?}\n  second: {:?}",
@@ -185,6 +187,7 @@ impl Op {
             },
             (f, s) => {
                 Err(SassError {
+                    offset: 0,
                     kind: ErrorKind::InvalidApplyMathArgs,
                     message: format!(
                         "Invalid apply math arguments:\n  first: {:?}\n  second: {:?}",
@@ -203,6 +206,7 @@ impl Op {
             Op::Slash   => first_num / second_num,
             Op::Percent => first_num % second_num,
             other => return Err(SassError {
+                offset: 0,
                 kind: ErrorKind::InvalidOperator,
                 message: format!(
                     "Cannot apply operator {:?} as math",

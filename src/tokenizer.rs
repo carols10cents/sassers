@@ -76,6 +76,7 @@ impl Tokenizer {
         let ret = match inner.next_rule() {
             Ok(Some(Event::Rule(rule))) => Ok(Some(Event::Rule(rule))),
             other => return Err(SassError {
+                offset: self.toker.offset,
                 kind: ErrorKind::TokenizerError,
                 message: format!(
                     "Expected sass rule from inner tokenizer, got: {:?}.",

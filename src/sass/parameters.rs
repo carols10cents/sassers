@@ -66,6 +66,7 @@ pub fn collate_args_parameters(
                 .or(arguments.get(i).and_then( |a| Some(a.value.clone()) ))
                 .or(p.clone().default.and_then( |d| Some(d) ))
                 .ok_or(SassError {
+                    offset: 0,
                     kind: ErrorKind::ExpectedMixinArgument,
                     message: format!("Cannot find argument for mixin parameter named `{}` in arguments `{:?}`", p.name, arguments),
                 }));

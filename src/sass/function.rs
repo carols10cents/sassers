@@ -68,6 +68,7 @@ impl SassFunctionCall {
                             Some(&ValuePart::Color(ref cv)) => Ok(cv.clone()),
                             Some(&ValuePart::String(ref s)) => ColorValue::from_hex(s.clone()),
                             ref e @ Some(_) | ref e @ None => Err(SassError {
+                                offset: 0,
                                 kind: ErrorKind::UnexpectedValuePartType,
                                 message: format!(
                                     "Expected color argument to rgba to be a color-like ValuePart; instead got `{:?}`", e
@@ -83,6 +84,7 @@ impl SassFunctionCall {
                         ))
                     },
                     _ => Err(SassError {
+                        offset: 0,
                         kind: ErrorKind::WrongNumberOfArguments,
                         message: format!(
                             "Expected 2 or 4 arguments to rgba; got {}: `{:?}`",
@@ -109,6 +111,7 @@ impl SassFunctionCall {
                     },
                     (other1, other2) => {
                         Err(SassError {
+                            offset: 0,
                             kind: ErrorKind::UnexpectedValuePartType,
                             message: format!(
                                 "Expected arguments to mix to be Colors; instead got `{:?}` and `{:?}`", other1, other2
@@ -131,6 +134,7 @@ impl SassFunctionCall {
                     Some(&ValuePart::Number(..)) => Ok(ValuePart::String(String::from("number"))),
                     Some(&ValuePart::String(..)) => Ok(ValuePart::String(String::from("string"))),
                     other => Err(SassError {
+                        offset: 0,
                         kind: ErrorKind::UnexpectedValuePartType,
                         message: format!(
                             "Don't know type-of value `{:?}`", other
@@ -149,6 +153,7 @@ impl SassFunctionCall {
             },
             _ => {
                 Err(SassError {
+                    offset: 0,
                     kind: ErrorKind::UnknownFunction,
                     message: format!(
                         "Don't know how to evaluate function `{}`",
@@ -180,6 +185,7 @@ impl SassFunctionCall {
                 Ok(ValuePart::Number(NumberValue::from_scalar(extracted as f32)))
             },
             ref e => Err(SassError {
+                offset: 0,
                 kind: ErrorKind::UnexpectedValuePartType,
                 message: format!(
                     "Expected color argument to {} to be a Color; instead got `{:?}`", which_color, e

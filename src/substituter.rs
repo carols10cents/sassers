@@ -104,6 +104,7 @@ impl<I> Substituter<I> {
                     let mixin_definition = match local_mixins.get(&mixin_name) {
                         Some(mixin) => mixin,
                         None => return Err(SassError {
+                            offset: 0,
                             kind: ErrorKind::ExpectedMixin,
                             message: format!("Cannot find mixin named `{}`", mixin_name),
                         }),
