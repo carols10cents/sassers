@@ -40,10 +40,10 @@ impl SassArgument {
     }
 }
 
-pub fn collate_args_parameters(
-    parameters: &Vec<SassParameter>,
-    arguments: &Vec<SassArgument>,
-    passed_variables: &HashMap<String, ValuePart>,
+pub fn collate_args_parameters<'a>(
+    parameters: &'a Vec<SassParameter>,
+    arguments: &'a Vec<SassArgument>,
+    passed_variables: &'a HashMap<String, ValuePart>,
 ) -> Result<HashMap<String, ValuePart>> {
 
     let mut named_arguments = HashMap::new();
@@ -64,17 +64,19 @@ pub fn collate_args_parameters(
         let replacement_value =
             try!(named_arguments.get(&p.name).and_then( |v| Some(v.to_string()) )
                 .or(arguments.get(i).and_then( |a| Some(a.value.clone()) ))
-                .or(p.clone().default.and_then( |d| Some(d) ))
+                .or(p.clone().default.and_then( |d| Some(d.clone()) ))
                 .ok_or(SassError {
                     offset: 0,
                     kind: ErrorKind::ExpectedMixinArgument,
                     message: format!("Cannot find argument for mixin parameter named `{}` in arguments `{:?}`", p.name, arguments),
                 }));
 
-        let mut ev = Evaluator::new_from_string(replacement_value);
+        let value_string = replacement_value;
+
+        let mut ev = Evaluator::new_from_string(&value_string);
         let ev_res = try!(ev.evaluate(&passed_variables));
 
-        replacements.insert(replacement_name, ev_res);
+        replacements.insert(replacement_name, ev_res.clone());
     }
 
     Ok(replacements)

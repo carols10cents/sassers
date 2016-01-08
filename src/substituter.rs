@@ -76,7 +76,7 @@ impl<I> Substituter<I> {
                     let mut lvs = self.variables.clone();
                     lvs.extend(local_variables.clone());
 
-                    let mut ev = Evaluator::new_from_string(value);
+                    let mut ev = Evaluator::new_from_string(&value);
                     let ev_res = try!(ev.evaluate(&lvs));
 
                     let resulting_property = Event::Property(
@@ -185,7 +185,7 @@ fn owned_evaluated_value(
     value: String,
     variables: &HashMap<String, ValuePart>) -> Result<ValuePart> {
 
-    let value_part = try!(Evaluator::new_from_string(value).evaluate(variables));
+    let value_part = try!(Evaluator::new_from_string(&value).evaluate(variables));
     Ok(match value_part {
         ValuePart::Number(nv) => ValuePart::Number(NumberValue { computed: true, ..nv }),
         other => other,

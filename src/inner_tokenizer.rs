@@ -13,12 +13,12 @@ pub enum State {
 }
 
 #[derive(Debug)]
-pub struct InnerTokenizer {
-    pub toker: Toker,
+pub struct InnerTokenizer<'a> {
+    pub toker: Toker<'a>,
     pub state: State,
 }
 
-impl InnerTokenizer {
+impl<'a> InnerTokenizer<'a> {
 
     fn limit(&self) -> usize {
         self.toker.limit()
@@ -143,7 +143,7 @@ impl InnerTokenizer {
     }
 }
 
-impl Iterator for InnerTokenizer {
+impl<'a> Iterator for InnerTokenizer<'a> {
     type Item = Result<Event>;
 
     fn next(&mut self) -> Option<Result<Event>> {

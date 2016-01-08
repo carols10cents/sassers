@@ -9,12 +9,12 @@ use substituter::Substituter;
 use std::io::Write;
 
 #[derive(Debug)]
-pub struct Tokenizer {
-    toker: Toker,
+pub struct Tokenizer<'a> {
+    toker: Toker<'a>,
 }
 
-impl Tokenizer {
-    pub fn new(inner_str: String) -> Tokenizer {
+impl<'a> Tokenizer<'a> {
+    pub fn new(inner_str: &str) -> Tokenizer {
         Tokenizer {
             toker: Toker {
                 inner_str: inner_str,
@@ -130,7 +130,7 @@ impl Tokenizer {
     }
 }
 
-impl Iterator for Tokenizer {
+impl<'a> Iterator for Tokenizer<'a> {
     type Item = Result<Event>;
 
     fn next(&mut self) -> Option<Result<Event>> {

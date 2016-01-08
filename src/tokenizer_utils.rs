@@ -90,12 +90,12 @@ pub fn scan_trailing_whitespace(data: &str) -> usize {
 }
 
 #[derive(Debug, Clone)]
-pub struct Toker {
-    pub inner_str: String,
+pub struct Toker<'a> {
+    pub inner_str: &'a str,
     pub offset: usize,
 }
 
-impl Toker {
+impl<'a> Toker<'a> {
     pub fn limit(&self) -> usize {
         self.inner_str.len()
     }

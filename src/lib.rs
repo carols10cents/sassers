@@ -19,7 +19,7 @@ mod tokenizer;
 mod tokenizer_utils;
 mod value_tokenizer;
 
-use error::{SassError, ErrorKind, Result};
+use error::{SassError, Result};
 use tokenizer::Tokenizer;
 
 fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
@@ -51,12 +51,12 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
     let imports_resolved = try!(resolve_imports(&input_path));
     let max_offset = imports_resolved.len();
 
-    let mut tokenizer = Tokenizer::new(imports_resolved);
+    let mut tokenizer = Tokenizer::new(&imports_resolved);
     let style = try!(style.parse());
 
     match tokenizer.stream(output, style) {
         Err(sass_error) => {
-            let context_start = cmp::max(sass_error.offset - 20, 0);
+            let context_start = sass_error.offset - cmp::min(sass_error.offset, 20);
             let context_end = cmp::min(sass_error.offset + 20, max_offset);
             Err(SassError {
                 message: format!("{}\nAt {}: `{}`",

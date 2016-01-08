@@ -9,12 +9,12 @@ use error::Result;
 use tokenizer_utils::*;
 
 #[derive(Debug)]
-pub struct ValueTokenizer {
-    toker: Toker,
+pub struct ValueTokenizer<'a> {
+    toker: Toker<'a>,
 }
 
-impl ValueTokenizer {
-    pub fn new(inner_str: String) -> ValueTokenizer {
+impl<'a> ValueTokenizer<'a> {
+    pub fn new(inner_str: &'a str) -> ValueTokenizer<'a> {
         ValueTokenizer {
             toker: Toker {
                 inner_str: inner_str,
@@ -107,7 +107,7 @@ impl ValueTokenizer {
     }
 }
 
-impl Iterator for ValueTokenizer {
+impl<'a> Iterator for ValueTokenizer<'a> {
     type Item = Result<ValuePart>;
 
     fn next(&mut self) -> Option<Result<ValuePart>> {
@@ -134,14 +134,14 @@ mod tests {
 
     #[test]
     fn it_returns_string_part() {
-        let mut vt = ValueTokenizer::new(String::from("foo"));
+        let mut vt = ValueTokenizer::new("foo");
         assert_eq!(Some(Ok(ValuePart::String(String::from("foo")))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_space_separated_string_parts() {
-        let mut vt = ValueTokenizer::new(String::from("foo bar"));
+        let mut vt = ValueTokenizer::new("foo bar");
         assert_eq!(Some(Ok(ValuePart::String(String::from("foo")))), vt.next());
         assert_eq!(Some(Ok(ValuePart::String(String::from("bar")))), vt.next());
         assert_eq!(None, vt.next());
@@ -149,14 +149,14 @@ mod tests {
 
     #[test]
     fn it_returns_variable() {
-        let mut vt = ValueTokenizer::new(String::from("$foo"));
+        let mut vt = ValueTokenizer::new("$foo");
         assert_eq!(Some(Ok(ValuePart::Variable(String::from("$foo")))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_variables_and_string_parts() {
-        let mut vt = ValueTokenizer::new(String::from("foo $bar baz $quux"));
+        let mut vt = ValueTokenizer::new("foo $bar baz $quux");
         assert_eq!(Some(Ok(ValuePart::String(String::from("foo")))), vt.next());
         assert_eq!(Some(Ok(ValuePart::Variable(String::from("$bar")))), vt.next());
         assert_eq!(Some(Ok(ValuePart::String(String::from("baz")))), vt.next());
@@ -166,14 +166,14 @@ mod tests {
 
     #[test]
     fn it_returns_number() {
-        let mut vt = ValueTokenizer::new(String::from("3"));
+        let mut vt = ValueTokenizer::new("3");
         assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(3.0)))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_two_numbers() {
-        let mut vt = ValueTokenizer::new(String::from("3 8.9"));
+        let mut vt = ValueTokenizer::new("3 8.9");
         assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(3.0)))), vt.next());
         assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(8.9)))), vt.next());
         assert_eq!(None, vt.next());
@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn it_returns_numbers_with_units() {
-        let mut vt = ValueTokenizer::new(String::from("3px"));
+        let mut vt = ValueTokenizer::new("3px");
         assert_eq!(
             Some(Ok(ValuePart::Number(NumberValue::with_units(3.0, String::from("px"))))),
             vt.next()
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn it_returns_numbers_with_units_but_not_parens() {
-        let mut vt = ValueTokenizer::new(String::from("(3px)"));
+        let mut vt = ValueTokenizer::new("(3px)");
         assert_eq!(Some(Ok(ValuePart::Operator(Op::LeftParen))), vt.next());
         assert_eq!(
             Some(Ok(ValuePart::Number(NumberValue::with_units(3.0, String::from("px"))))),
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn it_returns_numbers_with_percents_as_units() {
-        let mut vt = ValueTokenizer::new(String::from("10px 8%"));
+        let mut vt = ValueTokenizer::new("10px 8%");
         assert_eq!(
             Some(Ok(ValuePart::Number(NumberValue::with_units(10.0, String::from("px"))))),
             vt.next()
@@ -217,14 +217,14 @@ mod tests {
 
     #[test]
     fn it_returns_operator() {
-        let mut vt = ValueTokenizer::new(String::from("+"));
+        let mut vt = ValueTokenizer::new("+");
         assert_eq!(Some(Ok(ValuePart::Operator(Op::Plus))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_numbers_and_operators() {
-        let mut vt = ValueTokenizer::new(String::from("6 + 75.2"));
+        let mut vt = ValueTokenizer::new("6 + 75.2");
         assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(6.0)))), vt.next());
         assert_eq!(Some(Ok(ValuePart::Operator(Op::Plus))), vt.next());
         assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(75.2)))), vt.next());
@@ -233,7 +233,7 @@ mod tests {
 
     #[test]
     fn it_returns_numbers_and_operators_without_spaces() {
-        let mut vt = ValueTokenizer::new(String::from("6+75.2"));
+        let mut vt = ValueTokenizer::new("6+75.2");
         assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(6.0)))), vt.next());
         assert_eq!(Some(Ok(ValuePart::Operator(Op::Plus))), vt.next());
         assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(75.2)))), vt.next());
@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn it_does_stuff_with_parens() {
-        let mut vt = ValueTokenizer::new(String::from("2+(3 4)"));
+        let mut vt = ValueTokenizer::new("2+(3 4)");
         assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(2.0)))), vt.next());
         assert_eq!(Some(Ok(ValuePart::Operator(Op::Plus))), vt.next());
         assert_eq!(Some(Ok(ValuePart::Operator(Op::LeftParen))), vt.next());
@@ -254,7 +254,7 @@ mod tests {
 
     #[test]
     fn it_does_stuff_with_slash_separators() {
-        let mut vt = ValueTokenizer::new(String::from("15 / 3 / 5"));
+        let mut vt = ValueTokenizer::new("15 / 3 / 5");
         assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(15.0)))), vt.next());
         assert_eq!(Some(Ok(ValuePart::Operator(Op::Slash))), vt.next());
         assert_eq!(Some(Ok(ValuePart::Number(NumberValue::from_scalar(3.0)))), vt.next());
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn it_recognizes_hex() {
-        let mut vt = ValueTokenizer::new(String::from("#aabbcc"));
+        let mut vt = ValueTokenizer::new("#aabbcc");
         assert_eq!(
             Some(Ok(ValuePart::Color(ColorValue {
                 red: 170, green: 187, blue: 204, alpha: None,
@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn it_recognizes_short_hex() {
-        let mut vt = ValueTokenizer::new(String::from("#cba"));
+        let mut vt = ValueTokenizer::new("#cba");
         assert_eq!(
             Some(Ok(ValuePart::Color(ColorValue {
                 red: 204, green: 187, blue: 170, alpha: None,
@@ -291,7 +291,7 @@ mod tests {
 
     #[test]
     fn it_recognizes_hex_is_separate_from_parens() {
-        let mut vt = ValueTokenizer::new(String::from("#cba)"));
+        let mut vt = ValueTokenizer::new("#cba)");
         assert_eq!(
             Some(Ok(ValuePart::Color(ColorValue {
                 red: 204, green: 187, blue: 170, alpha: None,
@@ -305,7 +305,7 @@ mod tests {
 
     #[test]
     fn it_recognizes_rgb() {
-        let mut vt = ValueTokenizer::new(String::from("rgb(10,100,73)"));
+        let mut vt = ValueTokenizer::new("rgb(10,100,73)");
         assert_eq!(
             Some(Ok(ValuePart::Function(SassFunctionCall {
                 name: String::from("rgb"),
@@ -322,7 +322,7 @@ mod tests {
 
     #[test]
     fn it_recognizes_rgb_with_spaces() {
-        let mut vt = ValueTokenizer::new(String::from("rgb(10, 100, 73)"));
+        let mut vt = ValueTokenizer::new("rgb(10, 100, 73)");
         assert_eq!(
             Some(Ok(ValuePart::Function(SassFunctionCall {
                 name: String::from("rgb"),
@@ -339,7 +339,7 @@ mod tests {
 
     #[test]
     fn it_recognizes_rgb_with_named_arguments() {
-        let mut vt = ValueTokenizer::new(String::from("rgb(255, $blue: 0, $green: 255)"));
+        let mut vt = ValueTokenizer::new("rgb(255, $blue: 0, $green: 255)");
         assert_eq!(
             Some(Ok(ValuePart::Function(SassFunctionCall {
                 name: String::from("rgb"),
@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn it_recognizes_arbitrary_functions() {
-        let mut vt = ValueTokenizer::new(String::from("some-func(10, 73)"));
+        let mut vt = ValueTokenizer::new("some-func(10, 73)");
         assert_eq!(
             Some(Ok(ValuePart::Function(SassFunctionCall {
                 name: String::from("some-func"),

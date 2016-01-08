@@ -15,8 +15,8 @@ pub struct Evaluator<T> {
     paren_level: i32,
 }
 
-impl Evaluator<ValueTokenizer> {
-    pub fn new_from_string(original: String) -> Evaluator<ValueTokenizer>
+impl<'a> Evaluator<ValueTokenizer<'a>> {
+    pub fn new_from_string(original: &'a str) -> Evaluator<ValueTokenizer<'a>>
     {
         Evaluator {
             value_tokens: ValueTokenizer::new(original),
@@ -198,7 +198,7 @@ mod tests {
         ]));
 
         let answer = Evaluator::new_from_string(
-            String::from("foo $bar 199.82 baz $quux")
+            "foo $bar 199.82 baz $quux"
         ).evaluate(&vars);
 
         assert_eq!(
@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn it_flattents_lists() {
         let answer = Evaluator::new_from_string(
-            String::from("80% 90%, 80% 90%, 80% 90%")
+            "80% 90%, 80% 90%, 80% 90%"
         ).evaluate(&HashMap::new());
         assert_eq!(
             Ok(ValuePart::List(vec![
@@ -239,9 +239,7 @@ mod tests {
         let mut vars = HashMap::new();
         vars.insert("$three".to_string(), ValuePart::Number(NumberValue::computed(3.0)));
 
-        let answer = Evaluator::new_from_string(
-            String::from("15 / $three")
-        ).evaluate(&vars);
+        let answer = Evaluator::new_from_string("15 / $three").evaluate(&vars);
 
         assert_eq!(
             Ok(ValuePart::Number(NumberValue::computed(5.0))),
@@ -254,9 +252,7 @@ mod tests {
         let mut vars = HashMap::new();
         vars.insert("$three".to_string(), ValuePart::Number(NumberValue::computed(3.0)));
 
-        let answer = Evaluator::new_from_string(
-            String::from("15 / 5 / $three")
-        ).evaluate(&vars);
+        let answer = Evaluator::new_from_string("15 / 5 / $three").evaluate(&vars);
 
         assert_eq!(
             Ok(ValuePart::Number(NumberValue::computed(1.0))),
@@ -272,9 +268,7 @@ mod tests {
             ValuePart::Number(NumberValue::with_units(3.0, String::from("px")))
         );
 
-        let answer = Evaluator::new_from_string(
-            String::from("15px / $three")
-        ).evaluate(&vars);
+        let answer = Evaluator::new_from_string("15px / $three").evaluate(&vars);
 
         assert_eq!(
             Ok(ValuePart::Number(NumberValue::computed(5.0))),
@@ -284,9 +278,7 @@ mod tests {
 
     #[test]
     fn it_concats_colors_and_literals() {
-        let answer = Evaluator::new_from_string(
-            String::from("#abc + hello")
-        ).evaluate(&HashMap::new());
+        let answer = Evaluator::new_from_string("#abc + hello").evaluate(&HashMap::new());
 
         assert_eq!(
             Ok(ValuePart::String(String::from("#abchello"))),
@@ -303,7 +295,7 @@ mod tests {
             ValuePart::Number(NumberValue::computed(3.0)),
         ]));
         let answer = Evaluator::new_from_string(
-            String::from("1/2, $stuff url(\"www.foo.com/blah.png\") blah blah")
+            "1/2, $stuff url(\"www.foo.com/blah.png\") blah blah"
         ).evaluate(&vars);
 
         assert_eq!(
@@ -326,7 +318,7 @@ mod tests {
     #[test]
     fn it_handles_lots_of_parens_and_slashes() {
         let answer = Evaluator::new_from_string(
-            String::from("1 + (2 + (3/4 + (4/5 6/7)))")
+            "1 + (2 + (3/4 + (4/5 6/7)))"
         ).evaluate(&HashMap::new());
         assert_eq!(
             Ok(ValuePart::List(vec![
@@ -341,7 +333,7 @@ mod tests {
 
     #[test]
     fn it_handles_a_few_parens_and_slashes() {
-        let answer = Evaluator::new_from_string(String::from("(4/5 6/7)")).evaluate(&HashMap::new());
+        let answer = Evaluator::new_from_string("(4/5 6/7)").evaluate(&HashMap::new());
         assert_eq!(
             Ok(ValuePart::List(vec![
               ValuePart::Number(NumberValue::computed(0.8)),
