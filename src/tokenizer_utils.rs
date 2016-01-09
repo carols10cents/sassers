@@ -265,7 +265,15 @@ impl<'a> Toker<'a> {
             if self.eat(end_list).is_ok() {
                 break;
             } else {
-                try!(self.eat(separator));
+                match self.eat(separator) {
+                    Err(e) => {
+                        return Err(SassError {
+                            message: format!("While tokenizing list with separator `{}` and end list `{}`:\n{}", separator, end_list, e.message),
+                            ..e
+                        })
+                    }
+                    _ => {},
+                }
             }
         }
 

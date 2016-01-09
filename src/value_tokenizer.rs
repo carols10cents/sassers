@@ -5,7 +5,7 @@ use sass::function::SassFunctionCall;
 use sass::parameters::SassArgument;
 use sass::op::Op;
 
-use error::Result;
+use error::{SassError, Result};
 use tokenizer_utils::*;
 
 #[derive(Debug)]
@@ -84,7 +84,15 @@ impl<'a> ValueTokenizer<'a> {
 
             if self.toker.eat("(").is_ok() {
                 let name = String::from(&self.toker.inner_str[start..i]);
-                let arguments = try!(self.toker.tokenize_list(",", ")", &valid_mixin_arg_char));
+                let arguments = match self.toker.tokenize_list(",", ")", &valid_mixin_arg_char) {
+                    Ok(args) => args,
+                    Err(e) => {
+                        return Err(SassError {
+                            message: format!("Parsing arguments for function {}\n{}", name, e.message),
+                            ..e
+                        })
+                    }
+                };
 
                 if name == "url" {
                     Some(ValuePart::String(
