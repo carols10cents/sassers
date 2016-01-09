@@ -15,7 +15,7 @@ pub fn isnt_space(c: u8) -> bool {
 }
 
 pub fn is_ascii_whitespace(c: u8) -> bool {
-   is_newline(c) || is_ascii_whitespace_no_nl(c)
+    is_newline(c) || is_ascii_whitespace_no_nl(c)
 }
 
 pub fn is_ascii_whitespace_no_nl(c: u8) -> bool {
@@ -179,50 +179,52 @@ impl<'a> Toker<'a> {
         }
     }
 
-   pub fn skip_leading_whitespace(&mut self) {
-       let mut i = self.offset;
+    pub fn skip_leading_whitespace(&mut self) {
+        let mut i = self.offset;
 
-       while i < self.limit() {
-           let c = self.bytes()[i];
-           if is_ascii_whitespace(c) {
-               i += self.scan_while_or_end(i, is_ascii_whitespace);
-           } else if c == b'/' && i + 1 < self.limit() && self.bytes()[i + 1] == b'/' {
-               i += self.scan_while_or_end(i, isnt_newline);
-           } else {
-               self.offset = i;
-               return
-           }
-       }
-       self.offset = self.limit();
-   }
+        while i < self.limit() {
+            let c = self.bytes()[i];
+            if is_ascii_whitespace(c) {
+                i += self.scan_while_or_end(i, is_ascii_whitespace);
+            } else if c == b'/' && i + 1 < self.limit() && self.bytes()[i + 1] == b'/' {
+                i += self.scan_while_or_end(i, isnt_newline);
+            } else {
+                self.offset = i;
+                return
+            }
+        }
+        self.offset = self.limit();
+    }
 
-   pub fn next_name(&mut self) -> Result<String> {
-       let name_beginning = self.offset;
-       let mut i = name_beginning;
+    pub fn next_name(&mut self) -> Result<String> {
+        debug!("next_name, offset {:?}", self.offset);
+        let name_beginning = self.offset;
+        let mut i = name_beginning;
 
-       // Colons are valid at the beginning of a name
-       if self.eat(":").is_ok() {
-           i = self.offset;
-       }
+        // Colons are valid at the beginning of a name
+        if self.eat(":").is_ok() {
+            i = self.offset;
+        }
 
-       while i < self.limit() {
-           i += self.scan_while_or_end(i, valid_name_char);
-           let name_end = i;
-           self.offset = i;
-           return Ok(String::from(&self.inner_str[name_beginning..name_end]))
-       }
-       let error_offset = self.offset;
-       self.offset = self.limit();
-       Err(SassError {
-           offset: error_offset,
-           kind: ErrorKind::UnexpectedEof,
-           message: String::from(
-               "Expected a valid name; reached EOF instead."
-           ),
-       })
-   }
+        while i < self.limit() {
+            i += self.scan_while_or_end(i, valid_name_char);
+            let name_end = i;
+            self.offset = i;
+            return Ok(String::from(&self.inner_str[name_beginning..name_end]))
+        }
+        let error_offset = self.offset;
+        self.offset = self.limit();
+        Err(SassError {
+            offset: error_offset,
+            kind: ErrorKind::UnexpectedEof,
+            message: String::from(
+                "Expected a valid name; reached EOF instead."
+            ),
+        })
+    }
 
-   pub fn next_value(&mut self) -> Result<String> {
+    pub fn next_value(&mut self) -> Result<String> {
+        debug!("next_name, offset {:?}", self.offset);
         let value_beginning = self.offset;
         let mut i = value_beginning;
 
@@ -281,6 +283,7 @@ impl<'a> Toker<'a> {
     }
 
     pub fn next_mixin(&mut self) -> Result<Option<Event>> {
+        debug!("next_mixin, offset {:?}", self.offset);
         let name_beginning = self.offset;
         let mut i = name_beginning;
 
@@ -331,6 +334,7 @@ impl<'a> Toker<'a> {
     }
 
     pub fn next_mixin_call(&mut self) -> Result<Option<Event>> {
+        debug!("next_mixin_call, offset {:?}", self.offset);
         self.skip_leading_whitespace();
         let name_beginning = self.offset;
         let mut i = name_beginning;
@@ -372,6 +376,7 @@ impl<'a> Toker<'a> {
     }
 
     pub fn next_comment(&mut self) -> Result<Option<Event>> {
+        debug!("next_comment, offset {:?}", self.offset);
         let comment_body_beginning = self.offset;
         let mut i = comment_body_beginning + 2;
 

@@ -89,10 +89,12 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn next_comment(&mut self) -> Result<Option<Event>> {
+        debug!("next_comment");
         self.toker.next_comment()
     }
 
     fn next_variable(&mut self) -> Result<Option<Event>> {
+        debug!("next_variable");
         let var_name = try!(self.toker.next_name());
 
         try!(self.toker.eat(":"));
@@ -110,6 +112,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn next_mixin(&mut self) -> Result<Option<Event>> {
+        debug!("next_mixin");
         match self.toker.next_mixin() {
             Ok(Some(Event::Mixin(sass_mixin))) => {
                  Ok(Some(Event::Mixin(sass_mixin)))
@@ -120,6 +123,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn next_mixin_call(&mut self) -> Result<Option<Event>> {
+        debug!("next_mixin_call");
         match self.toker.next_mixin_call() {
             Ok(Some(Event::MixinCall(sass_mixin_call))) => {
                  Ok(Some(Event::MixinCall(sass_mixin_call)))

@@ -51,7 +51,7 @@ impl<'a> InnerTokenizer<'a> {
     }
 
     pub fn next_rule(&mut self) -> Result<Option<Event>> {
-        debug!("in next rule, offset {:?}", self.toker.offset);
+        debug!("next_rule, offset {:?}", self.toker.offset);
         let mut current_sass_rule = SassRule::new();
         current_sass_rule.selectors = try!(self.selector_list());
         let mut inner = InnerTokenizer {
@@ -74,6 +74,7 @@ impl<'a> InnerTokenizer<'a> {
     }
 
     fn next_property(&mut self) -> Result<Option<Event>> {
+        debug!("next_property, offset {:?}", self.toker.offset);
         self.toker.skip_leading_whitespace();
 
         if self.toker.at_eof() {
