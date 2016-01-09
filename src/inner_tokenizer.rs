@@ -120,10 +120,12 @@ impl<'a> InnerTokenizer<'a> {
 
         let prop_value = try!(self.toker.next_value());
 
+        debug!("prop_value = {:?}", prop_value);
+
         try!(self.toker.eat(";"));
         self.toker.skip_leading_whitespace();
 
-        if prop_name.as_bytes()[0] == b'$' {
+        if prop_name.value.as_bytes()[0] == b'$' {
             Ok(Some(Event::Variable(SassVariable {
                 name:  prop_name,
                 value: prop_value,

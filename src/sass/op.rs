@@ -2,6 +2,7 @@ use error::{Result, SassError, ErrorKind};
 use sass::value_part::ValuePart;
 use sass::color_value::ColorValue;
 use evaluator::Evaluator;
+use token::Token;
 
 use std::fmt;
 use std::str::FromStr;
@@ -62,7 +63,12 @@ impl Op {
         match (self, second) {
             (&Op::Plus, s @ ValuePart::List(..)) => self.apply_list(first, s),
             (&Op::Plus, s @ ValuePart::String(..)) => {
-                Ok(ValuePart::String(format!("{}{}", first, s).into()))
+                Ok(ValuePart::String(
+                    Token {
+                        value: format!("{}{}", first, s).into(),
+                        offset: first.offset(),
+                    }
+                ))
             },
             (&Op::Slash, s) => self.apply_slash(first, s, paren_level),
             (&Op::Comma, s) => {
@@ -77,7 +83,8 @@ impl Op {
         }
     }
 
-    fn force_list_collapse(&self, mut vp: ValuePart) -> Result<ValuePart> {
+    fn force_list_collapse(&self, bvp: &ValuePart) -> Result<ValuePart> {
+        let mut vp = bvp.clone();
         match vp {
             ValuePart::List(ref mut l) => {
                 if l.iter().any(|v| {
@@ -89,6 +96,7 @@ impl Op {
                     let mut ve = vec![ValuePart::Operator(Op::LeftParen)];
                     l.push(ValuePart::Operator(Op::RightParen));
                     ve.append(l);
+                    debug!("Evaluator::new_from_string(&value_string)");
                     Evaluator::new(
                         ve.into_iter().map(|v| Ok(v)).collect::<Vec<_>>()
                     ).evaluate(&HashMap::new())
@@ -101,22 +109,32 @@ impl Op {
     }
 
     fn apply_list(&self, first: ValuePart, second: ValuePart) -> Result<ValuePart> {
-        let first_collapsed  = try!(self.force_list_collapse(first));
-        let second_collapsed = try!(self.force_list_collapse(second));
+        let first_collapsed  = try!(self.force_list_collapse(&first));
+        let second_collapsed = try!(self.force_list_collapse(&second));
 
         match (first_collapsed, second_collapsed) {
             (ValuePart::Number(fnum), ValuePart::List(mut slist)) => {
                 let new_first_item_value = format!("{}{}", fnum, slist.remove(0));
-                let v = ValuePart::String(new_first_item_value.into());
+                let v = ValuePart::String(Token {
+                    value: new_first_item_value.into(),
+                    offset: first.offset(),
+                });
 
                 ValuePart::concat_into_list(v, ValuePart::List(slist))
             },
             (ValuePart::List(mut flist), ValuePart::Number(snum)) => {
+                let list_item = flist.pop().unwrap_or(ValuePart::String(Token{
+                    value: String::from(""),
+                    offset: None,
+                }));
                 let new_last_item_value = format!("{}{}",
-                    flist.pop().unwrap_or(ValuePart::String(String::from(""))),
+                    list_item,
                     snum
                 );
-                let v = ValuePart::String(new_last_item_value.into());
+                let v = ValuePart::String(Token {
+                    value: new_last_item_value.into(),
+                    offset: list_item.offset(),
+                });
                 ValuePart::concat_into_list(ValuePart::List(flist), v)
             },
             (f @ ValuePart::List(..), s @ ValuePart::List(..)) => {
@@ -141,8 +159,8 @@ impl Op {
     fn apply_slash(&self, first: ValuePart, second: ValuePart, paren_level: i32) -> Result<ValuePart> {
         if paren_level == 0 {
             if first.computed_number() || second.computed_number() {
-                let first_collapsed  = try!(self.force_list_collapse(first));
-                let second_collapsed = try!(self.force_list_collapse(second));
+                let first_collapsed  = try!(self.force_list_collapse(&first));
+                let second_collapsed = try!(self.force_list_collapse(&second));
 
                 self.apply_math(first_collapsed, second_collapsed)
             } else {

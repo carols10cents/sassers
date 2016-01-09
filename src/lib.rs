@@ -15,6 +15,7 @@ mod event;
 mod inner_tokenizer;
 mod sass;
 mod substituter;
+mod token;
 mod tokenizer;
 mod tokenizer_utils;
 mod value_tokenizer;

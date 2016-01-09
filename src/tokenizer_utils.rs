@@ -3,6 +3,7 @@ use event::Event;
 use sass::mixin::{SassMixin, SassMixinCall};
 use sass::parameters::{SassParameter, SassArgument};
 use inner_tokenizer::{InnerTokenizer, State};
+use token::Token;
 
 use std::cmp;
 
@@ -196,7 +197,7 @@ impl<'a> Toker<'a> {
         self.offset = self.limit();
     }
 
-    pub fn next_name(&mut self) -> Result<String> {
+    pub fn next_name(&mut self) -> Result<Token> {
         debug!("next_name, offset {:?}", self.offset);
         let name_beginning = self.offset;
         let mut i = name_beginning;
@@ -210,7 +211,10 @@ impl<'a> Toker<'a> {
             i += self.scan_while_or_end(i, valid_name_char);
             let name_end = i;
             self.offset = i;
-            return Ok(String::from(&self.inner_str[name_beginning..name_end]))
+            return Ok(Token {
+                value: String::from(&self.inner_str[name_beginning..name_end]),
+                offset: Some(name_beginning),
+            })
         }
         let error_offset = self.offset;
         self.offset = self.limit();
@@ -223,7 +227,7 @@ impl<'a> Toker<'a> {
         })
     }
 
-    pub fn next_value(&mut self) -> Result<String> {
+    pub fn next_value(&mut self) -> Result<Token> {
         debug!("next_name, offset {:?}", self.offset);
         let value_beginning = self.offset;
         let mut i = value_beginning;
@@ -232,7 +236,10 @@ impl<'a> Toker<'a> {
             i += self.scan_while_or_end(i, isnt_semicolon);
             let value_end = i;
             self.offset = i;
-            return Ok(String::from(&self.inner_str[value_beginning..value_end]))
+            return Ok(Token {
+                value: String::from(&self.inner_str[value_beginning..value_end]),
+                offset: Some(value_beginning),
+            })
         }
         let error_offset = self.offset;
         self.offset = self.limit();
@@ -245,7 +252,7 @@ impl<'a> Toker<'a> {
         })
     }
 
-    pub fn tokenize_list<F>(&mut self, separator: &str, end_list: &str, valid_char_fn: &F) -> Result<Vec<String>>
+    pub fn tokenize_list<F>(&mut self, separator: &str, end_list: &str, valid_char_fn: &F) -> Result<Vec<Token>>
         where F: Fn(u8) -> bool {
         let mut list = Vec::new();
 
@@ -260,7 +267,10 @@ impl<'a> Toker<'a> {
             let end = i - n;
 
             if end > beginning {
-                list.push(String::from(&self.inner_str[beginning..end]));
+                list.push(Token {
+                    value: String::from(&self.inner_str[beginning..end]),
+                    offset: Some(beginning),
+                });
             }
 
             self.offset = i;

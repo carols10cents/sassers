@@ -2,6 +2,7 @@ use error::{SassError, ErrorKind, Result};
 use sass::op::Op;
 use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
+use token::Token;
 
 use std::fmt;
 use std::cmp;
@@ -17,17 +18,21 @@ pub struct ColorValue {
     pub original: String,
 }
 
-fn variable_to_u8(variables: &HashMap<String, ValuePart>, name: &str) -> Result<u8> {
-    let value_part = try!(variables.get(name.into()).ok_or(SassError {
+fn variable_to_u8(variables: &HashMap<Token, ValuePart>, name: &str) -> Result<u8> {
+    let name_token = Token {
+        value: name.into(),
+        offset: None,
+    };
+    let value_part = try!(variables.get(&name_token).ok_or(SassError {
         offset: 0,
         kind: ErrorKind::ArgumentNotFound,
         message: format!("Could not find value for argument `{}`.", name),
     }));
     match *value_part {
-        ValuePart::String(ref s) => s.parse().map_err(|_| SassError {
+        ValuePart::String(ref t) => t.value.parse().map_err(|_| SassError {
             offset: 0,
             kind: ErrorKind::ParseError,
-            message: format!("Could not parse `{}` into u8 for color value.", s),
+            message: format!("Could not parse `{}` into u8 for color value.", t),
         }),
         ValuePart::Number(ref nv) => Ok(nv.scalar as u8),
         ref other => Err(SassError {
@@ -38,8 +43,12 @@ fn variable_to_u8(variables: &HashMap<String, ValuePart>, name: &str) -> Result<
     }
 }
 
-pub fn alpha_from_variables(variables: &HashMap<String, ValuePart>) -> Result<Option<f32>> {
-    match variables.get("$alpha".into()) {
+pub fn alpha_from_variables(variables: &HashMap<Token, ValuePart>) -> Result<Option<f32>> {
+    let alpha_token = Token {
+        value: "$alpha".into(),
+        offset: None,
+    };
+    match variables.get(&alpha_token) {
         Some(&ValuePart::Number(ref nv)) => Ok(Some(nv.scalar)),
         Some(ref other) => Err(SassError {
             offset: 0,
@@ -65,7 +74,7 @@ fn rgba_string(red: u8, green: u8, blue: u8, alpha: Option<f32>) -> String {
 }
 
 impl ColorValue {
-    pub fn from_variables(variables: &HashMap<String, ValuePart>) -> Result<ColorValue> {
+    pub fn from_variables(variables: &HashMap<Token, ValuePart>) -> Result<ColorValue> {
         let red = try!(variable_to_u8(&variables, "$red"));
         let green = try!(variable_to_u8(&variables, "$green"));
         let blue = try!(variable_to_u8(&variables, "$blue"));
@@ -81,7 +90,8 @@ impl ColorValue {
         })
     }
 
-    pub fn from_hex(hex: String) -> Result<ColorValue> {
+    pub fn from_hex(hex_token: Token) -> Result<ColorValue> {
+        let hex = hex_token.value;
         if hex.len() == 4 {
             Ok(ColorValue {
                 red:   u8::from_str_radix(&hex[1..2], 16).unwrap() * 17,
@@ -372,7 +382,7 @@ mod tests {
 
     #[test]
     fn it_ignores_overflow_when_not_a_named_color() {
-        let c = ColorValue::from_hex(String::from("#ff0000")).unwrap();
+        let c = ColorValue::from_hex("#ff0000".into()).unwrap();
         let res = c.apply_math(Op::Plus, NumberValue::from_scalar(1.0)).unwrap();
         assert!(res.computed);
         assert_eq!("#ff0101", format!("{}", res));
@@ -386,8 +396,8 @@ mod tests {
 
     #[test]
     fn combining_colors_results_in_computed() {
-        let c = ColorValue::from_hex(String::from("#ff0000")).unwrap();
-        let d = ColorValue::from_hex(String::from("#00ff00")).unwrap();
+        let c = ColorValue::from_hex("#ff0000".into()).unwrap();
+        let d = ColorValue::from_hex("#00ff00".into()).unwrap();
         let res = c.combine_colors(Op::Plus, d).unwrap();
         assert!(res.computed);
         assert_eq!("yellow", format!("{}", res));

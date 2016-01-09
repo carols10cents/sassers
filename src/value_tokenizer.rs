@@ -4,6 +4,7 @@ use sass::value_part::ValuePart;
 use sass::function::SassFunctionCall;
 use sass::parameters::SassArgument;
 use sass::op::Op;
+use token::Token;
 
 use error::{SassError, Result};
 use tokenizer_utils::*;
@@ -58,7 +59,10 @@ impl<'a> ValueTokenizer<'a> {
         } else if self.toker.bytes()[start] == b'$' {
             i += self.toker.scan_while_or_end(i, isnt_space);
             self.toker.offset = i;
-            Some(ValuePart::Variable(String::from(&self.toker.inner_str[start..i])))
+            Some(ValuePart::Variable(Token {
+                value: String::from(&self.toker.inner_str[start..i]),
+                offset: Some(self.toker.offset),
+            }))
         } else if self.toker.eat("#").is_ok() {
             if self.toker.eat("{").is_ok() {
                 i = self.toker.offset;
@@ -66,14 +70,19 @@ impl<'a> ValueTokenizer<'a> {
                 i += self.toker.scan_while_or_end(i, (|c| c != b'}' ));
                 self.toker.offset = i;
                 try!(self.toker.eat("}"));
-                Some(ValuePart::String(String::from(
-                    &self.toker.inner_str[start_interpolation..i]
-                )))
+                Some(ValuePart::String(Token {
+                    value: String::from(&self.toker.inner_str[start_interpolation..i]),
+                    offset: Some(self.toker.offset),
+                }))
             } else {
                 i = self.toker.offset;
                 i += self.toker.scan_while_or_end(i, valid_hex_char);
                 self.toker.offset = i;
-                match ColorValue::from_hex(String::from(&self.toker.inner_str[start..i])) {
+                let hex_token = Token {
+                    value: String::from(&self.toker.inner_str[start..i]),
+                    offset: Some(start),
+                };
+                match ColorValue::from_hex(hex_token) {
                     Ok(v) => Some(ValuePart::Color(v)),
                     Err(e) => return Err(e),
                 }
@@ -87,7 +96,9 @@ impl<'a> ValueTokenizer<'a> {
                 let arguments = match self.toker.tokenize_list(",", ")", &valid_mixin_arg_char) {
                     Ok(args) => args,
                     Err(e) => {
+                        debug!("HEEEEERE e.offset = {}, start = {}", e.offset, start);
                         return Err(SassError {
+                            offset: e.offset + start,
                             message: format!("Parsing arguments for function {}\n{}", name, e.message),
                             ..e
                         })
@@ -95,19 +106,23 @@ impl<'a> ValueTokenizer<'a> {
                 };
 
                 if name == "url" {
-                    Some(ValuePart::String(
-                        String::from(&self.toker.inner_str[start..self.toker.offset])
-                    ))
+                    Some(ValuePart::String(Token {
+                        value: String::from(&self.toker.inner_str[start..self.toker.offset]),
+                        offset: Some(start),
+                    }))
                 } else {
                     Some(ValuePart::Function(SassFunctionCall {
-                        name: name,
+                        name: Token { value: name, offset: Some(start) },
                         arguments: arguments.into_iter().map(|a|
                             SassArgument::new(a)
                         ).collect(),
                     }))
                 }
             } else {
-                Some(ValuePart::String(String::from(&self.toker.inner_str[start..i])))
+                Some(ValuePart::String(Token {
+                    value: String::from(&self.toker.inner_str[start..i]),
+                    offset: Some(start),
+                }))
             }
         };
 
@@ -143,32 +158,32 @@ mod tests {
     #[test]
     fn it_returns_string_part() {
         let mut vt = ValueTokenizer::new("foo");
-        assert_eq!(Some(Ok(ValuePart::String(String::from("foo")))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::String("foo".into()))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_space_separated_string_parts() {
         let mut vt = ValueTokenizer::new("foo bar");
-        assert_eq!(Some(Ok(ValuePart::String(String::from("foo")))), vt.next());
-        assert_eq!(Some(Ok(ValuePart::String(String::from("bar")))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::String("foo".into()))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::String("bar".into()))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_variable() {
         let mut vt = ValueTokenizer::new("$foo");
-        assert_eq!(Some(Ok(ValuePart::Variable(String::from("$foo")))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Variable("$foo".into()))), vt.next());
         assert_eq!(None, vt.next());
     }
 
     #[test]
     fn it_returns_variables_and_string_parts() {
         let mut vt = ValueTokenizer::new("foo $bar baz $quux");
-        assert_eq!(Some(Ok(ValuePart::String(String::from("foo")))), vt.next());
-        assert_eq!(Some(Ok(ValuePart::Variable(String::from("$bar")))), vt.next());
-        assert_eq!(Some(Ok(ValuePart::String(String::from("baz")))), vt.next());
-        assert_eq!(Some(Ok(ValuePart::Variable(String::from("$quux")))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::String("foo".into()))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Variable("$bar".into()))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::String("baz".into()))), vt.next());
+        assert_eq!(Some(Ok(ValuePart::Variable("$quux".into()))), vt.next());
         assert_eq!(None, vt.next());
     }
 
@@ -316,7 +331,7 @@ mod tests {
         let mut vt = ValueTokenizer::new("rgb(10,100,73)");
         assert_eq!(
             Some(Ok(ValuePart::Function(SassFunctionCall {
-                name: String::from("rgb"),
+                name: "rgb".into(),
                 arguments: vec![
                     SassArgument { name: None, value: String::from("10") },
                     SassArgument { name: None, value: String::from("100") },
@@ -333,7 +348,7 @@ mod tests {
         let mut vt = ValueTokenizer::new("rgb(10, 100, 73)");
         assert_eq!(
             Some(Ok(ValuePart::Function(SassFunctionCall {
-                name: String::from("rgb"),
+                name: "rgb".into(),
                 arguments: vec![
                     SassArgument { name: None, value: String::from("10") },
                     SassArgument { name: None, value: String::from("100") },
@@ -350,11 +365,11 @@ mod tests {
         let mut vt = ValueTokenizer::new("rgb(255, $blue: 0, $green: 255)");
         assert_eq!(
             Some(Ok(ValuePart::Function(SassFunctionCall {
-                name: String::from("rgb"),
+                name: "rgb".into(),
                 arguments: vec![
-                    SassArgument { name: None, value: String::from("255") },
-                    SassArgument { name: Some(String::from("$blue")), value: String::from("0") },
-                    SassArgument { name: Some(String::from("$green")), value: String::from("255") },
+                    SassArgument::new("255"),
+                    SassArgument::new("$blue:0"),
+                    SassArgument::new("$green: 255"),
                 ],
             }))),
             vt.next()
@@ -367,7 +382,7 @@ mod tests {
         let mut vt = ValueTokenizer::new("some-func(10, 73)");
         assert_eq!(
             Some(Ok(ValuePart::Function(SassFunctionCall {
-                name: String::from("some-func"),
+                name: "some-func".into(),
                 arguments: vec![
                     SassArgument { name: None, value: String::from("10") },
                     SassArgument { name: None, value: String::from("73") },

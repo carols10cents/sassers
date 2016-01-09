@@ -28,6 +28,11 @@ MIT. See LICENSE.
 
 * Compare speed/memory usage to libsass
 * Profile if it's significantly worse than libsass and fix
+* Abstract variable/parameter HashMaps into a `context` or `binding` object with nice insertion and accessing methods
+
+## Useful debugging incantation
+
+To get debugging statements and run a particular test:
 
 ```
 $ RUST_LOG=sassers=debug cargo test -- --nocapture evaluator::tests::it_subtitutes_variable_values

@@ -1,5 +1,7 @@
+use token::Token;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct SassVariable {
-    pub name: String,
-    pub value: String,
+    pub name: Token,
+    pub value: Token,
 }

@@ -7,12 +7,13 @@ use sass::number_value::NumberValue;
 use sass::value_part::ValuePart;
 use sass::mixin::SassMixin;
 use sass::parameters::*;
+use token::Token;
 
 use std::collections::HashMap;
 
 pub struct Substituter<I> {
     tokenizer: I,
-    variables: HashMap<String, ValuePart>,
+    variables: HashMap<Token, ValuePart>,
     mixins:    HashMap<String, SassMixin>,
 }
 
@@ -28,7 +29,7 @@ impl<I> Substituter<I> {
     fn replace_children_in_scope(
         &mut self,
         children: Vec<Event>,
-        passed_variables: Option<HashMap<String, ValuePart>>,
+        passed_variables: Option<HashMap<Token, ValuePart>>,
         passed_mixins: Option<HashMap<String, SassMixin>>) -> Result<Vec<Event>> {
 
         let mut results = Vec::new();
@@ -52,8 +53,8 @@ impl<I> Substituter<I> {
                         ValuePart::List(mut list) => {
                             match list.pop() {
                                 Some(ValuePart::String(s)) => {
-                                    if s == "!global" {
-                                        self.variables.insert((*name).to_string(), ValuePart::List(list.clone()));
+                                    if s.value == "!global" {
+                                        self.variables.insert(name.clone(), ValuePart::List(list.clone()));
                                         ValuePart::List(list)
                                     } else {
                                         list.push(ValuePart::String(s));
@@ -70,14 +71,19 @@ impl<I> Substituter<I> {
                         other => other,
                     };
 
-                    local_variables.insert((*name).to_string(), val);
+                    local_variables.insert(name, val);
                 },
                 Event::UnevaluatedProperty(name, value) => {
                     let mut lvs = self.variables.clone();
                     lvs.extend(local_variables.clone());
 
-                    let mut ev = Evaluator::new_from_string(&value);
-                    let ev_res = try!(ev.evaluate(&lvs));
+                    debug!("UnevaluatedProperty value {:?}", value);
+
+                    let mut ev = Evaluator::new_from_string(&value.value[..]);
+                    let ev_res = try!(ev.evaluate(&lvs).map_err(|e| SassError {
+                        offset: value.offset.unwrap_or(0) + e.offset,
+                        ..e
+                    }));
 
                     let resulting_property = Event::Property(
                         name,
@@ -112,6 +118,7 @@ impl<I> Substituter<I> {
 
                     let mut mixin_replacements = self.variables.clone();
                     mixin_replacements.extend(local_variables.clone());
+                    debug!("collate_args_parameters");
                     let collated_args = try!(collate_args_parameters(
                         &mixin_definition.parameters,
                         &mixin_call.arguments,
@@ -147,7 +154,7 @@ impl<I> Iterator for Substituter<I>
                     Ok(v) => v,
                     Err(e) => return Some(Err(e)),
                 };
-                self.variables.insert((*name).to_string(), val);
+                self.variables.insert(name, val);
                 self.next()
             },
             Some(Ok(Event::Mixin(mixin))) => {
@@ -182,10 +189,11 @@ impl<I> Iterator for Substituter<I>
 }
 
 fn owned_evaluated_value(
-    value: String,
-    variables: &HashMap<String, ValuePart>) -> Result<ValuePart> {
+    value: Token,
+    variables: &HashMap<Token, ValuePart>) -> Result<ValuePart> {
 
-    let value_part = try!(Evaluator::new_from_string(&value).evaluate(variables));
+    debug!("Evaluator::new_from_string(&value_string)");
+    let value_part = try!(Evaluator::new_from_string(&value.value[..]).evaluate(variables));
     Ok(match value_part {
         ValuePart::Number(nv) => ValuePart::Number(NumberValue { computed: true, ..nv }),
         other => other,

@@ -3,6 +3,7 @@ use sass::value_part::*;
 use sass::number_value::NumberValue;
 use sass::op::Op;
 use value_tokenizer::ValueTokenizer;
+use token::Token;
 
 use std::collections::HashMap;
 use std::vec;
@@ -42,7 +43,7 @@ impl Evaluator<vec::IntoIter<Result<ValuePart>>> {
 impl<T> Evaluator<T>
 where T: Iterator<Item = Result<ValuePart>>
 {
-    pub fn evaluate(&mut self, variables: &HashMap<String, ValuePart>) -> Result<ValuePart> {
+    pub fn evaluate(&mut self, variables: &HashMap<Token, ValuePart>) -> Result<ValuePart> {
         debug!("=====new evaluate call=======");
         let mut last_was_an_operator = true;
 
@@ -50,7 +51,8 @@ where T: Iterator<Item = Result<ValuePart>>
             debug!("evaluate processing {:?}", part);
             match part {
                 Ok(ValuePart::Variable(name)) => {
-                    let value = match variables.get(&(*name).to_string()) {
+                    debug!("matched a variable: {:?}, variables: {:?}", name, variables);
+                    let value = match variables.get(&name) {
                         Some(v) => {
                             debug!("evaluate substituting Variable {:?} with {:?}", name, v);
                             match v.clone() {
@@ -191,8 +193,8 @@ mod tests {
     #[test]
     fn it_subtitutes_variable_values() {
         let mut vars = HashMap::new();
-        vars.insert("$bar".to_string(), ValuePart::Number(NumberValue::from_scalar(4.0)));
-        vars.insert("$quux".to_string(), ValuePart::List(vec![
+        vars.insert("$bar".into(), ValuePart::Number(NumberValue::from_scalar(4.0)));
+        vars.insert("$quux".into(), ValuePart::List(vec![
             ValuePart::Number(NumberValue::with_units(3.0, String::from("px"))),
             ValuePart::Number(NumberValue::with_units(10.0, String::from("px"))),
         ]));
@@ -203,10 +205,10 @@ mod tests {
 
         assert_eq!(
             Ok(ValuePart::List(vec![
-                ValuePart::String(String::from("foo")),
+                ValuePart::String("foo".into()),
                 ValuePart::Number(NumberValue::computed(4.0)),
                 ValuePart::Number(NumberValue::from_scalar(199.82)),
-                ValuePart::String(String::from("baz")),
+                ValuePart::String("baz".into()),
                 ValuePart::Number(NumberValue::with_units(3.0, String::from("px"))),
                 ValuePart::Number(NumberValue::with_units(10.0, String::from("px"))),
             ])),
@@ -237,7 +239,7 @@ mod tests {
     #[test]
     fn it_divides_if_value_came_from_a_variable() {
         let mut vars = HashMap::new();
-        vars.insert("$three".to_string(), ValuePart::Number(NumberValue::computed(3.0)));
+        vars.insert("$three".into(), ValuePart::Number(NumberValue::computed(3.0)));
 
         let answer = Evaluator::new_from_string("15 / $three").evaluate(&vars);
 
@@ -250,7 +252,7 @@ mod tests {
     #[test]
     fn it_divides_if_a_later_value_came_from_a_variable() {
         let mut vars = HashMap::new();
-        vars.insert("$three".to_string(), ValuePart::Number(NumberValue::computed(3.0)));
+        vars.insert("$three".into(), ValuePart::Number(NumberValue::computed(3.0)));
 
         let answer = Evaluator::new_from_string("15 / 5 / $three").evaluate(&vars);
 
@@ -264,7 +266,7 @@ mod tests {
     fn it_divides_out_units() {
         let mut vars = HashMap::new();
         vars.insert(
-            "$three".to_string(),
+            "$three".into(),
             ValuePart::Number(NumberValue::with_units(3.0, String::from("px")))
         );
 
@@ -281,7 +283,7 @@ mod tests {
         let answer = Evaluator::new_from_string("#abc + hello").evaluate(&HashMap::new());
 
         assert_eq!(
-            Ok(ValuePart::String(String::from("#abchello"))),
+            Ok(ValuePart::String("#abchello".into())),
             answer
         );
     }
@@ -289,7 +291,7 @@ mod tests {
     #[test]
     fn it_does_jacked_stuff() {
         let mut vars = HashMap::new();
-        vars.insert("$stuff".to_string(), ValuePart::List(vec![
+        vars.insert("$stuff".into(), ValuePart::List(vec![
             ValuePart::Number(NumberValue::computed(1.0)),
             ValuePart::Number(NumberValue::computed(2.0)),
             ValuePart::Number(NumberValue::computed(3.0)),
@@ -307,9 +309,9 @@ mod tests {
                 ValuePart::Number(NumberValue::computed(1.0)),
                 ValuePart::Number(NumberValue::computed(2.0)),
                 ValuePart::Number(NumberValue::computed(3.0)),
-                ValuePart::String(String::from("url(\"www.foo.com/blah.png\")")),
-                ValuePart::String(String::from("blah")),
-                ValuePart::String(String::from("blah")),
+                ValuePart::String("url(\"www.foo.com/blah.png\")".into()),
+                ValuePart::String("blah".into()),
+                ValuePart::String("blah".into()),
             ])),
             answer
         );
@@ -322,7 +324,7 @@ mod tests {
         ).evaluate(&HashMap::new());
         assert_eq!(
             Ok(ValuePart::List(vec![
-                ValuePart::String(String::from("120.750.8")),
+                ValuePart::String("120.750.8".into()),
                 ValuePart::Number(NumberValue::from_scalar(6.0)),
                 ValuePart::Operator(Op::Slash),
                 ValuePart::Number(NumberValue::from_scalar(7.0)),
@@ -435,7 +437,7 @@ mod tests {
         ]).evaluate(&HashMap::new());
 
         assert_eq!(Ok(ValuePart::List(vec![
-            ValuePart::String(String::from("23")),
+            ValuePart::String("23".into()),
             ValuePart::Number(NumberValue::from_scalar(4.0))
         ])), answer);
     }
@@ -455,7 +457,7 @@ mod tests {
         ]).evaluate(&HashMap::new());
 
         assert_eq!(Ok(ValuePart::List(vec![
-            ValuePart::String(String::from("23")),
+            ValuePart::String("23".into()),
             ValuePart::Number(NumberValue::from_scalar(4.0)),
             ValuePart::Number(NumberValue::from_scalar(5.0)),
         ])), answer);
@@ -476,7 +478,7 @@ mod tests {
         ]).evaluate(&HashMap::new());
 
         assert_eq!(Ok(ValuePart::List(vec![
-            ValuePart::String(String::from("10.5")),
+            ValuePart::String("10.5".into()),
             ValuePart::Number(NumberValue::from_scalar(2.0)),
             ValuePart::Number(NumberValue::from_scalar(3.0)),
         ])), answer);

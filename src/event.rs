@@ -4,13 +4,14 @@ use sass::value_part::ValuePart;
 use sass::mixin::{SassMixinCall, SassMixin};
 use sass::output_style::SassOutputStyle;
 use error::{SassError, ErrorKind, Result};
+use token::Token;
 
 use std::io::Write;
 
 #[derive(Debug, Clone)]
 pub enum Event {
-    Property(String, ValuePart),
-    UnevaluatedProperty(String, String),
+    Property(Token, ValuePart),
+    UnevaluatedProperty(Token, Token),
     Comment(String),
     Rule(SassRule),
     Variable(SassVariable),

@@ -3,13 +3,14 @@ use sass::op::Op;
 use sass::color_value::ColorValue;
 use sass::number_value::NumberValue;
 use sass::function::SassFunctionCall;
+use token::Token;
 
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValuePart {
-    Variable(String),
-    String(String),
+    Variable(Token),
+    String(Token),
     Number(NumberValue),
     Operator(Op),
     List(Vec<ValuePart>),
@@ -44,6 +45,14 @@ impl ValuePart {
         match *self {
             ValuePart::Number(ref nv) => nv.computed,
             _ => false,
+        }
+    }
+
+    pub fn offset(&self) -> Option<usize> {
+        match *self {
+            ValuePart::Variable(ref t) |
+            ValuePart::String(ref t) => t.offset,
+            _ => None,
         }
     }
 

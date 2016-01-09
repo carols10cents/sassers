@@ -22,13 +22,13 @@ impl SassRule {
 
     fn selector_distribution(&self, parents: &str, separator: &str) -> String {
         match parents.len() {
-            0 => self.selectors.iter().map(|s| (*s.name).to_string()).collect::<Vec<_>>().join(separator),
+            0 => self.selectors.iter().map(|s| s.name.value.clone()).collect::<Vec<_>>().join(separator),
             _ => parents.split(",").map(|p| {
                 self.selectors.iter().map(|s| {
-                    if s.name.contains("&") {
-                        s.name.replace("&", p.trim())
+                    if s.name.value.contains("&") {
+                        s.name.value.replace("&", p.trim())
                     } else {
-                        format!("{} {}", p.trim(), s.name)
+                        format!("{} {}", p.trim(), s.name.value)
                     }
                 }).collect::<Vec<_>>().join(separator)
             }).collect::<Vec<_>>().join(separator),
