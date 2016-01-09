@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::Read;
 use regex::Regex;
 use std::io::Write;
-use std::cmp;
+use std::iter;
 
 mod error;
 mod evaluator;
@@ -56,13 +56,29 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
 
     match tokenizer.stream(output, style) {
         Err(sass_error) => {
-            let context_start = sass_error.offset - cmp::min(sass_error.offset, 20);
-            let context_end = cmp::min(sass_error.offset + 20, max_offset);
+            let before_error = &imports_resolved[0..sass_error.offset];
+            let after_error = &imports_resolved[sass_error.offset..];
+
+            let context_start = before_error
+                .as_bytes()
+                .iter()
+                .rposition(|&c| c == b'\n')
+                .unwrap_or(0);
+            let context_end = after_error
+                .as_bytes()
+                .iter()
+                .position(|&c| c == b'\n')
+                .unwrap_or(max_offset);
+
             Err(SassError {
-                message: format!("{}\nAt {}: `{}`",
+                message: format!("{}\nOn line {}:\n{}\n{}^",
                     sass_error.message,
-                    sass_error.offset,
-                    &imports_resolved[context_start..context_end],
+                    before_error.split("\n").collect::<Vec<_>>().len(),
+                    &imports_resolved[context_start..context_end + sass_error.offset],
+                    iter::repeat(" ")
+                         .take(sass_error.offset - context_start)
+                         .collect::<Vec<_>>()
+                         .join(""),
                 ),
                 ..sass_error
             })
