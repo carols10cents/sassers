@@ -22,6 +22,7 @@ mod value_tokenizer;
 
 use error::{SassError, Result};
 use tokenizer::Tokenizer;
+use sass::output_style::SassOutputStyle;
 
 fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
     let mut file = try!(File::open(&inputpath));
@@ -53,37 +54,39 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
     let max_offset = imports_resolved.len();
 
     let mut tokenizer = Tokenizer::new(&imports_resolved);
-    let style = try!(style.parse());
+    let style: SassOutputStyle = try!(style.parse());
 
-    match tokenizer.stream(output, style) {
-        Err(sass_error) => {
-            let before_error = &imports_resolved[0..sass_error.offset];
-            let after_error = &imports_resolved[sass_error.offset..];
+    Ok(())
 
-            let context_start = before_error
-                .as_bytes()
-                .iter()
-                .rposition(|&c| c == b'\n')
-                .unwrap_or(0);
-            let context_end = after_error
-                .as_bytes()
-                .iter()
-                .position(|&c| c == b'\n')
-                .unwrap_or(max_offset);
-
-            Err(SassError {
-                message: format!("{}\nOn line {}:\n{}\n{}^",
-                    sass_error.message,
-                    before_error.split("\n").collect::<Vec<_>>().len(),
-                    &imports_resolved[context_start..context_end + sass_error.offset],
-                    iter::repeat(" ")
-                         .take(sass_error.offset - context_start)
-                         .collect::<Vec<_>>()
-                         .join(""),
-                ),
-                ..sass_error
-            })
-        },
-        other => other,
-    }
+    // match tokenizer.stream(output, style) {
+    //     Err(sass_error) => {
+    //         let before_error = &imports_resolved[0..sass_error.offset];
+    //         let after_error = &imports_resolved[sass_error.offset..];
+    //
+    //         let context_start = before_error
+    //             .as_bytes()
+    //             .iter()
+    //             .rposition(|&c| c == b'\n')
+    //             .unwrap_or(0);
+    //         let context_end = after_error
+    //             .as_bytes()
+    //             .iter()
+    //             .position(|&c| c == b'\n')
+    //             .unwrap_or(max_offset);
+    //
+    //         Err(SassError {
+    //             message: format!("{}\nOn line {}:\n{}\n{}^",
+    //                 sass_error.message,
+    //                 before_error.split("\n").collect::<Vec<_>>().len(),
+    //                 &imports_resolved[context_start..context_end + sass_error.offset],
+    //                 iter::repeat(" ")
+    //                      .take(sass_error.offset - context_start)
+    //                      .collect::<Vec<_>>()
+    //                      .join(""),
+    //             ),
+    //             ..sass_error
+    //         })
+    //     },
+    //     other => other,
+    // }
 }
