@@ -65,7 +65,7 @@ impl<'a> Tokenizer<'a> {
 }
 
 fn is_single_char_token(ch: char) -> bool {
-    "{}:".chars().any(|c| c == ch)
+    "{}:;".chars().any(|c| c == ch)
 }
 
 #[cfg(test)]
@@ -117,6 +117,18 @@ mod tests {
         assert_eq!(tokenizer.next(), Some(Ok(Token::new("property", 10))));
         assert_eq!(tokenizer.next(), Some(Ok(Token::new(":", 18))));
         assert_eq!(tokenizer.next(), Some(Ok(Token::new(":", 19))));
+        assert_eq!(tokenizer.next(), None);
+    }
+
+    #[test]
+    fn it_separates_semicolon() {
+        let mut tokenizer = Tokenizer::new(";;\na;\nb\n;");
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new(";", 0))));
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new(";", 1))));
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new("a", 2))));
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new(";", 3))));
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new("b", 4))));
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new(";", 5))));
         assert_eq!(tokenizer.next(), None);
     }
 }
