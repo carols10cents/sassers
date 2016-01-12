@@ -42,8 +42,23 @@ impl<'a> Tokenizer<'a> {
                         value: curr_char.to_string(),
                         offset: Some(char_offset),
                     }))
+                } else if curr_char.is_numeric() {
+                    // Start of a multi-char numeric token
+                    value.push(curr_char);
+                    start = char_offset;
+
+                    while let Some(&(next_char_offset, next_char)) = self.chars.peek() {
+                        // Stop when we reach a non-numeric char
+                        if !next_char.is_numeric() && next_char != '.' {
+                            break;
+                        } else {
+                            value.push(next_char);
+                            self.chars.next();
+                        }
+                    }
+                    return Ok(Some(Token { value: value, offset: Some(start) }))
                 } else {
-                    // Start of a multi-char token
+                    // Start of a multi-char non-numeric token
                     // First non-whitespace - save its offset to be the Token's offset
                     value.push(curr_char);
                     start = char_offset;
@@ -129,6 +144,20 @@ mod tests {
         assert_eq!(tokenizer.next(), Some(Ok(Token::new(";", 3))));
         assert_eq!(tokenizer.next(), Some(Ok(Token::new("b", 4))));
         assert_eq!(tokenizer.next(), Some(Ok(Token::new(";", 5))));
+        assert_eq!(tokenizer.next(), None);
+    }
+
+    #[test]
+    fn it_separates_numbers() {
+        let mut tokenizer = Tokenizer::new("border: 0px 1.5 11em;");
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new("border", 0))));
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new(":", 6))));
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new("0", 7))));
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new("px", 8))));
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new("1.5", 11))));
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new("11", 15))));
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new("em", 17))));
+        assert_eq!(tokenizer.next(), Some(Ok(Token::new(";", 19))));
         assert_eq!(tokenizer.next(), None);
     }
 }
