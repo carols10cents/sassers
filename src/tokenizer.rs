@@ -87,6 +87,16 @@ fn is_single_char_token(ch: char) -> bool {
 mod tests {
     use super::*;
     use token::Token;
+    use error::Result;
+
+    fn assert_expected_token(
+        actual: Option<Result<Token>>,
+        expected_value: &str,
+        expected_offset: usize) {
+        let actual = actual.unwrap().unwrap();
+        assert_eq!(actual.value, expected_value);
+        assert_eq!(actual.offset, Some(expected_offset));
+    }
 
     #[test]
     fn it_returns_none_for_empty_string() {
@@ -104,8 +114,8 @@ mod tests {
     fn it_returns_words() {
         // Without regard to Sass word validity
         let mut tokenizer = Tokenizer::new(" \n  div   aoeu  ");
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("div", 4))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("aoeu", 10))));
+        assert_expected_token(tokenizer.next(), "div", 4);
+        assert_expected_token(tokenizer.next(), "aoeu", 10);
         assert_eq!(tokenizer.next(), None);
     }
 
@@ -113,51 +123,51 @@ mod tests {
     fn it_separates_curly_braces() {
         // Without regard to matching
         let mut tokenizer = Tokenizer::new("{}}a{ blue}");
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("{", 0))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("}", 1))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("}", 2))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("a", 3))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("{", 4))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("blue", 6))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("}", 10))));
+        assert_expected_token(tokenizer.next(), "{", 0);
+        assert_expected_token(tokenizer.next(), "}", 1);
+        assert_expected_token(tokenizer.next(), "}", 2);
+        assert_expected_token(tokenizer.next(), "a", 3);
+        assert_expected_token(tokenizer.next(), "{", 4);
+        assert_expected_token(tokenizer.next(), "blue", 6);
+        assert_expected_token(tokenizer.next(), "}", 10);
         assert_eq!(tokenizer.next(), None);
     }
 
     #[test]
     fn it_separates_colon() {
         let mut tokenizer = Tokenizer::new(":invalid: property::");
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new(":", 0))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("invalid", 1))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new(":", 8))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("property", 10))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new(":", 18))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new(":", 19))));
+        assert_expected_token(tokenizer.next(), ":", 0);
+        assert_expected_token(tokenizer.next(), "invalid", 1);
+        assert_expected_token(tokenizer.next(), ":", 8);
+        assert_expected_token(tokenizer.next(), "property", 10);
+        assert_expected_token(tokenizer.next(), ":", 18);
+        assert_expected_token(tokenizer.next(), ":", 19);
         assert_eq!(tokenizer.next(), None);
     }
 
     #[test]
     fn it_separates_semicolon() {
         let mut tokenizer = Tokenizer::new(";;\na;\nb\n;");
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new(";", 0))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new(";", 1))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("a", 2))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new(";", 3))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("b", 4))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new(";", 5))));
+        assert_expected_token(tokenizer.next(), ";", 0);
+        assert_expected_token(tokenizer.next(), ";", 1);
+        assert_expected_token(tokenizer.next(), "a", 3);
+        assert_expected_token(tokenizer.next(), ";", 4);
+        assert_expected_token(tokenizer.next(), "b", 6);
+        assert_expected_token(tokenizer.next(), ";", 8);
         assert_eq!(tokenizer.next(), None);
     }
 
     #[test]
     fn it_separates_numbers() {
         let mut tokenizer = Tokenizer::new("border: 0px 1.5 11em;");
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("border", 0))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new(":", 6))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("0", 7))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("px", 8))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("1.5", 11))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("11", 15))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new("em", 17))));
-        assert_eq!(tokenizer.next(), Some(Ok(Token::new(";", 19))));
+        assert_expected_token(tokenizer.next(), "border", 0);
+        assert_expected_token(tokenizer.next(), ":", 6);
+        assert_expected_token(tokenizer.next(), "0", 8);
+        assert_expected_token(tokenizer.next(), "px", 9);
+        assert_expected_token(tokenizer.next(), "1.5", 12);
+        assert_expected_token(tokenizer.next(), "11", 16);
+        assert_expected_token(tokenizer.next(), "em", 18);
+        assert_expected_token(tokenizer.next(), ";", 20);
         assert_eq!(tokenizer.next(), None);
     }
 }

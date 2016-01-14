@@ -23,15 +23,6 @@ impl hash::Hash for Token {
     }
 }
 
-impl<'a> Token {
-    pub fn new(s: &'a str, o: usize) -> Token {
-        Token {
-            value: String::from(s),
-            offset: Some(o),
-        }
-    }
-}
-
 impl<'a> From<&'a str> for Token {
     fn from(s: &'a str) -> Token {
         Token {
