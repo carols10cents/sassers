@@ -36,6 +36,7 @@ impl Event {
                         format!("{}\n", c)
                     },
                     SassOutputStyle::Debug => format!("{:?}\n", self),
+                    _ => unreachable!(),
                 };
                 Ok(try!(write!(output, "{}", s)))
             },
@@ -63,6 +64,7 @@ impl Event {
             SassOutputStyle::Expanded => self.expanded(),
             SassOutputStyle::Compact => self.compact(),
             SassOutputStyle::Debug => format!("{:?}\n", self),
+            _ => unreachable!(),
         }
     }
 

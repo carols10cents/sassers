@@ -56,6 +56,15 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
     let mut tokenizer = Tokenizer::new(&imports_resolved);
     let style: SassOutputStyle = try!(style.parse());
 
+    match style {
+        SassOutputStyle::Tokens => {
+            while let Some(token) = tokenizer.next() {
+                println!("{:?}", token);
+            }
+        }
+        _ => {},
+    }
+
     Ok(())
 
     // match tokenizer.stream(output, style) {

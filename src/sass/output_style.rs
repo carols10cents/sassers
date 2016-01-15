@@ -8,6 +8,7 @@ pub enum SassOutputStyle {
     Compact,
     Compressed,
     Debug,
+    Tokens,
 }
 
 impl FromStr for SassOutputStyle {
@@ -19,9 +20,11 @@ impl FromStr for SassOutputStyle {
             "expanded"   => Ok(SassOutputStyle::Expanded),
             "compact"    => Ok(SassOutputStyle::Compact),
             "debug"      => Ok(SassOutputStyle::Debug),
+            "tokens"     => Ok(SassOutputStyle::Tokens),
             style        => Err(SassError {
                 offset: 0,
                 kind: ErrorKind::InvalidOutputStyle,
+                // Intentionally hiding debug/tokens
                 message: format!("Unknown output style {:?}. Please specify one of nested, compressed, expanded, or compact.", style),
             }),
         }
