@@ -109,7 +109,7 @@ impl<'a> Tokenizer<'a> {
 }
 
 fn is_single_char_token(ch: char) -> bool {
-    "{}():;".chars().any(|c| c == ch)
+    "{}():;/".chars().any(|c| c == ch)
 }
 
 #[cfg(test)]
@@ -223,6 +223,19 @@ mod tests {
         assert_expected_token(tokenizer.next(), "(", 7);
         assert_expected_token(tokenizer.next(), ")", 8);
         assert_expected_token(tokenizer.next(), "(", 9);
+        assert_eq!(tokenizer.next(), None);
+    }
+
+    #[test]
+    fn it_separates_slash() {
+        let mut tokenizer = Tokenizer::new("/ / 3/4 / 8");
+        assert_expected_token(tokenizer.next(), "/", 0);
+        assert_expected_token(tokenizer.next(), "/", 2);
+        assert_expected_token(tokenizer.next(), "3", 4);
+        assert_expected_token(tokenizer.next(), "/", 5);
+        assert_expected_token(tokenizer.next(), "4", 6);
+        assert_expected_token(tokenizer.next(), "/", 8);
+        assert_expected_token(tokenizer.next(), "8", 10);
         assert_eq!(tokenizer.next(), None);
     }
 }
