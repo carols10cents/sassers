@@ -155,13 +155,15 @@ mod tests {
     use token::{Lexeme, Token};
     use error::Result;
 
-    fn assert_expected_lexeme(
-        actual: Option<Result<Lexeme>>,
-        expected_token: Token,
-        expected_offset: usize) {
-        let actual = actual.unwrap().unwrap();
-        assert_eq!(actual.token, expected_token);
-        assert_eq!(actual.offset, Some(expected_offset));
+    fn expected_lexeme(expected_token: Token, expected_offset: usize) -> Option<Result<Lexeme>> {
+        Some(Ok(Lexeme {
+            token: expected_token,
+            offset: Some(expected_offset),
+        }))
+    }
+
+    fn expected_ident(expected_value: &str, expected_offset: usize) -> Option<Result<Lexeme>> {
+        expected_lexeme(Token::Ident(expected_value.into()), expected_offset)
     }
 
     #[test]
@@ -180,8 +182,8 @@ mod tests {
     fn it_returns_words() {
         // Without regard to Sass word validity
         let mut tokenizer = Tokenizer::new(" \n  div   aoeu  ");
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("div".into()), 4);
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("aoeu".into()), 10);
+        assert_eq!(tokenizer.next(), expected_ident("div", 4));
+        assert_eq!(tokenizer.next(), expected_ident("aoeu", 10));
         assert_eq!(tokenizer.next(), None);
     }
 
@@ -189,13 +191,13 @@ mod tests {
     fn it_separates_curly_braces() {
         // Without regard to matching
         let mut tokenizer = Tokenizer::new("{}}a{ blah}");
-        assert_expected_lexeme(tokenizer.next(), Token::LeftCurlyBrace, 0);
-        assert_expected_lexeme(tokenizer.next(), Token::RightCurlyBrace, 1);
-        assert_expected_lexeme(tokenizer.next(), Token::RightCurlyBrace, 2);
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("a".into()), 3);
-        assert_expected_lexeme(tokenizer.next(), Token::LeftCurlyBrace, 4);
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("blah".into()), 6);
-        assert_expected_lexeme(tokenizer.next(), Token::RightCurlyBrace, 10);
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::LeftCurlyBrace, 0));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::RightCurlyBrace, 1));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::RightCurlyBrace, 2));
+        assert_eq!(tokenizer.next(), expected_ident("a", 3));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::LeftCurlyBrace, 4));
+        assert_eq!(tokenizer.next(), expected_ident("blah", 6));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::RightCurlyBrace, 10));
         assert_eq!(tokenizer.next(), None);
     }
 
@@ -203,77 +205,77 @@ mod tests {
     fn it_separates_colon() {
         let mut tokenizer = Tokenizer::new(":invalid: property::");
         // This might be wrong. I have a note somewhere else that colons can start idents.
-        assert_expected_lexeme(tokenizer.next(), Token::Colon, 0);
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("invalid".into()), 1);
-        assert_expected_lexeme(tokenizer.next(), Token::Colon, 8);
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("property".into()), 10);
-        assert_expected_lexeme(tokenizer.next(), Token::Colon, 18);
-        assert_expected_lexeme(tokenizer.next(), Token::Colon, 19);
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Colon, 0));
+        assert_eq!(tokenizer.next(), expected_ident("invalid", 1));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Colon, 8));
+        assert_eq!(tokenizer.next(), expected_ident("property", 10));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Colon, 18));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Colon, 19));
         assert_eq!(tokenizer.next(), None);
     }
 
     #[test]
     fn it_separates_semicolon() {
         let mut tokenizer = Tokenizer::new(";;\na;\nb\n;");
-        assert_expected_lexeme(tokenizer.next(), Token::Semicolon, 0);
-        assert_expected_lexeme(tokenizer.next(), Token::Semicolon, 1);
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("a".into()), 3);
-        assert_expected_lexeme(tokenizer.next(), Token::Semicolon, 4);
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("b".into()), 6);
-        assert_expected_lexeme(tokenizer.next(), Token::Semicolon, 8);
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Semicolon, 0));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Semicolon, 1));
+        assert_eq!(tokenizer.next(), expected_ident("a", 3));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Semicolon, 4));
+        assert_eq!(tokenizer.next(), expected_ident("b", 6));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Semicolon, 8));
         assert_eq!(tokenizer.next(), None);
     }
 
     #[test]
     fn it_separates_numbers() {
         let mut tokenizer = Tokenizer::new("border: 0px 1.5 11em;");
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("border".into()), 0);
-        assert_expected_lexeme(tokenizer.next(), Token::Colon, 6);
-        assert_expected_lexeme(tokenizer.next(), Token::Number(0.0), 8);
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("px".into()), 9);
-        assert_expected_lexeme(tokenizer.next(), Token::Number(1.5), 12);
-        assert_expected_lexeme(tokenizer.next(), Token::Number(11.0), 16);
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("em".into()), 18);
-        assert_expected_lexeme(tokenizer.next(), Token::Semicolon, 20);
+        assert_eq!(tokenizer.next(), expected_ident("border", 0));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Colon, 6));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(0.0), 8));
+        assert_eq!(tokenizer.next(), expected_ident("px", 9));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(1.5), 12));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(11.0), 16));
+        assert_eq!(tokenizer.next(), expected_ident("em", 18));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Semicolon, 20));
         assert_eq!(tokenizer.next(), None);
     }
 
     #[test]
     fn it_separates_hyphen() {
         let mut tokenizer = Tokenizer::new("font-weight -webkit -3 - 4-5 a-1");
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("font-weight".into()), 0);
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("-webkit".into()), 12);
-        assert_expected_lexeme(tokenizer.next(), Token::Number(-3.0), 20);
-        assert_expected_lexeme(tokenizer.next(), Token::Minus, 23);
-        assert_expected_lexeme(tokenizer.next(), Token::Number(4.0), 25);
-        assert_expected_lexeme(tokenizer.next(), Token::Number(-5.0), 26);
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("a-1".into()), 29);
+        assert_eq!(tokenizer.next(), expected_ident("font-weight", 0));
+        assert_eq!(tokenizer.next(), expected_ident("-webkit", 12));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(-3.0), 20));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Minus, 23));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(4.0), 25));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(-5.0), 26));
+        assert_eq!(tokenizer.next(), expected_ident("a-1", 29));
         assert_eq!(tokenizer.next(), None);
     }
 
     #[test]
     fn it_separates_parens() {
         let mut tokenizer = Tokenizer::new("() rgb)()(");
-        assert_expected_lexeme(tokenizer.next(), Token::LeftParen, 0);
-        assert_expected_lexeme(tokenizer.next(), Token::RightParen, 1);
-        assert_expected_lexeme(tokenizer.next(), Token::Ident("rgb".into()), 3);
-        assert_expected_lexeme(tokenizer.next(), Token::RightParen, 6);
-        assert_expected_lexeme(tokenizer.next(), Token::LeftParen, 7);
-        assert_expected_lexeme(tokenizer.next(), Token::RightParen, 8);
-        assert_expected_lexeme(tokenizer.next(), Token::LeftParen, 9);
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::LeftParen, 0));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::RightParen, 1));
+        assert_eq!(tokenizer.next(), expected_ident("rgb", 3));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::RightParen, 6));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::LeftParen, 7));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::RightParen, 8));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::LeftParen, 9));
         assert_eq!(tokenizer.next(), None);
     }
 
     #[test]
     fn it_separates_slash() {
         let mut tokenizer = Tokenizer::new("/ / 3/4 / 8");
-        assert_expected_lexeme(tokenizer.next(), Token::Slash, 0);
-        assert_expected_lexeme(tokenizer.next(), Token::Slash, 2);
-        assert_expected_lexeme(tokenizer.next(), Token::Number(3.0), 4);
-        assert_expected_lexeme(tokenizer.next(), Token::Slash, 5);
-        assert_expected_lexeme(tokenizer.next(), Token::Number(4.0), 6);
-        assert_expected_lexeme(tokenizer.next(), Token::Slash, 8);
-        assert_expected_lexeme(tokenizer.next(), Token::Number(8.0), 10);
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Slash, 0));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Slash, 2));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(3.0), 4));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Slash, 5));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(4.0), 6));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Slash, 8));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(8.0), 10));
         assert_eq!(tokenizer.next(), None);
     }
 }
