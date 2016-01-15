@@ -48,7 +48,7 @@ impl<'a> Tokenizer<'a> {
                             if peek_char.is_whitespace() {
                                 return Ok(Some(Lexeme { token: Token::Minus, offset: Some(start) }))
                             } else if peek_char.is_numeric() {
-                                while let Some(&(next_char_offset, next_char)) = self.chars.peek() {
+                                while let Some(&(_, next_char)) = self.chars.peek() {
                                     // Stop when we reach a non-numeric char
                                     if !next_char.is_numeric() && next_char != '.' {
                                         break;
@@ -60,7 +60,7 @@ impl<'a> Tokenizer<'a> {
 
                                 let value = match value.parse() {
                                     Ok(v) => v,
-                                    Err(e) => return Err(SassError {
+                                    Err(_) => return Err(SassError {
                                         offset: start,
                                         kind: ErrorKind::TokenizerError,
                                         message: format!(
@@ -72,7 +72,7 @@ impl<'a> Tokenizer<'a> {
                                 return Ok(Some(Lexeme { token: Token::Number(value), offset: Some(start) }))
 
                             } else {
-                                while let Some(&(next_char_offset, next_char)) = self.chars.peek() {
+                                while let Some(&(_, next_char)) = self.chars.peek() {
                                     // Stop when we reach a non-ident char (hyphens are special)
                                     if next_char.is_whitespace() || (
                                         is_single_char_token(next_char) && next_char != '-'
@@ -100,7 +100,7 @@ impl<'a> Tokenizer<'a> {
                         value.push(curr_char);
                         start = char_offset;
 
-                        while let Some(&(next_char_offset, next_char)) = self.chars.peek() {
+                        while let Some(&(_, next_char)) = self.chars.peek() {
                             // Stop when we reach a non-numeric char
                             if !next_char.is_numeric() && next_char != '.' {
                                 break;
@@ -111,7 +111,7 @@ impl<'a> Tokenizer<'a> {
                         }
                         let value = match value.parse() {
                             Ok(v) => v,
-                            Err(e) => return Err(SassError {
+                            Err(_) => return Err(SassError {
                                 offset: start,
                                 kind: ErrorKind::TokenizerError,
                                 message: format!(
@@ -125,7 +125,7 @@ impl<'a> Tokenizer<'a> {
                         // Start of a multi-char non-numeric token
                         value.push(curr_char);
                         start = char_offset;
-                        while let Some(&(next_char_offset, next_char)) = self.chars.peek() {
+                        while let Some(&(_, next_char)) = self.chars.peek() {
                             // Stop when we reach a non-ident char (hyphens are special)
                             if next_char.is_whitespace() || (
                                 is_single_char_token(next_char) && next_char != '-'

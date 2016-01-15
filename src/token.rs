@@ -1,4 +1,3 @@
-use std::hash;
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
