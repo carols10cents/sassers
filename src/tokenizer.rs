@@ -109,7 +109,7 @@ impl<'a> Tokenizer<'a> {
 }
 
 fn is_single_char_token(ch: char) -> bool {
-    "{}:;".chars().any(|c| c == ch)
+    "{}():;".chars().any(|c| c == ch)
 }
 
 #[cfg(test)]
@@ -210,6 +210,19 @@ mod tests {
         assert_expected_token(tokenizer.next(), "4", 25);
         assert_expected_token(tokenizer.next(), "-5", 26);
         assert_expected_token(tokenizer.next(), "a-1", 29);
+        assert_eq!(tokenizer.next(), None);
+    }
+
+    #[test]
+    fn it_separates_parens() {
+        let mut tokenizer = Tokenizer::new("() rgb)()(");
+        assert_expected_token(tokenizer.next(), "(", 0);
+        assert_expected_token(tokenizer.next(), ")", 1);
+        assert_expected_token(tokenizer.next(), "rgb", 3);
+        assert_expected_token(tokenizer.next(), ")", 6);
+        assert_expected_token(tokenizer.next(), "(", 7);
+        assert_expected_token(tokenizer.next(), ")", 8);
+        assert_expected_token(tokenizer.next(), "(", 9);
         assert_eq!(tokenizer.next(), None);
     }
 }
