@@ -37,19 +37,17 @@ impl<'a> Tokenizer<'a> {
             } else {
                 let single_char_token = Token::from_char(curr_char);
                 if single_char_token.is_some() {
-                    if curr_char == '-' {
-                        if let Some(&(_, peek_char)) = self.chars.peek() {
-                            if peek_char.is_whitespace() {
-                                return Ok(Some(Lexeme {
-                                    token: Token::Minus,
-                                    offset: Some(char_offset)
-                                }))
-                            } else if peek_char.is_numeric() {
-                                return self.number(curr_char, char_offset)
-                            } else {
-                                return self.ident(curr_char, char_offset)
-                            }
+                    let peek_char = self.peek_char();
+                    if curr_char == '-' &&
+                       peek_char.is_some() &&
+                       !peek_char.unwrap().is_whitespace() {
+
+                        if peek_char.unwrap().is_numeric() {
+                            return self.number(curr_char, char_offset)
+                        } else {
+                            return self.ident(curr_char, char_offset)
                         }
+
                     } else {
                         // We already tested that single_char_token was Some.
                         return Ok(Some(Lexeme {
@@ -220,7 +218,7 @@ mod tests {
 
     #[test]
     fn it_separates_hyphen() {
-        let mut tokenizer = Tokenizer::new("font-weight -webkit -3 - 4-5 a-1");
+        let mut tokenizer = Tokenizer::new("font-weight -webkit -3 - 4-5 a-1 -");
         assert_eq!(tokenizer.next(), expected_ident("font-weight", 0));
         assert_eq!(tokenizer.next(), expected_ident("-webkit", 12));
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(-3.0), 20));
@@ -228,6 +226,7 @@ mod tests {
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(4.0), 25));
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(-5.0), 26));
         assert_eq!(tokenizer.next(), expected_ident("a-1", 29));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Minus, 33));
         assert_eq!(tokenizer.next(), None);
     }
 
