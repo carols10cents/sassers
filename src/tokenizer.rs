@@ -30,60 +30,24 @@ impl<'a> Tokenizer<'a> {
     }
 
     pub fn parse(&mut self) -> Result<Option<Lexeme>> {
-        let mut value = String::new();
-        let mut start;
-
         while let Some((char_offset, curr_char)) = self.chars.next() {
             // Skip leading whitespace
             if curr_char.is_whitespace() {
                 continue;
             } else {
                 let single_char_token = Token::from_char(curr_char);
-                if value.is_empty() && single_char_token.is_some() {
+                if single_char_token.is_some() {
                     if curr_char == '-' {
-                        value.push(curr_char);
-                        start = char_offset;
-
                         if let Some(&(_, peek_char)) = self.chars.peek() {
                             if peek_char.is_whitespace() {
-                                return Ok(Some(Lexeme { token: Token::Minus, offset: Some(start) }))
+                                return Ok(Some(Lexeme {
+                                    token: Token::Minus,
+                                    offset: Some(char_offset)
+                                }))
                             } else if peek_char.is_numeric() {
-                                while let Some(&(_, next_char)) = self.chars.peek() {
-                                    // Stop when we reach a non-numeric char
-                                    if !next_char.is_numeric() && next_char != '.' {
-                                        break;
-                                    } else {
-                                        value.push(next_char);
-                                        self.chars.next();
-                                    }
-                                }
-
-                                let value = match value.parse() {
-                                    Ok(v) => v,
-                                    Err(_) => return Err(SassError {
-                                        offset: start,
-                                        kind: ErrorKind::TokenizerError,
-                                        message: format!(
-                                            "Tried to parse `{}` into a f32 but failed.",
-                                            value,
-                                        ),
-                                    })
-                                };
-                                return Ok(Some(Lexeme { token: Token::Number(value), offset: Some(start) }))
-
+                                return self.number(curr_char, char_offset)
                             } else {
-                                while let Some(&(_, next_char)) = self.chars.peek() {
-                                    // Stop when we reach a non-ident char (hyphens are special)
-                                    if next_char.is_whitespace() || (
-                                        is_single_char_token(next_char) && next_char != '-'
-                                    ) {
-                                        break;
-                                    } else {
-                                        value.push(next_char);
-                                        self.chars.next();
-                                    }
-                                }
-                                return Ok(Some(Lexeme { token: Token::Ident(value), offset: Some(start) }))
+                                return self.ident(curr_char, char_offset)
                             }
                         }
                     } else {
@@ -94,54 +58,68 @@ impl<'a> Tokenizer<'a> {
                         }))
                     }
                 } else {
-
                     if curr_char.is_numeric() {
-                        // Start of a multi-char numeric token
-                        value.push(curr_char);
-                        start = char_offset;
-
-                        while let Some(&(_, next_char)) = self.chars.peek() {
-                            // Stop when we reach a non-numeric char
-                            if !next_char.is_numeric() && next_char != '.' {
-                                break;
-                            } else {
-                                value.push(next_char);
-                                self.chars.next();
-                            }
-                        }
-                        let value = match value.parse() {
-                            Ok(v) => v,
-                            Err(_) => return Err(SassError {
-                                offset: start,
-                                kind: ErrorKind::TokenizerError,
-                                message: format!(
-                                    "Tried to parse `{}` into a f32 but failed.",
-                                    value,
-                                ),
-                            })
-                        };
-                        return Ok(Some(Lexeme { token: Token::Number(value), offset: Some(start) }))
+                        return self.number(curr_char, char_offset)
                     } else {
-                        // Start of a multi-char non-numeric token
-                        value.push(curr_char);
-                        start = char_offset;
-                        while let Some(&(_, next_char)) = self.chars.peek() {
-                            // Stop when we reach a non-ident char (hyphens are special)
-                            if next_char.is_whitespace() || (
-                                is_single_char_token(next_char) && next_char != '-'
-                            ) {
-                                break;
-                            } else {
-                                value.push(next_char);
-                                self.chars.next();
-                            }
-                        }
-                        return Ok(Some(Lexeme { token: Token::Ident(value), offset: Some(start) }))
+                        return self.ident(curr_char, char_offset)
                     }
                 }
             }
         }
         return Ok(None)
+    }
+
+    fn peek_char(&mut self) -> Option<char> {
+        match self.chars.peek() {
+            Some(&(_, peek_char)) => Some(peek_char),
+            None => None,
+        }
+    }
+
+    fn ident(&mut self, curr_char: char, start: usize) -> Result<Option<Lexeme>> {
+        let mut value = String::new();
+        value.push(curr_char);
+
+        while let Some(peek_char) = self.peek_char() {
+            // Stop when we reach a non-ident char (hyphens are special)
+            if peek_char.is_whitespace() || (
+                is_single_char_token(peek_char) && peek_char != '-'
+            ) {
+                break;
+            } else {
+                value.push(peek_char);
+                self.chars.next();
+            }
+        }
+        Ok(Some(Lexeme { token: Token::Ident(value), offset: Some(start) }))
+    }
+
+    fn number(&mut self, curr_char: char, start: usize) -> Result<Option<Lexeme>> {
+        let mut value = String::new();
+        value.push(curr_char);
+
+        while let Some(peek_char) = self.peek_char() {
+            // Stop when we reach a non-numeric char
+            if !peek_char.is_numeric() && peek_char != '.' {
+                break;
+            } else {
+                value.push(peek_char);
+                self.chars.next();
+            }
+        }
+
+        let value = match value.parse() {
+            Ok(v) => v,
+            Err(_) => return Err(SassError {
+                offset: start,
+                kind: ErrorKind::TokenizerError,
+                message: format!(
+                    "Tried to parse `{}` into a f32 but failed.",
+                    value,
+                ),
+            })
+        };
+        Ok(Some(Lexeme { token: Token::Number(value), offset: Some(start) }))
     }
 }
 
