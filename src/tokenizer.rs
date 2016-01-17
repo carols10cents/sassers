@@ -29,6 +29,8 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
+    // In the string parsing sense, not the parsing-out-semantics part yet.
+    // Well, there's a tiny bit of semantics, depending on how you define "meaning".
     pub fn parse(&mut self) -> Result<Option<Lexeme>> {
         while let Some((char_offset, curr_char)) = self.chars.next() {
             // Skip leading whitespace

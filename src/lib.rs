@@ -14,6 +14,7 @@ mod evaluator;
 mod event;
 mod inner_tokenizer;
 mod sass;
+mod parser;
 mod substituter;
 mod token;
 mod tokenizer;
@@ -22,6 +23,7 @@ mod value_tokenizer;
 
 use error::{SassError, Result};
 use tokenizer::Tokenizer;
+use parser::Parser;
 use sass::output_style::SassOutputStyle;
 
 fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
@@ -53,15 +55,21 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
     let imports_resolved = try!(resolve_imports(&input_path));
     let max_offset = imports_resolved.len();
 
-    let mut tokenizer = Tokenizer::new(&imports_resolved);
     let style: SassOutputStyle = try!(style.parse());
 
     match style {
         SassOutputStyle::Tokens => {
+            let mut tokenizer = Tokenizer::new(&imports_resolved);
             while let Some(token) = tokenizer.next() {
                 println!("{:?}", token);
             }
-        }
+        },
+        SassOutputStyle::AST => {
+            let mut parser = Parser::new(&imports_resolved);
+            while let Some(ast_node) = parser.next() {
+                println!("{:?}", ast_node);
+            }
+        },
         _ => {},
     }
 
