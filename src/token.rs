@@ -22,11 +22,11 @@ pub enum Token {
     RightCurlyBrace,
 
     Ident(String),
-    Variable(String),
-    Literal(String),
-    Comment(String),
     Number(f32),
-    Color(String),
+    // Variable(String),
+    // Literal(String),
+    // Comment(String),
+    // Color(String),
 }
 
 impl fmt::Display for Token {
@@ -46,11 +46,11 @@ impl fmt::Display for Token {
             Token::RightCurlyBrace => write!(f, "}}"),
 
             Token::Ident(ref i) => write!(f, "{}", i),
-            Token::Variable(ref i) => write!(f, "{}", i),
-            Token::Literal(ref i) => write!(f, "{}", i),
-            Token::Comment(ref i) => write!(f, "{}", i),
             Token::Number(i) => write!(f, "{}", i),
-            Token::Color(ref i) => write!(f, "{}", i),
+            // Token::Variable(ref i) => write!(f, "{}", i),
+            // Token::Literal(ref i) => write!(f, "{}", i),
+            // Token::Comment(ref i) => write!(f, "{}", i),
+            // Token::Color(ref i) => write!(f, "{}", i),
         }
     }
 }
@@ -75,12 +75,3 @@ impl Token {
         Some(r)
     }
 }
-
-// impl<'a> From<&'a str> for Token {
-//     fn from(s: &'a str) -> Token {
-//         Token {
-//             value: String::from(s),
-//             offset: None,
-//         }
-//     }
-// }

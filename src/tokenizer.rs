@@ -5,7 +5,6 @@ use std::str::CharIndices;
 use std::iter::Peekable;
 
 pub struct Tokenizer<'a> {
-    text: &'a str,
     chars: Peekable<CharIndices<'a>>,
 }
 
@@ -24,7 +23,6 @@ impl<'a> Iterator for Tokenizer<'a> {
 impl<'a> Tokenizer<'a> {
     pub fn new(text: &str) -> Tokenizer {
         Tokenizer {
-            text: text,
             chars: text.char_indices().peekable(),
         }
     }
