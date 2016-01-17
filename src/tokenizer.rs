@@ -36,27 +36,14 @@ impl<'a> Tokenizer<'a> {
                 continue;
             } else {
                 let single_char_token = Token::from_char(curr_char);
-                if single_char_token.is_some() {
-                    let peek_char = self.peek_char();
-                    if curr_char == '-' &&
-                       peek_char.is_some() &&
-                       !peek_char.unwrap().is_whitespace() {
-
-                        if peek_char.unwrap().is_numeric() {
-                            return self.number(curr_char, char_offset)
-                        } else {
-                            return self.ident(curr_char, char_offset)
-                        }
-
-                    } else {
-                        // We already tested that single_char_token was Some.
-                        return Ok(Some(Lexeme {
-                            token: single_char_token.unwrap(),
-                            offset: Some(char_offset),
-                        }))
-                    }
+                if single_char_token.is_some() && !self.hyphen_starting_shit(curr_char) {
+                    // We already tested that single_char_token was Some.
+                    return Ok(Some(Lexeme {
+                        token: single_char_token.unwrap(),
+                        offset: Some(char_offset),
+                    }))
                 } else {
-                    if curr_char.is_numeric() {
+                    if curr_char.is_numeric() || self.hyphen_starting_number(curr_char) {
                         return self.number(curr_char, char_offset)
                     } else {
                         return self.ident(curr_char, char_offset)
@@ -65,6 +52,16 @@ impl<'a> Tokenizer<'a> {
             }
         }
         return Ok(None)
+    }
+
+    fn hyphen_starting_shit(&mut self, curr_char: char) -> bool {
+        let peek_char = self.peek_char();
+        curr_char == '-' && peek_char.is_some() && !peek_char.unwrap().is_whitespace()
+    }
+
+    fn hyphen_starting_number(&mut self, curr_char: char) -> bool {
+        let peek_char = self.peek_char();
+        curr_char == '-' && peek_char.is_some() && peek_char.unwrap().is_numeric()
     }
 
     fn peek_char(&mut self) -> Option<char> {
@@ -98,6 +95,7 @@ impl<'a> Tokenizer<'a> {
 
         while let Some(peek_char) = self.peek_char() {
             // Stop when we reach a non-numeric char
+            // TODO: disallow two `.`s in one number
             if !peek_char.is_numeric() && peek_char != '.' {
                 break;
             } else {
