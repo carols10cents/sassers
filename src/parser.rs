@@ -6,7 +6,7 @@ pub struct Parser<'a> {
     pub tokenizer: Tokenizer<'a>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ASTNode {
 }
 
@@ -24,5 +24,16 @@ impl<'a> Parser<'a> {
             text: text,
             tokenizer: Tokenizer::new(&text),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_returns_none_for_empty_string() {
+        let mut parser = Parser::new("");
+        assert_eq!(parser.next(), None);
     }
 }
