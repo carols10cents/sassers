@@ -2,7 +2,6 @@ use tokenizer::Tokenizer;
 use error::{Result};
 
 pub struct Parser<'a> {
-    pub text: &'a str,
     pub tokenizer: Tokenizer<'a>,
 }
 
@@ -21,7 +20,6 @@ impl<'a> Iterator for Parser<'a> {
 impl<'a> Parser<'a> {
     pub fn new(text: &str) -> Parser {
         Parser {
-            text: text,
             tokenizer: Tokenizer::new(&text),
         }
     }
