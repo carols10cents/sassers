@@ -1,10 +1,10 @@
 use regex::Regex;
 use regex::Captures;
-use token::Token;
+use token::Lexeme;
 
 #[derive(Debug,Clone)]
 pub struct SassSelector {
-    pub name: Token,
+    pub name: Lexeme,
 }
 
 fn squeeze(data: String) -> String {
@@ -20,10 +20,10 @@ fn compress_attr_selectors(data: String) -> String {
 }
 
 impl SassSelector {
-    pub fn new(selector: Token) -> SassSelector {
+    pub fn new(selector: Lexeme) -> SassSelector {
         SassSelector {
-            name: Token {
-                value: compress_attr_selectors(squeeze(selector.value)),
+            name: Lexeme {
+                token: compress_attr_selectors(squeeze(selector.value())),
                 offset: selector.offset,
             }
         }
