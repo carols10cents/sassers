@@ -68,7 +68,12 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
                 try!(write!(output, "{:?}", ast_node));
             }
         },
-        _ => {},
+        other_style => {
+            let mut parser = Parser::new(&imports_resolved);
+            while let Some(ast_node) = parser.next() {
+                try!(ast_node.unwrap().stream(output, other_style));
+            }
+        },
     }
 
     Ok(())

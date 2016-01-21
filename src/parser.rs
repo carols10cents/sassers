@@ -1,7 +1,10 @@
 use token::{Token, Lexeme};
 use tokenizer::Tokenizer;
 use sass::rule::SassRule;
+use sass::output_style::SassOutputStyle;
 use error::{Result};
+
+use std::io::Write;
 
 pub struct Parser<'a> {
     pub tokenizer: Tokenizer<'a>,
@@ -10,6 +13,14 @@ pub struct Parser<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ASTRoot {
     Rule(SassRule),
+}
+
+impl ASTRoot {
+    pub fn stream<W: Write>(&self, output: &mut W, style: SassOutputStyle) -> Result<()> {
+        match *self {
+            ASTRoot::Rule(ref sr) => sr.stream(output, style),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
