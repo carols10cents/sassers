@@ -56,18 +56,6 @@ impl ValuePart {
         }
     }
 
-    pub fn expanded(&self) -> String {
-        format!("{}", self)
-    }
-
-    pub fn nested(&self) -> String {
-        format!("{}", self)
-    }
-
-    pub fn compact(&self) -> String {
-        format!("{}", self)
-    }
-
     pub fn compressed(&self) -> String {
         match *self {
             ValuePart::Color(ref color) => format!("{}", color.compressed()),

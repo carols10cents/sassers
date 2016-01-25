@@ -57,20 +57,8 @@ impl Event {
         }
     }
 
-    pub fn to_string(&self, style: SassOutputStyle) -> String {
-        match style {
-            SassOutputStyle::Nested => self.nested(),
-            SassOutputStyle::Compressed => self.compressed(),
-            SassOutputStyle::Expanded => self.expanded(),
-            SassOutputStyle::Compact => self.compact(),
-            SassOutputStyle::Debug => format!("{:?}\n", self),
-            _ => unreachable!(),
-        }
-    }
-
     pub fn expanded(&self) -> String {
         match *self {
-            Event::Property(ref name, ref value) => format!("  {}: {};", name, value.expanded()),
             Event::Comment(ref comment) => format!("  {}", comment),
             ref other => format!("other = {:?}", other),
         }
@@ -78,7 +66,6 @@ impl Event {
 
     pub fn nested(&self) -> String {
         match *self {
-            Event::Property(ref name, ref value) => format!("  {}: {};", name, value.nested()),
             Event::Comment(ref comment) => format!("  {}", comment),
             ref other => format!("other = {:?}", other),
         }
@@ -86,7 +73,6 @@ impl Event {
 
     pub fn compact(&self) -> String {
         match *self {
-            Event::Property(ref name, ref value) => format!("{}: {};", name, value.compact()),
             Event::Comment(ref comment) => (*comment).to_string(),
             ref other => format!("other = {:?}", other),
         }
@@ -94,9 +80,6 @@ impl Event {
 
     pub fn compressed(&self) -> String {
         match *self {
-            Event::Property(ref name, ref value) => {
-                format!("{}:{}", name, value.compressed())
-            },
             Event::Comment(..) => String::from(""),
             ref other => format!("other = {:?}", other),
         }

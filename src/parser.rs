@@ -28,6 +28,23 @@ pub enum ASTNode {
     Property(Lexeme, Lexeme),
 }
 
+impl ASTNode {
+    pub fn output(&self, style: SassOutputStyle) -> String {
+        match *self {
+            ASTNode::Property(ref name, ref value) => {
+                match style {
+                    SassOutputStyle::Nested     => format!("  {}: {};", name.token, value.token),
+                    SassOutputStyle::Compressed => format!("{}:{}", name.token, value.token),
+                    SassOutputStyle::Expanded   => format!("  {}: {};", name.token, value.token),
+                    SassOutputStyle::Compact    => format!("{}: {};", name.token, value.token),
+                    SassOutputStyle::Debug      => format!("{:?}\n", self),
+                    _ => unreachable!(),
+                }
+            },
+        }
+    }
+}
+
 impl<'a> Iterator for Parser<'a> {
     type Item = Result<ASTRoot>;
 
