@@ -59,13 +59,13 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
         SassOutputStyle::Tokens => {
             let mut tokenizer = Tokenizer::new(&imports_resolved);
             while let Some(token) = tokenizer.next() {
-                try!(write!(output, "{:?}", token))
+                try!(write!(output, "{:?}\n", token))
             }
         },
         SassOutputStyle::AST => {
             let mut parser = Parser::new(&imports_resolved);
             while let Some(ast_node) = parser.next() {
-                try!(write!(output, "{:?}", ast_node));
+                try!(write!(output, "{:?}\n", ast_node));
             }
         },
         other_style => {
