@@ -1,5 +1,6 @@
 use token::Token;
 use tokenizer::Tokenizer;
+use ast::expression::Expression;
 use ast::root::Root;
 use ast::node::Node;
 use sass::rule::SassRule;
@@ -34,7 +35,9 @@ impl<'a> Iterator for Parser<'a> {
                         holding_pen = vec![];
                     } else if lexeme.token == Token::Colon {
                         // TODO: these unwraps had better work
-                        let property_value = self.tokenizer.next().unwrap().unwrap();
+                        let property_value = Expression::List(vec![
+                            self.tokenizer.next().unwrap().unwrap()
+                        ]);
                         // TODO: this had better be a semicolon
                         self.tokenizer.next();
                         // TODO: holding pen better have exactly one thing in it
@@ -65,6 +68,7 @@ impl<'a> Parser<'a> {
 mod tests {
     use super::*;
     use sass::rule::SassRule;
+    use ast::expression::Expression;
     use ast::root::Root;
     use ast::node::Node;
     use token::{Token, Lexeme};
@@ -83,7 +87,9 @@ mod tests {
                 selectors: vec![Lexeme { token: Token::Ident("a".into()), offset: Some(0) }],
                 children: vec![Node::Property(
                     Lexeme { token: Token::Ident("color".into()), offset: Some(4) },
-                    Lexeme { token: Token::Ident("blue".into()), offset: Some(11) },
+                    Expression::List(vec![
+                        Lexeme { token: Token::Ident("blue".into()), offset: Some(11) },
+                    ])
                 )],
             }
         ))));
@@ -103,7 +109,9 @@ mod tests {
                         }],
                         children: vec![Node::Property(
                             Lexeme { token: Token::Ident("color".into()), offset: Some(12) },
-                            Lexeme { token: Token::Ident("blue".into()), offset: Some(19) },
+                            Expression::List(vec![
+                                Lexeme { token: Token::Ident("blue".into()), offset: Some(19) },
+                            ]),
                         )],
                     }
                 )],
