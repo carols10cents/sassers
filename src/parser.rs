@@ -32,15 +32,18 @@ impl ASTNode {
     pub fn stream<W: Write>(&self, output: &mut W, style: SassOutputStyle) -> Result<()> {
         match *self {
             ASTNode::Property(ref name, ref value) => {
-                try!(
-                match style {
-                    SassOutputStyle::Nested     => write!(output, "  {}: {};", name.token, value.token),
-                    SassOutputStyle::Compressed => write!(output, "{}:{}", name.token, value.token),
-                    SassOutputStyle::Expanded   => write!(output, "  {}: {};", name.token, value.token),
-                    SassOutputStyle::Compact    => write!(output, "{}: {};", name.token, value.token),
-                    SassOutputStyle::Debug      => write!(output, "{:?}\n", self),
+                let ref n = name.token;
+                let ref v = value.token;
+                // grumble mumble format strings you know they're a string literal
+                let property = match style {
+                    SassOutputStyle::Nested     => format!("  {}: {};", n, v),
+                    SassOutputStyle::Compressed => format!("{}:{}", n, v),
+                    SassOutputStyle::Expanded   => format!("  {}: {};", n, v),
+                    SassOutputStyle::Compact    => format!("{}: {};", n, v),
+                    SassOutputStyle::Debug      => format!("{:?}\n", self),
                     _ => unreachable!(),
-                });
+                };
+                try!(write!(output, "{}", property));
             },
         }
         Ok(())
