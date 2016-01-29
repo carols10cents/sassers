@@ -29,19 +29,21 @@ pub enum ASTNode {
 }
 
 impl ASTNode {
-    pub fn output(&self, style: SassOutputStyle) -> String {
+    pub fn stream<W: Write>(&self, output: &mut W, style: SassOutputStyle) -> Result<()> {
         match *self {
             ASTNode::Property(ref name, ref value) => {
+                try!(
                 match style {
-                    SassOutputStyle::Nested     => format!("  {}: {};", name.token, value.token),
-                    SassOutputStyle::Compressed => format!("{}:{}", name.token, value.token),
-                    SassOutputStyle::Expanded   => format!("  {}: {};", name.token, value.token),
-                    SassOutputStyle::Compact    => format!("{}: {};", name.token, value.token),
-                    SassOutputStyle::Debug      => format!("{:?}\n", self),
+                    SassOutputStyle::Nested     => write!(output, "  {}: {};", name.token, value.token),
+                    SassOutputStyle::Compressed => write!(output, "{}:{}", name.token, value.token),
+                    SassOutputStyle::Expanded   => write!(output, "  {}: {};", name.token, value.token),
+                    SassOutputStyle::Compact    => write!(output, "{}: {};", name.token, value.token),
+                    SassOutputStyle::Debug      => write!(output, "{:?}\n", self),
                     _ => unreachable!(),
-                }
+                });
             },
         }
+        Ok(())
     }
 }
 

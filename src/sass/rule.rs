@@ -52,19 +52,21 @@ impl SassRule {
         // TODO: peek?
         if let Some(prop) = properties.next() {
             has_properties = true;
-            try!(write!(output, "{}{}{{{}{}{}",
+            try!(write!(output, "{}{}{{{}{}",
               selector_string,
               style.selector_brace_separator(),
               style.brace_property_separator(),
               style.before_property(nesting),
-              prop.output(style),
             ));
+
+            try!(prop.stream(output, style));
+
             for prop in properties {
-                try!(write!(output, "{}{}{}",
+                try!(write!(output, "{}{}",
                     style.after_property(),
                     style.before_property(nesting),
-                    prop.output(style),
                 ));
+                try!(prop.stream(output, style));
             }
             try!(write!(output, "{}}}", style.property_brace_separator()));
         }
