@@ -34,12 +34,11 @@ impl<'a> Iterator for Parser<'a> {
                         current_sass_rule.selectors = holding_pen;
                         holding_pen = vec![];
                     } else if lexeme.token == Token::Colon {
-                        // TODO: these unwraps had better work
-                        let property_value = Expression::List(vec![
-                            self.tokenizer.next().unwrap().unwrap()
-                        ]);
-                        // TODO: this had better be a semicolon
-                        self.tokenizer.next();
+                        let property_value = match Expression::parse(&mut self.tokenizer) {
+                            Ok(e) => e,
+                            Err(e) => return Some(Err(e)),
+                        };
+
                         // TODO: holding pen better have exactly one thing in it
                         let child = Node::Property(holding_pen.pop().unwrap(), property_value);
                         current_sass_rule.children.push(child);
