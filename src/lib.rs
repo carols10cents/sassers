@@ -8,6 +8,7 @@ use std::io::Read;
 use regex::Regex;
 use std::io::Write;
 
+mod ast;
 mod error;
 // mod evaluator;
 // mod event;

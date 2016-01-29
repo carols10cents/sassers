@@ -1,5 +1,5 @@
 use sass::output_style::SassOutputStyle;
-use parser::ASTNode;
+use ast::node::Node;
 use token::Lexeme;
 use error::Result;
 
@@ -9,7 +9,7 @@ use std::io::Write;
 #[derive(Clone, PartialEq)]
 pub struct SassRule {
     pub selectors: Vec<Lexeme>,
-    pub children: Vec<ASTNode>,
+    pub children: Vec<Node>,
 }
 
 impl SassRule {
