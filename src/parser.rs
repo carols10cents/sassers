@@ -86,9 +86,9 @@ mod tests {
                 selectors: vec![Lexeme { token: Token::Ident("a".into()), offset: Some(0) }],
                 children: vec![Node::Property(
                     Lexeme { token: Token::Ident("color".into()), offset: Some(4) },
-                    Expression::List(vec![
-                        Lexeme { token: Token::Ident("blue".into()), offset: Some(11) },
-                    ])
+                    Expression::String(
+                        Lexeme { token: Token::Ident("blue".into()), offset: Some(11) }
+                    ),
                 )],
             }
         ))));
@@ -108,9 +108,9 @@ mod tests {
                         }],
                         children: vec![Node::Property(
                             Lexeme { token: Token::Ident("color".into()), offset: Some(12) },
-                            Expression::List(vec![
-                                Lexeme { token: Token::Ident("blue".into()), offset: Some(19) },
-                            ]),
+                            Expression::String(
+                                Lexeme { token: Token::Ident("blue".into()), offset: Some(19) }
+                            ),
                         )],
                     }
                 )],
