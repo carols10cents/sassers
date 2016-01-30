@@ -47,11 +47,11 @@ impl SassRule {
         }
 
         let mut properties = self.children.iter();
-        let mut has_properties = false;
+        // let mut has_properties = false;
 
         // TODO: peek?
         if let Some(prop) = properties.next() {
-            has_properties = true;
+            // has_properties = true;
             try!(write!(output, "{}{}{{{}{}",
               selector_string,
               style.selector_brace_separator(),

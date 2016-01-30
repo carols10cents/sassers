@@ -8,6 +8,7 @@ pub enum Expression {
 }
 
 impl Expression {
+    #[allow(unused_variables)]
     pub fn to_string(&self, style: SassOutputStyle) -> String {
         match *self {
             Expression::List(ref elements) => elements.iter().map(|e|
