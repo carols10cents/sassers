@@ -54,12 +54,25 @@ mod tests {
         Lexeme { token: Token::Ident("blue".into()), offset: None }
     }
 
+    fn zero() -> Lexeme {
+        Lexeme { token: Token::Number(0.0), offset: None }
+    }
+
     #[test]
-    fn it_parses_a_list() {
+    fn it_parses_a_list_of_one() {
         let mut fake_tokenizer = vec![Ok(blue()), Ok(semicolon())].into_iter();
         assert_eq!(
             Expression::parse(&mut fake_tokenizer),
             Ok(Expression::List(vec![blue()]))
+        );
+    }
+
+    #[test]
+    fn it_parses_a_list() {
+        let mut fake_tokenizer = vec![Ok(zero()), Ok(zero()), Ok(semicolon())].into_iter();
+        assert_eq!(
+            Expression::parse(&mut fake_tokenizer),
+            Ok(Expression::List(vec![zero(), zero()]))
         );
     }
 }
