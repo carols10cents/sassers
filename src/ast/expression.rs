@@ -1,4 +1,3 @@
-use tokenizer::Tokenizer;
 use sass::output_style::SassOutputStyle;
 use token::{Lexeme, Token};
 use error::{Result, SassError, ErrorKind};
@@ -17,7 +16,7 @@ impl Expression {
         }
     }
 
-    pub fn parse(tokenizer: &mut Tokenizer) -> Result<Expression> {
+    pub fn parse<T: Iterator<Item = Result<Lexeme>>>(tokenizer: &mut T) -> Result<Expression> {
         let mut list = vec![];
         while let Some(Ok(lexeme)) = tokenizer.next() {
             if lexeme.token == Token::Semicolon {
@@ -38,5 +37,28 @@ impl Expression {
                 "Expected semicolon while parsing a value expression; reached EOF instead."
             ),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use token::{Lexeme, Token};
+
+    fn semicolon() -> Lexeme {
+        Lexeme { token: Token::Semicolon, offset: None }
+    }
+
+    fn blue() -> Lexeme {
+        Lexeme { token: Token::Ident("blue".into()), offset: None }
+    }
+
+    #[test]
+    fn it_parses_a_list() {
+        let mut fake_tokenizer = vec![Ok(blue()), Ok(semicolon())].into_iter();
+        assert_eq!(
+            Expression::parse(&mut fake_tokenizer),
+            Ok(Expression::List(vec![blue()]))
+        );
     }
 }
