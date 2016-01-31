@@ -1,6 +1,6 @@
 use sass::output_style::SassOutputStyle;
 use ast::node::Node;
-use token::Lexeme;
+use token::{Lexeme, Token};
 use error::Result;
 
 use std::fmt;
@@ -46,7 +46,7 @@ impl SassRule {
             selector_string = compress_selectors(selector_string);
         }
 
-        let mut properties = self.children.iter();
+        let mut properties = self.child_properties().into_iter();
         // let mut has_properties = false;
 
         // TODO: peek?
@@ -92,6 +92,52 @@ impl SassRule {
         // }
         Ok(())
     }
+
+    // TODO: I don't like how child_properties and child_rules are so different, but
+    // i'm not sure what to do about it yet.
+    pub fn child_properties(&self) -> Vec<&Node> {
+        self.children.iter().filter(|c|
+            match **c {
+                Node::Rule(..) => false,
+                Node::Property(..) => true,
+            }
+        ).collect::<Vec<_>>()
+    }
+
+    pub fn child_rules(&self) -> Vec<SassRule> {
+        self.children.clone().into_iter().filter_map(|c|
+            match c {
+                Node::Rule(rule) => Some(rule),
+                Node::Property(..) => None,
+            }
+        ).collect::<Vec<_>>()
+    }
+
+    pub fn optimize(self) -> Vec<SassRule> {
+        match self.child_properties().len() {
+            0 => {
+                self.child_rules().into_iter().map(|cr|
+                    cr.collapse_with_parent_selectors(&self.selectors)
+                ).collect()
+            },
+            _ => vec![self],
+        }
+    }
+
+    pub fn collapse_with_parent_selectors(self, parents: &Vec<Lexeme>) -> SassRule {
+        let new_selectors = parents.iter().flat_map(|p|
+            self.selectors.iter().map(|c|
+                Lexeme {
+                    token: Token::Ident(format!("{} {}", p.token, c.token)),
+                    offset: p.offset,
+                }
+            ).collect::<Vec<_>>()
+        ).collect();
+        SassRule {
+            selectors: new_selectors,
+            children: self.children,
+        }
+    }
 }
 
 fn compress_selectors(selector_string: String) -> String {
@@ -103,5 +149,49 @@ impl fmt::Debug for SassRule {
         let children = self.children.iter().map(|c| format!("{:?}", c)).collect::<Vec<_>>().join("\n");
         let indented_children = children.split("\n").collect::<Vec<_>>().join("\n  ");
         write!(f, "{:?} {{\n  {}\n}}", self.selectors, indented_children)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ast::node::Node;
+    use ast::expression::Expression;
+    use token::{Token, Lexeme};
+
+    #[test]
+    fn it_collapses_subrules_without_properties() {
+        let orig = SassRule {
+            selectors: vec![Lexeme { token: Token::Ident("div".into()), offset: Some(0) }],
+            children: vec![Node::Rule(
+                SassRule {
+                    selectors: vec![Lexeme {
+                        token: Token::Ident("img".into()),
+                        offset: Some(6)
+                    }],
+                    children: vec![Node::Property(
+                        Lexeme { token: Token::Ident("color".into()), offset: Some(12) },
+                        Expression::String(
+                            Lexeme { token: Token::Ident("blue".into()), offset: Some(19) }
+                        ),
+                    )],
+                }
+            )],
+        };
+
+        assert_eq!(
+            orig.optimize(),
+            vec![SassRule {
+                selectors: vec![
+                    Lexeme { token: Token::Ident("div img".into()), offset: Some(0) },
+                ],
+                children: vec![Node::Property(
+                    Lexeme { token: Token::Ident("color".into()), offset: Some(12) },
+                    Expression::String(
+                        Lexeme { token: Token::Ident("blue".into()), offset: Some(19) }
+                    ),
+                )],
+            }]
+        );
     }
 }

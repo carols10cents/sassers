@@ -72,8 +72,11 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
         },
         other_style => {
             let mut parser = Parser::new(&imports_resolved);
-            while let Some(ast_node) = parser.next() {
-                try!(optimizer::optimize(ast_node.unwrap()).stream(output, other_style));
+            while let Some(Ok(ast_node)) = parser.next() {
+                let optimized = optimizer::optimize(ast_node);
+                for r in optimized {
+                    try!(r.stream(output, other_style));
+                }
             }
         },
     }
