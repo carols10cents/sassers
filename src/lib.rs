@@ -14,6 +14,7 @@ mod error;
 // mod event;
 // mod inner_tokenizer;
 mod sass;
+mod optimizer;
 mod parser;
 // mod substituter;
 mod token;
@@ -72,7 +73,7 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
         other_style => {
             let mut parser = Parser::new(&imports_resolved);
             while let Some(ast_node) = parser.next() {
-                try!(ast_node.unwrap().stream(output, other_style));
+                try!(optimizer::optimize(ast_node.unwrap()).stream(output, other_style));
             }
         },
     }
