@@ -5,7 +5,6 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq)]
 pub struct NumberValue {
     pub scalar:   Lexeme,
-    pub unit:     Option<Lexeme>,
     pub computed: bool,
 }
 
@@ -14,10 +13,16 @@ impl<'b> NumberValue {
         self.scalar.offset
     }
 
+    // pub fn unit(&self) -> Option<String> {
+    //     match self.scalar.token {
+    //         Token::Number(_, Some(ref u)) => Some(u.clone()),
+    //         _ => None,
+    //     }
+    // }
+
     pub fn from_scalar(num: Lexeme) -> NumberValue {
         NumberValue {
             scalar:   num,
-            unit:     None,
             computed: false,
         }
     }
@@ -31,14 +36,6 @@ impl<'b> NumberValue {
     //     }
     // }
 
-    pub fn with_units(num: Lexeme, unit: Lexeme) -> NumberValue {
-        NumberValue {
-            scalar:   num,
-            unit:     Some(unit),
-            computed: false,
-        }
-    }
-    //
     // pub fn apply_math(self, op: Op, nv: NumberValue) -> Result<NumberValue> {
     //     let result       = try!(self.compute_number(op, &nv));
     //     let result_units = try!(self.compute_units(op, nv));
@@ -89,10 +86,6 @@ impl<'b> NumberValue {
 
 impl fmt::Display for NumberValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let unit_string = match self.unit {
-            Some(ref u) => u.token.to_string(),
-            None => String::from(""),
-        };
-        write!(f, "{}{}", self.scalar.token, unit_string)
+        write!(f, "{}", self.scalar.token)
     }
 }

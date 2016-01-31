@@ -22,7 +22,7 @@ pub enum Token {
     RightCurlyBrace,
 
     Ident(String),
-    Number(f32),
+    Number(f32, Option<String>),
     // Variable(String),
     // Literal(String),
     // Comment(String),
@@ -46,7 +46,8 @@ impl fmt::Display for Token {
             Token::RightCurlyBrace => write!(f, "}}"),
 
             Token::Ident(ref i) => write!(f, "{}", i),
-            Token::Number(i) => write!(f, "{}", i),
+            Token::Number(i, Some(ref u)) => write!(f, "{}{}", i, u),
+            Token::Number(i, None) => write!(f, "{}", i),
             // Token::Variable(ref i) => write!(f, "{}", i),
             // Token::Literal(ref i) => write!(f, "{}", i),
             // Token::Comment(ref i) => write!(f, "{}", i),

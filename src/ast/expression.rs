@@ -33,7 +33,7 @@ impl Expression {
                 } else {
                     return Ok(Expression::List(list))
                 }
-            } else if let Token::Number(_) = lexeme.token {
+            } else if let Token::Number(_, _) = lexeme.token {
                 list.push(Expression::Number(NumberValue::from_scalar(lexeme)))
             } else {
                 list.push(Expression::String(lexeme));
@@ -71,11 +71,11 @@ mod tests {
     }
 
     fn one() -> Lexeme {
-        Lexeme { token: Token::Number(1.0), offset: None }
+        Lexeme { token: Token::Number(1.0, None), offset: None }
     }
 
-    fn pixels() -> Lexeme {
-        Lexeme { token: Token::Ident("px".into()), offset: None }
+    fn one_px() -> Lexeme {
+        Lexeme { token: Token::Number(1.0, Some("px".into())), offset: None }
     }
 
     #[test]
@@ -110,10 +110,10 @@ mod tests {
 
     #[test]
     fn it_parses_a_number_with_units() {
-        let mut fake_tokenizer = vec![Ok(one()), Ok(pixels()), Ok(semicolon())].into_iter();
+        let mut fake_tokenizer = vec![Ok(one_px()), Ok(semicolon())].into_iter();
         assert_eq!(
             Expression::parse(&mut fake_tokenizer),
-            Ok(Expression::Number(NumberValue::with_units(one(), pixels())))
+            Ok(Expression::Number(NumberValue::from_scalar(one_px())))
         );
     }
 }

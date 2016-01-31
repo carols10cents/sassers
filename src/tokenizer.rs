@@ -115,7 +115,27 @@ impl<'a> Tokenizer<'a> {
                 ),
             })
         };
-        Ok(Some(Lexeme { token: Token::Number(value), offset: Some(start) }))
+
+        let mut unit = String::new();
+        while let Some(peek_char) = self.peek_char() {
+            // Get units; stop when we reach a space or non-percent operator
+            if peek_char == '%' || (
+                !peek_char.is_whitespace() && !is_single_char_token(peek_char)
+            ) {
+                unit.push(peek_char);
+                self.chars.next();
+            } else {
+                break;
+            }
+        }
+
+        let token = if unit.len() > 0 {
+            Token::Number(value, Some(unit))
+        } else {
+            Token::Number(value, None)
+        };
+
+        Ok(Some(Lexeme { token: token, offset: Some(start) }))
     }
 }
 
@@ -205,11 +225,11 @@ mod tests {
         let mut tokenizer = Tokenizer::new("border: 0px 1.5 11em;");
         assert_eq!(tokenizer.next(), expected_ident("border", 0));
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Colon, 6));
-        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(0.0), 8));
-        assert_eq!(tokenizer.next(), expected_ident("px", 9));
-        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(1.5), 12));
-        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(11.0), 16));
-        assert_eq!(tokenizer.next(), expected_ident("em", 18));
+        assert_eq!(tokenizer.next(), expected_lexeme(
+            Token::Number(0.0, Some("px".into())), 8
+        ));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(1.5, None), 12));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(11.0, Some("em".into())), 16));
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Semicolon, 20));
         assert_eq!(tokenizer.next(), None);
     }
@@ -219,10 +239,10 @@ mod tests {
         let mut tokenizer = Tokenizer::new("font-weight -webkit -3 - 4-5 a-1 -");
         assert_eq!(tokenizer.next(), expected_ident("font-weight", 0));
         assert_eq!(tokenizer.next(), expected_ident("-webkit", 12));
-        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(-3.0), 20));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(-3.0, None), 20));
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Minus, 23));
-        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(4.0), 25));
-        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(-5.0), 26));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(4.0, None), 25));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(-5.0, None), 26));
         assert_eq!(tokenizer.next(), expected_ident("a-1", 29));
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Minus, 33));
         assert_eq!(tokenizer.next(), None);
@@ -246,11 +266,11 @@ mod tests {
         let mut tokenizer = Tokenizer::new("/ / 3/4 / 8");
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Slash, 0));
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Slash, 2));
-        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(3.0), 4));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(3.0, None), 4));
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Slash, 5));
-        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(4.0), 6));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(4.0, None), 6));
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Slash, 8));
-        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(8.0), 10));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(8.0, None), 10));
         assert_eq!(tokenizer.next(), None);
     }
 }
