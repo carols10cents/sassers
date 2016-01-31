@@ -273,4 +273,14 @@ mod tests {
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Number(8.0, None), 10));
         assert_eq!(tokenizer.next(), None);
     }
+
+    #[test]
+    fn it_separates_comma() {
+        let mut tokenizer = Tokenizer::new("a, b {");
+        assert_eq!(tokenizer.next(), expected_ident("a", 0));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Comma, 1));
+        assert_eq!(tokenizer.next(), expected_ident("b", 3));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::LeftCurlyBrace, 5));
+        assert_eq!(tokenizer.next(), None);
+    }
 }
