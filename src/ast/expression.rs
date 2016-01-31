@@ -70,8 +70,12 @@ mod tests {
         Lexeme { token: Token::Ident("blue".into()), offset: None }
     }
 
-    fn zero() -> Lexeme {
-        Lexeme { token: Token::Number(0.0), offset: None }
+    fn one() -> Lexeme {
+        Lexeme { token: Token::Number(1.0), offset: None }
+    }
+
+    fn pixels() -> Lexeme {
+        Lexeme { token: Token::Ident("px".into()), offset: None }
     }
 
     #[test]
@@ -85,27 +89,31 @@ mod tests {
 
     #[test]
     fn it_parses_a_list() {
-        let mut fake_tokenizer = vec![Ok(zero()), Ok(zero()), Ok(semicolon())].into_iter();
+        let mut fake_tokenizer = vec![Ok(one()), Ok(one()), Ok(semicolon())].into_iter();
         assert_eq!(
             Expression::parse(&mut fake_tokenizer),
             Ok(Expression::List(vec![
-                Expression::Number(NumberValue::from_scalar(zero())),
-                Expression::Number(NumberValue::from_scalar(zero())),
+                Expression::Number(NumberValue::from_scalar(one())),
+                Expression::Number(NumberValue::from_scalar(one())),
             ]))
         );
     }
 
     #[test]
     fn it_parses_a_number_without_units() {
-        let mut fake_tokenizer = vec![Ok(zero()), Ok(semicolon())].into_iter();
+        let mut fake_tokenizer = vec![Ok(one()), Ok(semicolon())].into_iter();
         assert_eq!(
             Expression::parse(&mut fake_tokenizer),
-            Ok(Expression::Number(NumberValue::from_scalar(zero())))
+            Ok(Expression::Number(NumberValue::from_scalar(one())))
         );
     }
 
     #[test]
     fn it_parses_a_number_with_units() {
-
+        let mut fake_tokenizer = vec![Ok(one()), Ok(pixels()), Ok(semicolon())].into_iter();
+        assert_eq!(
+            Expression::parse(&mut fake_tokenizer),
+            Ok(Expression::Number(NumberValue::with_units(one(), pixels())))
+        );
     }
 }
