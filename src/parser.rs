@@ -1,4 +1,4 @@
-use token::Token;
+use token::{Token, Lexeme};
 use tokenizer::Tokenizer;
 use ast::expression::Expression;
 use ast::root::Root;
@@ -16,8 +16,10 @@ impl<'a> Iterator for Parser<'a> {
     fn next(&mut self) -> Option<Result<Root>> {
         let mut current_sass_rule = SassRule::new();
         let mut rule_stack = vec![];
+        let mut selector_holding_pen = Lexeme::new();
         while let Some(Ok(lexeme)) = self.tokenizer.next() {
             if lexeme.token == Token::LeftCurlyBrace {
+                current_sass_rule.selectors.push(selector_holding_pen);
                 let mut holding_pen = vec![];
                 while let Some(Ok(lexeme)) = self.tokenizer.next() {
                     if lexeme.token == Token::RightCurlyBrace {
@@ -47,8 +49,11 @@ impl<'a> Iterator for Parser<'a> {
                     }
                 }
                 return Some(Ok(Root::Rule(current_sass_rule)))
+            } else if lexeme.token == Token::Comma {
+                current_sass_rule.selectors.push(selector_holding_pen);
+                selector_holding_pen = Lexeme::new();
             } else {
-                current_sass_rule.selectors.push(lexeme);
+                selector_holding_pen = selector_holding_pen.combine(&lexeme);
             }
         }
         None
@@ -113,6 +118,25 @@ mod tests {
                             ),
                         )],
                     }
+                )],
+            }
+        ))));
+    }
+
+    #[test]
+    fn it_returns_rules_with_multiple_selectors() {
+        let mut parser = Parser::new("a, b c { color: red; }");
+        assert_eq!(parser.next(), Some(Ok(Root::Rule(
+            SassRule {
+                selectors: vec![
+                    Lexeme { token: Token::Ident("a".into()), offset: Some(0) },
+                    Lexeme { token: Token::Ident("b c".into()), offset: Some(3) },
+                ],
+                children: vec![Node::Property(
+                    Lexeme { token: Token::Ident("color".into()), offset: Some(9) },
+                    Expression::String(
+                        Lexeme { token: Token::Ident("red".into()), offset: Some(16) }
+                    ),
                 )],
             }
         ))));

@@ -6,6 +6,26 @@ pub struct Lexeme {
     pub offset: Option<usize>,
 }
 
+impl Lexeme {
+    pub fn new() -> Lexeme {
+        Lexeme {
+            token: Token::Ident("".into()),
+            offset: None,
+        }
+    }
+
+    pub fn combine(&self, other: &Lexeme) -> Lexeme {
+        let offset = match self.offset {
+            Some(o) => Some(o),
+            None => other.offset,
+        };
+        Lexeme {
+            token: self.token.combine(&other.token),
+            offset: offset,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Plus,
@@ -27,6 +47,21 @@ pub enum Token {
     // Literal(String),
     // Comment(String),
     // Color(String),
+}
+
+impl Token {
+    pub fn combine(&self, other: &Token) -> Token {
+        match (self, other) {
+            (&Token::Ident(ref my_str), &Token::Ident(ref other_str)) => {
+                if my_str.len() > 0 {
+                    Token::Ident(format!("{} {}", my_str, other_str))
+                } else {
+                    Token::Ident(other_str.clone())
+                }
+            },
+            (_, _) => unimplemented!(),
+        }
+    }
 }
 
 impl fmt::Display for Token {
