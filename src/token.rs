@@ -9,7 +9,7 @@ pub struct Lexeme {
 impl Lexeme {
     pub fn new() -> Lexeme {
         Lexeme {
-            token: Token::Ident("".into()),
+            token: Token::String("".into()),
             offset: None,
         }
     }
@@ -41,22 +41,22 @@ pub enum Token {
     LeftCurlyBrace,
     RightCurlyBrace,
 
-    Ident(String),
+    String(String),
+    // StringLiteral(String),
+
     Number(f32, Option<String>),
-    // Variable(String),
-    // Literal(String),
+
     // Comment(String),
-    // Color(String),
 }
 
 impl Token {
     pub fn combine(&self, other: &Token) -> Token {
         match (self, other) {
-            (&Token::Ident(ref my_str), &Token::Ident(ref other_str)) => {
+            (&Token::String(ref my_str), &Token::String(ref other_str)) => {
                 if my_str.len() > 0 {
-                    Token::Ident(format!("{} {}", my_str, other_str))
+                    Token::String(format!("{} {}", my_str, other_str))
                 } else {
-                    Token::Ident(other_str.clone())
+                    Token::String(other_str.clone())
                 }
             },
             (_, _) => unimplemented!(),
@@ -80,7 +80,7 @@ impl fmt::Display for Token {
             Token::LeftCurlyBrace => write!(f, "{{"),
             Token::RightCurlyBrace => write!(f, "}}"),
 
-            Token::Ident(ref i) => write!(f, "{}", i),
+            Token::String(ref i) => write!(f, "{}", i),
             Token::Number(i, Some(ref u)) => write!(f, "{}{}", i, u),
             Token::Number(i, None) => write!(f, "{}", i),
             // Token::Variable(ref i) => write!(f, "{}", i),

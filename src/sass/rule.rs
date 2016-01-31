@@ -132,7 +132,7 @@ impl SassRule {
         let new_selectors = parents.iter().flat_map(|p|
             self.selectors.iter().map(|c|
                 Lexeme {
-                    token: Token::Ident(format!("{} {}", p.token, c.token)),
+                    token: Token::String(format!("{} {}", p.token, c.token)),
                     offset: p.offset,
                 }
             ).collect::<Vec<_>>()
@@ -166,17 +166,17 @@ mod tests {
     #[test]
     fn it_collapses_subrules_without_properties() {
         let orig = SassRule {
-            selectors: vec![Lexeme { token: Token::Ident("div".into()), offset: Some(0) }],
+            selectors: vec![Lexeme { token: Token::String("div".into()), offset: Some(0) }],
             children: vec![Node::Rule(
                 SassRule {
                     selectors: vec![Lexeme {
-                        token: Token::Ident("img".into()),
+                        token: Token::String("img".into()),
                         offset: Some(6)
                     }],
                     children: vec![Node::Property(
-                        Lexeme { token: Token::Ident("color".into()), offset: Some(12) },
+                        Lexeme { token: Token::String("color".into()), offset: Some(12) },
                         Expression::String(
-                            Lexeme { token: Token::Ident("blue".into()), offset: Some(19) }
+                            Lexeme { token: Token::String("blue".into()), offset: Some(19) }
                         ),
                     )],
                 }
@@ -187,12 +187,12 @@ mod tests {
             orig.optimize(),
             vec![SassRule {
                 selectors: vec![
-                    Lexeme { token: Token::Ident("div img".into()), offset: Some(0) },
+                    Lexeme { token: Token::String("div img".into()), offset: Some(0) },
                 ],
                 children: vec![Node::Property(
-                    Lexeme { token: Token::Ident("color".into()), offset: Some(12) },
+                    Lexeme { token: Token::String("color".into()), offset: Some(12) },
                     Expression::String(
-                        Lexeme { token: Token::Ident("blue".into()), offset: Some(19) }
+                        Lexeme { token: Token::String("blue".into()), offset: Some(19) }
                     ),
                 )],
             }]

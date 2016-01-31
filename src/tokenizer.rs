@@ -86,7 +86,7 @@ impl<'a> Tokenizer<'a> {
                 self.chars.next();
             }
         }
-        Ok(Some(Lexeme { token: Token::Ident(value), offset: Some(start) }))
+        Ok(Some(Lexeme { token: Token::String(value), offset: Some(start) }))
     }
 
     fn number(&mut self, curr_char: char, start: usize) -> Result<Option<Lexeme>> {
@@ -157,7 +157,7 @@ mod tests {
     }
 
     fn expected_ident(expected_value: &str, expected_offset: usize) -> Option<Result<Lexeme>> {
-        expected_lexeme(Token::Ident(expected_value.into()), expected_offset)
+        expected_lexeme(Token::String(expected_value.into()), expected_offset)
     }
 
     #[test]

@@ -67,7 +67,7 @@ mod tests {
     }
 
     fn blue() -> Lexeme {
-        Lexeme { token: Token::Ident("blue".into()), offset: None }
+        Lexeme { token: Token::String("blue".into()), offset: None }
     }
 
     fn one() -> Lexeme {

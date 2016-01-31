@@ -88,11 +88,11 @@ mod tests {
         let mut parser = Parser::new("a { color: blue; }");
         assert_eq!(parser.next(), Some(Ok(Root::Rule(
             SassRule {
-                selectors: vec![Lexeme { token: Token::Ident("a".into()), offset: Some(0) }],
+                selectors: vec![Lexeme { token: Token::String("a".into()), offset: Some(0) }],
                 children: vec![Node::Property(
-                    Lexeme { token: Token::Ident("color".into()), offset: Some(4) },
+                    Lexeme { token: Token::String("color".into()), offset: Some(4) },
                     Expression::String(
-                        Lexeme { token: Token::Ident("blue".into()), offset: Some(11) }
+                        Lexeme { token: Token::String("blue".into()), offset: Some(11) }
                     ),
                 )],
             }
@@ -104,17 +104,17 @@ mod tests {
         let mut parser = Parser::new("div { img { color: blue; } }");
         assert_eq!(parser.next(), Some(Ok(Root::Rule(
             SassRule {
-                selectors: vec![Lexeme { token: Token::Ident("div".into()), offset: Some(0) }],
+                selectors: vec![Lexeme { token: Token::String("div".into()), offset: Some(0) }],
                 children: vec![Node::Rule(
                     SassRule {
                         selectors: vec![Lexeme {
-                            token: Token::Ident("img".into()),
+                            token: Token::String("img".into()),
                             offset: Some(6)
                         }],
                         children: vec![Node::Property(
-                            Lexeme { token: Token::Ident("color".into()), offset: Some(12) },
+                            Lexeme { token: Token::String("color".into()), offset: Some(12) },
                             Expression::String(
-                                Lexeme { token: Token::Ident("blue".into()), offset: Some(19) }
+                                Lexeme { token: Token::String("blue".into()), offset: Some(19) }
                             ),
                         )],
                     }
@@ -129,13 +129,13 @@ mod tests {
         assert_eq!(parser.next(), Some(Ok(Root::Rule(
             SassRule {
                 selectors: vec![
-                    Lexeme { token: Token::Ident("a".into()), offset: Some(0) },
-                    Lexeme { token: Token::Ident("b c".into()), offset: Some(3) },
+                    Lexeme { token: Token::String("a".into()), offset: Some(0) },
+                    Lexeme { token: Token::String("b c".into()), offset: Some(3) },
                 ],
                 children: vec![Node::Property(
-                    Lexeme { token: Token::Ident("color".into()), offset: Some(9) },
+                    Lexeme { token: Token::String("color".into()), offset: Some(9) },
                     Expression::String(
-                        Lexeme { token: Token::Ident("red".into()), offset: Some(16) }
+                        Lexeme { token: Token::String("red".into()), offset: Some(16) }
                     ),
                 )],
             }
