@@ -113,14 +113,18 @@ impl SassRule {
         ).collect::<Vec<_>>()
     }
 
+    pub fn has_properties(&self) -> bool {
+        !self.child_properties().is_empty()
+    }
+
     pub fn optimize(self) -> Vec<SassRule> {
-        match self.child_properties().len() {
-            0 => {
+        match self.has_properties() {
+            true  => vec![self],
+            false => {
                 self.child_rules().into_iter().map(|cr|
                     cr.collapse_with_parent_selectors(&self.selectors)
                 ).collect()
             },
-            _ => vec![self],
         }
     }
 
