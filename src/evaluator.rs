@@ -1,10 +1,11 @@
 use ast::expression::Expression;
 use ast::root::Root;
 use token::{Token, Lexeme};
+use context::Context;
 
 use std::collections::HashMap;
 
-pub fn evaluate(root: Root, context: &mut HashMap<String, Expression>) -> Option<Root> {
+pub fn evaluate(root: Root, context: &mut Context) -> Option<Root> {
     match root {
         Root::Rule(..) => Some(root),
         _ => None,

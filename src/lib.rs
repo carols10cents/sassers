@@ -10,6 +10,7 @@ use std::io::Write;
 use std::collections::HashMap;
 
 mod ast;
+mod context;
 mod error;
 mod evaluator;
 // mod event;
@@ -23,6 +24,7 @@ mod tokenizer;
 // mod tokenizer_utils;
 // mod value_tokenizer;
 
+use context::Context;
 use error::Result;
 use tokenizer::Tokenizer;
 use parser::Parser;
@@ -73,7 +75,7 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
         },
         other_style => {
             let mut parser  = Parser::new(&imports_resolved);
-            let mut context = HashMap::new();
+            let mut context = Context::new();
             while let Some(Ok(ast_node)) = parser.next() {
                 let evaluated = evaluator::evaluate(ast_node, &mut context);
                 if let Some(root) = evaluated {
