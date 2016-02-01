@@ -2,6 +2,7 @@ use sass::output_style::SassOutputStyle;
 use ast::node::Node;
 use token::{Lexeme, Token};
 use error::Result;
+use context::Context;
 
 use std::fmt;
 use std::io::Write;
@@ -141,6 +142,10 @@ impl SassRule {
             selectors: new_selectors,
             children: self.children,
         }
+    }
+
+    pub fn evaluate(self, context: &Context) -> SassRule {
+        self
     }
 }
 
