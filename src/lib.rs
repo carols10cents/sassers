@@ -7,7 +7,6 @@ use std::fs::File;
 use std::io::Read;
 use regex::Regex;
 use std::io::Write;
-use std::collections::HashMap;
 
 mod ast;
 mod context;

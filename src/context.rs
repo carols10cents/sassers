@@ -12,4 +12,8 @@ impl Context {
             variables: HashMap::new(),
         }
     }
+
+    pub fn add_variable(&mut self, variable: SassVariable) {
+        self.variables.insert(variable.name_string(), variable);
+    }
 }

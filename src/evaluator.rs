@@ -8,7 +8,10 @@ use std::collections::HashMap;
 pub fn evaluate(root: Root, context: &mut Context) -> Option<Root> {
     match root {
         Root::Rule(..) => Some(root),
-        _ => None,
+        Root::Variable(sv) => {
+            context.add_variable(sv);
+            None
+        },
     }
 }
 
