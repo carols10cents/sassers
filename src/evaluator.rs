@@ -5,7 +5,10 @@ use token::{Token, Lexeme};
 use std::collections::HashMap;
 
 pub fn evaluate(root: Root, context: &mut HashMap<String, Expression>) -> Option<Root> {
-    None
+    match root {
+        Root::Rule(..) => Some(root),
+        _ => None,
+    }
 }
 
 // use error::{Result, SassError, ErrorKind};
