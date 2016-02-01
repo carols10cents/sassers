@@ -89,21 +89,4 @@ impl SassOutputStyle {
             _ => "",
         })
     }
-
-    // pub fn rule_and_child_rules_separator(&self, nesting: &str) -> String {
-    //     match *self {
-    //         SassOutputStyle::Nested => format!("\n{}", nesting),
-    //         SassOutputStyle::Expanded => String::from("\n"),
-    //         SassOutputStyle::Compact => String::from("\n"),
-    //         _ => String::from(""),
-    //     }
-    // }
-
-    // pub fn child_rule_separator(&self, has_properties: bool) -> String {
-    //     String::from(match (*self, has_properties) {
-    //         (SassOutputStyle::Nested, true) => "\n  ",
-    //         (SassOutputStyle::Compressed, _) => "",
-    //         (_, _) => "\n",
-    //     })
-    // }
 }

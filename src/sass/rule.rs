@@ -72,25 +72,6 @@ impl SassRule {
             try!(write!(output, "{}}}", style.property_brace_separator()));
         }
 
-        // let mut child_rules = self.children.iter().filter(|c| c.is_child_rule() ).map(|c| {
-        //     match c {
-        //         &Event::Rule(ref rule) => rule,
-        //         _ => unreachable!(),
-        //     }
-        // });
-        //
-        // if let Some(child_rule) = child_rules.next() {
-        //     let mut recursive_nesting = String::from(nesting);
-        //     if has_properties {
-        //         recursive_nesting.push_str("  ");
-        //         try!(write!(output, "{}", style.rule_and_child_rules_separator(&recursive_nesting)));
-        //     }
-        //     try!(child_rule.recursive_stream(output, style, &selector_string, &recursive_nesting));
-        //     for child_rule in child_rules {
-        //         try!(write!(output, "{}", style.child_rule_separator(has_properties)));
-        //         try!(child_rule.recursive_stream(output, style, &selector_string, &recursive_nesting));
-        //     }
-        // }
         Ok(())
     }
 

@@ -12,16 +12,11 @@ mod ast;
 mod context;
 mod error;
 mod evaluator;
-// mod event;
-// mod inner_tokenizer;
 mod sass;
 mod optimizer;
 mod parser;
-// mod substituter;
 mod token;
 mod tokenizer;
-// mod tokenizer_utils;
-// mod value_tokenizer;
 
 use context::Context;
 use error::Result;
@@ -88,36 +83,4 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
     }
 
     Ok(())
-
-    // match tokenizer.stream(output, style) {
-    //     Err(sass_error) => {
-    //         let before_error = &imports_resolved[0..sass_error.offset];
-    //         let after_error = &imports_resolved[sass_error.offset..];
-    //
-    //         let context_start = before_error
-    //             .as_bytes()
-    //             .iter()
-    //             .rposition(|&c| c == b'\n')
-    //             .unwrap_or(0);
-    //         let context_end = after_error
-    //             .as_bytes()
-    //             .iter()
-    //             .position(|&c| c == b'\n')
-    //             .unwrap_or(max_offset);
-    //
-    //         Err(SassError {
-    //             message: format!("{}\nOn line {}:\n{}\n{}^",
-    //                 sass_error.message,
-    //                 before_error.split("\n").collect::<Vec<_>>().len(),
-    //                 &imports_resolved[context_start..context_end + sass_error.offset],
-    //                 iter::repeat(" ")
-    //                      .take(sass_error.offset - context_start)
-    //                      .collect::<Vec<_>>()
-    //                      .join(""),
-    //             ),
-    //             ..sass_error
-    //         })
-    //     },
-    //     other => other,
-    // }
 }
