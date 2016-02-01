@@ -17,43 +17,58 @@ impl<'a> Iterator for Parser<'a> {
         let mut current_sass_rule = SassRule::new();
         let mut rule_stack = vec![];
         let mut selector_holding_pen = Lexeme::new();
-        while let Some(Ok(lexeme)) = self.tokenizer.next() {
-            if lexeme.token == Token::LeftCurlyBrace {
-                current_sass_rule.selectors.push(selector_holding_pen);
-                let mut holding_pen = vec![];
-                while let Some(Ok(lexeme)) = self.tokenizer.next() {
-                    if lexeme.token == Token::RightCurlyBrace {
-                        if rule_stack.is_empty() {
-                            return Some(Ok(Root::Rule(current_sass_rule)))
-                        } else {
-                            let tmp_rule = current_sass_rule;
-                            current_sass_rule = rule_stack.pop().unwrap();
-                            current_sass_rule.children.push(Node::Rule(tmp_rule));
-                        }
-                    } else if lexeme.token == Token::LeftCurlyBrace {
-                        rule_stack.push(current_sass_rule);
-                        current_sass_rule = SassRule::new();
-                        current_sass_rule.selectors = holding_pen;
-                        holding_pen = vec![];
-                    } else if lexeme.token == Token::Colon {
-                        let property_value = match Expression::parse(&mut self.tokenizer) {
-                            Ok(e) => e,
-                            Err(e) => return Some(Err(e)),
-                        };
 
-                        // TODO: holding pen better have exactly one thing in it
-                        let child = Node::Property(holding_pen.pop().unwrap(), property_value);
-                        current_sass_rule.children.push(child);
-                    } else {
-                        holding_pen.push(lexeme);
+        while let Some(Ok(lexeme)) = self.tokenizer.next() {
+            match lexeme.token {
+                Token::String(ref s) if s.starts_with("$") => {
+                    let variable_name = lexeme.clone();
+                    // TODO: this better be a colon
+                    self.tokenizer.next();
+                    let variable_value = match Expression::parse(&mut self.tokenizer) {
+                        Ok(e) => e,
+                        Err(e) => return Some(Err(e)),
+                    };
+                    return Some(Ok(Root::Variable(variable_name, variable_value)))
+                },
+                Token::LeftCurlyBrace => {
+                    current_sass_rule.selectors.push(selector_holding_pen);
+                    let mut holding_pen = vec![];
+                    while let Some(Ok(lexeme)) = self.tokenizer.next() {
+                        if lexeme.token == Token::RightCurlyBrace {
+                            if rule_stack.is_empty() {
+                                return Some(Ok(Root::Rule(current_sass_rule)))
+                            } else {
+                                let tmp_rule = current_sass_rule;
+                                current_sass_rule = rule_stack.pop().unwrap();
+                                current_sass_rule.children.push(Node::Rule(tmp_rule));
+                            }
+                        } else if lexeme.token == Token::LeftCurlyBrace {
+                            rule_stack.push(current_sass_rule);
+                            current_sass_rule = SassRule::new();
+                            current_sass_rule.selectors = holding_pen;
+                            holding_pen = vec![];
+                        } else if lexeme.token == Token::Colon {
+                            let property_value = match Expression::parse(&mut self.tokenizer) {
+                                Ok(e) => e,
+                                Err(e) => return Some(Err(e)),
+                            };
+
+                            // TODO: holding pen better have exactly one thing in it
+                            let child = Node::Property(holding_pen.pop().unwrap(), property_value);
+                            current_sass_rule.children.push(child);
+                        } else {
+                            holding_pen.push(lexeme);
+                        }
                     }
+                    return Some(Ok(Root::Rule(current_sass_rule)))
+                },
+                Token::Comma => {
+                    current_sass_rule.selectors.push(selector_holding_pen);
+                    selector_holding_pen = Lexeme::new();
+                },
+                _ => {
+                    selector_holding_pen = selector_holding_pen.combine(&lexeme);
                 }
-                return Some(Ok(Root::Rule(current_sass_rule)))
-            } else if lexeme.token == Token::Comma {
-                current_sass_rule.selectors.push(selector_holding_pen);
-                selector_holding_pen = Lexeme::new();
-            } else {
-                selector_holding_pen = selector_holding_pen.combine(&lexeme);
             }
         }
         None
@@ -97,6 +112,7 @@ mod tests {
                 )],
             }
         ))));
+        assert_eq!(parser.next(), None);
     }
 
     #[test]
@@ -121,6 +137,7 @@ mod tests {
                 )],
             }
         ))));
+        assert_eq!(parser.next(), None);
     }
 
     #[test]
@@ -140,5 +157,18 @@ mod tests {
                 )],
             }
         ))));
+        assert_eq!(parser.next(), None);
+    }
+
+    #[test]
+    fn it_returns_variable_setting_statements() {
+        let mut parser = Parser::new("$color: red;");
+        assert_eq!(parser.next(), Some(Ok(Root::Variable(
+            Lexeme { token: Token::String("$color".into()), offset: Some(0) },
+            Expression::String(
+                Lexeme { token: Token::String("red".into()), offset: Some(8) }
+            ),
+        ))));
+        assert_eq!(parser.next(), None);
     }
 }

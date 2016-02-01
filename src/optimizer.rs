@@ -5,5 +5,6 @@ pub fn optimize(root: Root) -> Vec<Root> {
         Root::Rule(rule) => {
             rule.optimize().into_iter().map(|r| Root::Rule(r) ).collect()
         },
+        Root::Variable(..) => unreachable!(), // variables get evaluated before optimization
     }
 }
