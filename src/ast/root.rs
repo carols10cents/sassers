@@ -1,7 +1,6 @@
 use sass::output_style::SassOutputStyle;
 use sass::rule::SassRule;
-use token::Lexeme;
-use ast::expression::Expression;
+use sass::variable::SassVariable;
 use error::{Result};
 
 use std::io::Write;
@@ -9,7 +8,7 @@ use std::io::Write;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Root {
     Rule(SassRule),
-    Variable(Lexeme, Expression),
+    Variable(SassVariable),
 }
 
 impl Root {

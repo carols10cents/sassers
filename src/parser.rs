@@ -4,6 +4,7 @@ use ast::expression::Expression;
 use ast::root::Root;
 use ast::node::Node;
 use sass::rule::SassRule;
+use sass::variable::SassVariable;
 use error::{Result};
 
 pub struct Parser<'a> {
@@ -28,7 +29,12 @@ impl<'a> Iterator for Parser<'a> {
                         Ok(e) => e,
                         Err(e) => return Some(Err(e)),
                     };
-                    return Some(Ok(Root::Variable(variable_name, variable_value)))
+                    return Some(Ok(Root::Variable(
+                        SassVariable {
+                            name: variable_name,
+                            value: variable_value
+                        }
+                    )))
                 },
                 Token::LeftCurlyBrace => {
                     current_sass_rule.selectors.push(selector_holding_pen);
@@ -87,6 +93,7 @@ impl<'a> Parser<'a> {
 mod tests {
     use super::*;
     use sass::rule::SassRule;
+    use sass::variable::SassVariable;
     use ast::expression::Expression;
     use ast::root::Root;
     use ast::node::Node;
@@ -163,12 +170,12 @@ mod tests {
     #[test]
     fn it_returns_variable_setting_statements() {
         let mut parser = Parser::new("$color: red;");
-        assert_eq!(parser.next(), Some(Ok(Root::Variable(
-            Lexeme { token: Token::String("$color".into()), offset: Some(0) },
-            Expression::String(
+        assert_eq!(parser.next(), Some(Ok(Root::Variable(SassVariable {
+            name: Lexeme { token: Token::String("$color".into()), offset: Some(0) },
+            value: Expression::String(
                 Lexeme { token: Token::String("red".into()), offset: Some(8) }
             ),
-        ))));
+        }))));
         assert_eq!(parser.next(), None);
     }
 }
