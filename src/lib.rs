@@ -7,10 +7,11 @@ use std::fs::File;
 use std::io::Read;
 use regex::Regex;
 use std::io::Write;
+use std::collections::HashMap;
 
 mod ast;
 mod error;
-// mod evaluator;
+mod evaluator;
 // mod event;
 // mod inner_tokenizer;
 mod sass;
@@ -71,11 +72,15 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
             }
         },
         other_style => {
-            let mut parser = Parser::new(&imports_resolved);
+            let mut parser  = Parser::new(&imports_resolved);
+            let mut context = HashMap::new();
             while let Some(Ok(ast_node)) = parser.next() {
-                let optimized = optimizer::optimize(ast_node);
-                for r in optimized {
-                    try!(r.stream(output, other_style));
+                let evaluated = evaluator::evaluate(ast_node, &mut context);
+                if let Some(root) = evaluated {
+                    let optimized = optimizer::optimize(root);
+                    for r in optimized {
+                        try!(r.stream(output, other_style));
+                    }
                 }
             }
         },
