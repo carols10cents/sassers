@@ -1,6 +1,6 @@
 [root]
 name = "sassers"
-version = "0.11.0-shitshow"
+version = "0.12.0-againagain"
 dependencies = [
  "docopt 0.6.78 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
