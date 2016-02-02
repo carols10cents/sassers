@@ -103,11 +103,12 @@ impl SassRule {
         let mut results = vec![];
         if self.has_properties() {
             results.push(self.clone());
+            return results
+        } else {
+            self.child_rules().into_iter().flat_map(|cr|
+                cr.collapse_with_parent_selectors(&self.selectors)
+            ).collect::<Vec<_>>()
         }
-        for cr in self.child_rules().into_iter() {
-            results.extend(cr.collapse_with_parent_selectors(&self.selectors));
-        }
-        results
     }
 
     pub fn collapse_with_parent_selectors(self, parents: &Vec<Lexeme>) -> Vec<SassRule> {
