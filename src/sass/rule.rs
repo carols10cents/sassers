@@ -100,17 +100,17 @@ impl SassRule {
     }
 
     pub fn optimize(self) -> Vec<SassRule> {
-        match self.has_properties() {
-            true  => vec![self],
-            false => {
-                self.child_rules().into_iter().map(|cr|
-                    cr.collapse_with_parent_selectors(&self.selectors)
-                ).collect()
-            },
+        let mut results = vec![];
+        if self.has_properties() {
+            results.push(self.clone());
         }
+        for cr in self.child_rules().into_iter() {
+            results.extend(cr.collapse_with_parent_selectors(&self.selectors));
+        }
+        results
     }
 
-    pub fn collapse_with_parent_selectors(self, parents: &Vec<Lexeme>) -> SassRule {
+    pub fn collapse_with_parent_selectors(self, parents: &Vec<Lexeme>) -> Vec<SassRule> {
         let new_selectors = parents.iter().flat_map(|p|
             self.selectors.iter().map(|c|
                 Lexeme {
@@ -122,7 +122,7 @@ impl SassRule {
         SassRule {
             selectors: new_selectors,
             children: self.children,
-        }
+        }.optimize()
     }
 
     pub fn evaluate(self, context: &Context) -> SassRule {
@@ -160,37 +160,76 @@ mod tests {
 
     #[test]
     fn it_collapses_subrules_without_properties() {
-        let orig = SassRule {
+        let innermost_rule = SassRule {
+            selectors: vec![Lexeme {
+                token: Token::String("strong".into()),
+                offset: Some(6)
+            }],
+            children: vec![
+                Node::Property(
+                    Lexeme { token: Token::String("font-weight".into()), offset: Some(12) },
+                    Expression::String(
+                        Lexeme { token: Token::String("bold".into()), offset: Some(19) }
+                    ),
+                ),
+            ],
+        };
+
+        let further_in_rule = SassRule {
+            selectors: vec![Lexeme {
+                token: Token::String("img".into()),
+                offset: Some(6)
+            }],
+            children: vec![
+                Node::Property(
+                    Lexeme { token: Token::String("color".into()), offset: Some(12) },
+                    Expression::String(
+                        Lexeme { token: Token::String("blue".into()), offset: Some(19) }
+                    ),
+                ),
+                Node::Rule(innermost_rule),
+            ],
+        };
+
+        let middle_rule = SassRule {
+            selectors: vec![Lexeme { token: Token::String("span".into()), offset: Some(0) }],
+            children: vec![Node::Rule(further_in_rule)],
+        };
+
+        let outer_rule = SassRule {
             selectors: vec![Lexeme { token: Token::String("div".into()), offset: Some(0) }],
-            children: vec![Node::Rule(
+            children: vec![Node::Rule(middle_rule)],
+        };
+
+        assert_eq!(
+            outer_rule.optimize(),
+            vec![
                 SassRule {
-                    selectors: vec![Lexeme {
-                        token: Token::String("img".into()),
-                        offset: Some(6)
-                    }],
+                    selectors: vec![
+                        Lexeme { token: Token::String("div span img".into()), offset: Some(0) },
+                    ],
                     children: vec![Node::Property(
                         Lexeme { token: Token::String("color".into()), offset: Some(12) },
                         Expression::String(
                             Lexeme { token: Token::String("blue".into()), offset: Some(19) }
                         ),
                     )],
+                },
+                SassRule {
+                    selectors: vec![
+                        Lexeme {
+                            token: Token::String("div span img strong".into()),
+                            offset: Some(0)
+                        },
+                    ],
+                    children: vec![Node::Property(
+                        Lexeme { token: Token::String("font-weight".into()), offset: Some(12) },
+                        Expression::String(
+                            Lexeme { token: Token::String("bold".into()), offset: Some(19) }
+                        ),
+                    )],
                 }
-            )],
-        };
-
-        assert_eq!(
-            orig.optimize(),
-            vec![SassRule {
-                selectors: vec![
-                    Lexeme { token: Token::String("div img".into()), offset: Some(0) },
-                ],
-                children: vec![Node::Property(
-                    Lexeme { token: Token::String("color".into()), offset: Some(12) },
-                    Expression::String(
-                        Lexeme { token: Token::String("blue".into()), offset: Some(19) }
-                    ),
-                )],
-            }]
+            ]
         );
     }
 }
