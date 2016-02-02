@@ -208,27 +208,31 @@ mod tests {
                     selectors: vec![
                         Lexeme { token: Token::String("div span img".into()), offset: Some(0) },
                     ],
-                    children: vec![Node::Property(
-                        Lexeme { token: Token::String("color".into()), offset: Some(12) },
-                        Expression::String(
-                            Lexeme { token: Token::String("blue".into()), offset: Some(19) }
+                    children: vec![
+                        Node::Property(
+                            Lexeme { token: Token::String("color".into()), offset: Some(12) },
+                            Expression::String(
+                                Lexeme { token: Token::String("blue".into()), offset: Some(19) }
+                            ),
                         ),
-                    )],
-                },
-                SassRule {
-                    selectors: vec![
-                        Lexeme {
-                            token: Token::String("div span img strong".into()),
-                            offset: Some(0)
-                        },
+                        Node::Rule(
+                            SassRule {
+                                selectors: vec![
+                                    Lexeme {
+                                        token: Token::String("strong".into()),
+                                        offset: Some(6)
+                                    },
+                                ],
+                                children: vec![Node::Property(
+                                    Lexeme { token: Token::String("font-weight".into()), offset: Some(12) },
+                                    Expression::String(
+                                        Lexeme { token: Token::String("bold".into()), offset: Some(19) }
+                                    ),
+                                )],
+                            }
+                        ),
                     ],
-                    children: vec![Node::Property(
-                        Lexeme { token: Token::String("font-weight".into()), offset: Some(12) },
-                        Expression::String(
-                            Lexeme { token: Token::String("bold".into()), offset: Some(19) }
-                        ),
-                    )],
-                }
+                },
             ]
         );
     }
