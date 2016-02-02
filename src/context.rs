@@ -1,3 +1,5 @@
+use token::Lexeme;
+use ast::expression::Expression;
 use sass::variable::SassVariable;
 
 use std::collections::HashMap;
@@ -15,5 +17,9 @@ impl Context {
 
     pub fn add_variable(&mut self, variable: SassVariable) {
         self.variables.insert(variable.name_string(), variable);
+    }
+
+    pub fn get_variable(&self, lexeme: &Lexeme) -> Option<Expression> {
+        self.variables.get(&lexeme.token.to_string()).and_then(|sv| Some(sv.value.clone()))
     }
 }

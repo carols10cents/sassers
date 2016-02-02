@@ -126,7 +126,16 @@ impl SassRule {
     }
 
     pub fn evaluate(self, context: &Context) -> SassRule {
-        self
+        let local_context = context.clone();
+        SassRule {
+            selectors: self.selectors,
+            children: self.children.into_iter().map(|c|
+                match c {
+                    Node::Rule(sr) => Node::Rule(sr.evaluate(&local_context)),
+                    Node::Property(lex, ex) => Node::Property(lex, ex.evaluate(&local_context)),
+                }
+            ).collect(),
+        }
     }
 }
 

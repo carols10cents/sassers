@@ -1,6 +1,7 @@
 use sass::output_style::SassOutputStyle;
 use token::{Lexeme, Token};
 use ast::number_value::NumberValue;
+use context::Context;
 use error::{Result, SassError, ErrorKind};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -53,6 +54,18 @@ impl Expression {
                 "Expected semicolon while parsing a value expression; reached EOF instead."
             ),
         })
+    }
+
+    pub fn evaluate(self, context: &Context) -> Expression {
+        match self {
+            Expression::List(exprs) => {
+                Expression::List(exprs.into_iter().map(|e| e.evaluate(&context)).collect())
+            },
+            Expression::Number(nv) => Expression::Number(nv),
+            Expression::String(lex) => {
+                context.get_variable(&lex).unwrap_or(Expression::String(lex))
+            },
+        }
     }
 }
 
