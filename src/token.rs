@@ -59,7 +59,7 @@ impl Token {
                     Token::String(other_str.clone())
                 }
             },
-            (_, _) => unimplemented!(),
+            (s, o) => panic!("Don't know how to combine {:?} and {:?}", s, o),
         }
     }
 }
