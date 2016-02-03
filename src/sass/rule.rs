@@ -48,11 +48,11 @@ impl SassRule {
         }
 
         let mut properties = self.child_properties().into_iter();
-        // let mut has_properties = false;
+        let mut has_properties = false;
 
         // TODO: peek?
         if let Some(prop) = properties.next() {
-            // has_properties = true;
+            has_properties = true;
             try!(write!(output, "{}{}{{{}{}",
               selector_string,
               style.selector_brace_separator(),
@@ -70,6 +70,23 @@ impl SassRule {
                 try!(prop.stream(output, style));
             }
             try!(write!(output, "{}}}", style.property_brace_separator()));
+        }
+
+
+        let mut child_rules = self.child_rules().into_iter();
+        if let Some(cr) = child_rules.next() {
+            let mut recursive_nesting = String::from(nesting);
+            if has_properties {
+                recursive_nesting.push_str("  ");
+                try!(write!(
+                    output, "{}", style.rule_and_child_rules_separator(&recursive_nesting)
+                ));
+            }
+            try!(cr.recursive_stream(output, style, &selector_string, &recursive_nesting));
+            for cr in child_rules {
+                try!(write!(output, "{}", style.child_rule_separator(has_properties)));
+                try!(cr.recursive_stream(output, style, &selector_string, &recursive_nesting));
+            }
         }
 
         Ok(())
