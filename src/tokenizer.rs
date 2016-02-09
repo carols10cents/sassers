@@ -67,7 +67,9 @@ impl<'a> Tokenizer<'a> {
 
     fn comment_starting(&mut self, curr_char: char) -> bool {
         let peek_char = self.peek_char();
-        curr_char == '/' && peek_char.is_some() && peek_char.unwrap() == '*'
+        curr_char == '/'
+          && peek_char.is_some()
+          && (peek_char.unwrap() == '*' || peek_char.unwrap() == '/')
     }
 
     fn hyphen_starting_number(&mut self, curr_char: char) -> bool {
@@ -173,15 +175,21 @@ impl<'a> Tokenizer<'a> {
         let mut value = String::new();
         value.push(curr_char);
 
-        if self.peek_char() == Some('*') {
-            value.push(self.peek_char().unwrap());
-            self.chars.next();
-        }
-        // TODO: else line comment, else error
+        let multiline = match self.peek_char() {
+            Some('*') => true,
+            Some('/') => false,
+            _ => unreachable!("You expected that you would test for a comment before calling this"),
+        };
+
+        value.push(self.peek_char().unwrap());
+        self.chars.next();
 
         while let Some(peek_char) = self.peek_char() {
-            if peek_char == '/' && value.ends_with("*") {
+            if multiline && peek_char == '/' && value.ends_with("*") {
                 value.push(peek_char);
+                self.chars.next();
+                break;
+            } else if !multiline && peek_char == '\n' {
                 self.chars.next();
                 break;
             } else {
@@ -360,6 +368,15 @@ mod tests {
         assert_eq!(tokenizer.next(), expected_ident("a", 0));
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Comment("/* foo\nbar */".into()), 2));
         assert_eq!(tokenizer.next(), expected_ident("no", 16));
+        assert_eq!(tokenizer.next(), None);
+    }
+
+    #[test]
+    fn it_separates_single_line_comments() {
+        let mut tokenizer = Tokenizer::new("b // because; hi \nc");
+        assert_eq!(tokenizer.next(), expected_ident("b", 0));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Comment("// because; hi ".into()), 2));
+        assert_eq!(tokenizer.next(), expected_ident("c", 18));
         assert_eq!(tokenizer.next(), None);
     }
 }
