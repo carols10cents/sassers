@@ -46,7 +46,7 @@ pub enum Token {
 
     Number(f32, Option<String>),
 
-    // Comment(String),
+    Comment(String),
 }
 
 impl Token {
@@ -84,10 +84,7 @@ impl fmt::Display for Token {
             Token::StringLiteral(ref i) => write!(f, "{}", i),
             Token::Number(i, Some(ref u)) => write!(f, "{}{}", i, u),
             Token::Number(i, None) => write!(f, "{}", i),
-            // Token::Variable(ref i) => write!(f, "{}", i),
-            // Token::Literal(ref i) => write!(f, "{}", i),
-            // Token::Comment(ref i) => write!(f, "{}", i),
-            // Token::Color(ref i) => write!(f, "{}", i),
+            Token::Comment(ref i) => write!(f, "{}", i),
         }
     }
 }

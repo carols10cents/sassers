@@ -36,14 +36,18 @@ impl<'a> Tokenizer<'a> {
                 continue;
             } else {
                 let single_char_token = Token::from_char(curr_char);
-                if single_char_token.is_some() && !self.hyphen_starting_shit(curr_char) {
+                if single_char_token.is_some()
+                   && !self.hyphen_starting_shit(curr_char)
+                   && !self.comment_starting(curr_char) {
                     // We already tested that single_char_token was Some.
                     return Ok(Some(Lexeme {
                         token: single_char_token.unwrap(),
                         offset: Some(char_offset),
                     }))
                 } else {
-                    if curr_char == '"' {
+                    if self.comment_starting(curr_char) {
+                        return self.comment(curr_char, char_offset)
+                    } else if curr_char == '"' {
                         return self.string_literal(curr_char, char_offset)
                     } else if curr_char.is_numeric() || self.hyphen_starting_number(curr_char) {
                         return self.number(curr_char, char_offset)
@@ -59,6 +63,11 @@ impl<'a> Tokenizer<'a> {
     fn hyphen_starting_shit(&mut self, curr_char: char) -> bool {
         let peek_char = self.peek_char();
         curr_char == '-' && peek_char.is_some() && !peek_char.unwrap().is_whitespace()
+    }
+
+    fn comment_starting(&mut self, curr_char: char) -> bool {
+        let peek_char = self.peek_char();
+        curr_char == '/' && peek_char.is_some() && peek_char.unwrap() == '*'
     }
 
     fn hyphen_starting_number(&mut self, curr_char: char) -> bool {
@@ -156,6 +165,32 @@ impl<'a> Tokenizer<'a> {
         }
 
         let token = Token::StringLiteral(value);
+
+        Ok(Some(Lexeme { token: token, offset: Some(start) }))
+    }
+
+    fn comment(&mut self, curr_char: char, start: usize) -> Result<Option<Lexeme>> {
+        let mut value = String::new();
+        value.push(curr_char);
+
+        if self.peek_char() == Some('*') {
+            value.push(self.peek_char().unwrap());
+            self.chars.next();
+        }
+        // TODO: else line comment, else error
+
+        while let Some(peek_char) = self.peek_char() {
+            if peek_char == '/' && value.ends_with("*") {
+                value.push(peek_char);
+                self.chars.next();
+                break;
+            } else {
+                value.push(peek_char);
+                self.chars.next();
+            }
+        }
+
+        let token = Token::Comment(value);
 
         Ok(Some(Lexeme { token: token, offset: Some(start) }))
     }
@@ -316,6 +351,15 @@ mod tests {
             expected_lexeme(Token::StringLiteral("\"hey \\\"ya\"".into()), 6)
         );
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Semicolon, 16));
+        assert_eq!(tokenizer.next(), None);
+    }
+
+    #[test]
+    fn it_separates_multiline_comments() {
+        let mut tokenizer = Tokenizer::new("a /* foo\nbar */ no");
+        assert_eq!(tokenizer.next(), expected_ident("a", 0));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Comment("/* foo\nbar */".into()), 2));
+        assert_eq!(tokenizer.next(), expected_ident("no", 16));
         assert_eq!(tokenizer.next(), None);
     }
 }
