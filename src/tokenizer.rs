@@ -43,7 +43,9 @@ impl<'a> Tokenizer<'a> {
                         offset: Some(char_offset),
                     }))
                 } else {
-                    if curr_char.is_numeric() || self.hyphen_starting_number(curr_char) {
+                    if curr_char == '"' {
+                        return self.string_literal(curr_char, char_offset)
+                    } else if curr_char.is_numeric() || self.hyphen_starting_number(curr_char) {
                         return self.number(curr_char, char_offset)
                     } else {
                         return self.ident(curr_char, char_offset)
@@ -134,6 +136,26 @@ impl<'a> Tokenizer<'a> {
         } else {
             Token::Number(value, None)
         };
+
+        Ok(Some(Lexeme { token: token, offset: Some(start) }))
+    }
+
+    fn string_literal(&mut self, curr_char: char, start: usize) -> Result<Option<Lexeme>> {
+        let mut value = String::new();
+        value.push(curr_char);
+
+        while let Some(peek_char) = self.peek_char() {
+            if peek_char == '"' && !value.ends_with("\\") {
+                value.push(peek_char);
+                self.chars.next();
+                break;
+            } else {
+                value.push(peek_char);
+                self.chars.next();
+            }
+        }
+
+        let token = Token::StringLiteral(value);
 
         Ok(Some(Lexeme { token: token, offset: Some(start) }))
     }
@@ -281,6 +303,19 @@ mod tests {
         assert_eq!(tokenizer.next(), expected_lexeme(Token::Comma, 1));
         assert_eq!(tokenizer.next(), expected_ident("b", 3));
         assert_eq!(tokenizer.next(), expected_lexeme(Token::LeftCurlyBrace, 5));
+        assert_eq!(tokenizer.next(), None);
+    }
+
+    #[test]
+    fn it_separates_double_quoted_string_literals() {
+        let mut tokenizer = Tokenizer::new("what: \"hey \\\"ya\";");
+        assert_eq!(tokenizer.next(), expected_ident("what", 0));
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Colon, 4));
+        assert_eq!(
+            tokenizer.next(),
+            expected_lexeme(Token::StringLiteral("\"hey \\\"ya\"".into()), 6)
+        );
+        assert_eq!(tokenizer.next(), expected_lexeme(Token::Semicolon, 16));
         assert_eq!(tokenizer.next(), None);
     }
 }
