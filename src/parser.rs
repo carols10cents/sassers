@@ -5,6 +5,7 @@ use ast::root::Root;
 use ast::node::Node;
 use sass::rule::SassRule;
 use sass::variable::SassVariable;
+use sass::comment::SassComment;
 use error::{Result};
 
 pub struct Parser<'a> {
@@ -72,6 +73,9 @@ impl<'a> Iterator for Parser<'a> {
                     current_sass_rule.selectors.push(selector_holding_pen);
                     selector_holding_pen = Lexeme::new();
                 },
+                Token::Comment(_) => {
+                    return Some(Ok(Root::Comment(SassComment { content: lexeme })))
+                },
                 _ => {
                     selector_holding_pen = selector_holding_pen.combine(&lexeme);
                 }
@@ -93,6 +97,7 @@ impl<'a> Parser<'a> {
 mod tests {
     use super::*;
     use sass::rule::SassRule;
+    use sass::comment::SassComment;
     use sass::variable::SassVariable;
     use ast::expression::Expression;
     use ast::root::Root;
@@ -175,6 +180,15 @@ mod tests {
             value: Expression::String(
                 Lexeme { token: Token::String("red".into()), offset: Some(8) }
             ),
+        }))));
+        assert_eq!(parser.next(), None);
+    }
+
+    #[test]
+    fn it_returns_a_comment() {
+        let mut parser = Parser::new("/* hi */");
+        assert_eq!(parser.next(), Some(Ok(Root::Comment(SassComment {
+            content: Lexeme { token: Token::Comment("/* hi */".into()), offset: Some(0) },
         }))));
         assert_eq!(parser.next(), None);
     }

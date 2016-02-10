@@ -13,5 +13,6 @@ pub fn evaluate(root: Root, context: &mut Context) -> Option<Root> {
             });
             None
         },
+        Root::Comment(c) => Some(Root::Comment(c)),
     }
 }
