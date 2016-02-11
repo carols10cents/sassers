@@ -38,15 +38,19 @@ impl<'a> Tokenizer<'a> {
                 let single_char_token = Token::from_char(curr_char);
                 if single_char_token.is_some()
                    && !self.hyphen_starting_shit(curr_char)
-                   && !self.comment_starting(curr_char) {
+                   && !self.multiline_comment_starting(curr_char)
+                   && !self.singleline_comment_starting(curr_char) {
                     // We already tested that single_char_token was Some.
                     return Ok(Some(Lexeme {
                         token: single_char_token.unwrap(),
                         offset: Some(char_offset),
                     }))
                 } else {
-                    if self.comment_starting(curr_char) {
-                        return self.comment(curr_char, char_offset)
+                    if self.multiline_comment_starting(curr_char) {
+                        return self.multiline_comment(curr_char, char_offset)
+                    } else if self.singleline_comment_starting(curr_char) {
+                        self.discard_singleline_comment();
+                        return self.parse()
                     } else if curr_char == '"' {
                         return self.string_literal(curr_char, char_offset)
                     } else if curr_char.is_numeric() || self.hyphen_starting_number(curr_char) {
@@ -65,11 +69,18 @@ impl<'a> Tokenizer<'a> {
         curr_char == '-' && peek_char.is_some() && !peek_char.unwrap().is_whitespace()
     }
 
-    fn comment_starting(&mut self, curr_char: char) -> bool {
+    fn multiline_comment_starting(&mut self, curr_char: char) -> bool {
         let peek_char = self.peek_char();
         curr_char == '/'
           && peek_char.is_some()
-          && (peek_char.unwrap() == '*' || peek_char.unwrap() == '/')
+          && peek_char.unwrap() == '*'
+    }
+
+    fn singleline_comment_starting(&mut self, curr_char: char) -> bool {
+        let peek_char = self.peek_char();
+        curr_char == '/'
+          && peek_char.is_some()
+          && peek_char.unwrap() == '/'
     }
 
     fn hyphen_starting_number(&mut self, curr_char: char) -> bool {
@@ -171,25 +182,16 @@ impl<'a> Tokenizer<'a> {
         Ok(Some(Lexeme { token: token, offset: Some(start) }))
     }
 
-    fn comment(&mut self, curr_char: char, start: usize) -> Result<Option<Lexeme>> {
+    fn multiline_comment(&mut self, curr_char: char, start: usize) -> Result<Option<Lexeme>> {
         let mut value = String::new();
         value.push(curr_char);
-
-        let multiline = match self.peek_char() {
-            Some('*') => true,
-            Some('/') => false,
-            _ => unreachable!("You expected that you would test for a comment before calling this"),
-        };
-
+        // We already tested that this was asterisk
         value.push(self.peek_char().unwrap());
         self.chars.next();
 
         while let Some(peek_char) = self.peek_char() {
-            if multiline && peek_char == '/' && value.ends_with("*") {
+            if peek_char == '/' && value.ends_with("*") {
                 value.push(peek_char);
-                self.chars.next();
-                break;
-            } else if !multiline && peek_char == '\n' {
                 self.chars.next();
                 break;
             } else {
@@ -201,6 +203,15 @@ impl<'a> Tokenizer<'a> {
         let token = Token::Comment(value);
 
         Ok(Some(Lexeme { token: token, offset: Some(start) }))
+    }
+
+    fn discard_singleline_comment(&mut self) {
+        while let Some(peek_char) = self.peek_char() {
+            self.chars.next();
+            if peek_char == '\n' {
+                break;
+            }
+        }
     }
 }
 
@@ -372,10 +383,9 @@ mod tests {
     }
 
     #[test]
-    fn it_separates_single_line_comments() {
+    fn it_removes_single_line_comments() {
         let mut tokenizer = Tokenizer::new("b // because; hi \nc");
         assert_eq!(tokenizer.next(), expected_ident("b", 0));
-        assert_eq!(tokenizer.next(), expected_lexeme(Token::Comment("// because; hi ".into()), 2));
         assert_eq!(tokenizer.next(), expected_ident("c", 18));
         assert_eq!(tokenizer.next(), None);
     }
