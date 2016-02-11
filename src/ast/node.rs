@@ -1,5 +1,6 @@
 use sass::output_style::SassOutputStyle;
 use sass::rule::SassRule;
+use sass::comment::SassComment;
 use token::Lexeme;
 use ast::expression::Expression;
 use error::{Result};
@@ -10,6 +11,7 @@ use std::io::Write;
 pub enum Node {
     Rule(SassRule),
     Property(Lexeme, Expression),
+    Comment(SassComment),
 }
 
 impl Node {
@@ -22,13 +24,25 @@ impl Node {
                 // grumble mumble format strings you know they're a string literal
                 let property = match style {
                     SassOutputStyle::Nested     => format!("  {}: {};", n, v),
-                    SassOutputStyle::Compressed => format!("{}:{}", n, v),
                     SassOutputStyle::Expanded   => format!("  {}: {};", n, v),
                     SassOutputStyle::Compact    => format!("{}: {};", n, v),
+                    SassOutputStyle::Compressed => format!("{}:{}", n, v),
                     SassOutputStyle::Debug      => format!("{:?}\n", self),
                     _ => unreachable!(),
                 };
                 try!(write!(output, "{}", property));
+            },
+            Node::Comment(ref sc) => {
+                match style {
+                    SassOutputStyle::Nested | SassOutputStyle::Expanded => {
+                        try!(write!(output, "  "));
+                    },
+                    SassOutputStyle::Compressed |
+                    SassOutputStyle::Compact |
+                    SassOutputStyle::Debug => {},
+                    _ => unreachable!(),
+                };
+                try!(sc.stream(output, style))
             },
         }
         Ok(())

@@ -14,11 +14,11 @@ impl SassComment {
         let comment = self.content.token.to_string();
         let s = match style {
             SassOutputStyle::Nested |
-            SassOutputStyle::Expanded => format!("{}\n", comment),
+            SassOutputStyle::Expanded => format!("{}", comment),
             SassOutputStyle::Compressed => String::from(""),
             SassOutputStyle::Compact => {
                 let c = comment.lines().map(|s| s.trim()).collect::<Vec<_>>().join(" ");
-                format!("{}\n", c)
+                format!("{}", c)
             },
             SassOutputStyle::Debug => format!("{:?}\n", self),
             _ => unreachable!(),

@@ -97,7 +97,8 @@ impl SassRule {
     pub fn child_properties(&self) -> Vec<&Node> {
         self.children.iter().filter(|c|
             match **c {
-                Node::Rule(..) => false,
+                Node::Rule(..)     => false,
+                Node::Comment(..)  => true,
                 Node::Property(..) => true,
             }
         ).collect::<Vec<_>>()
@@ -107,6 +108,7 @@ impl SassRule {
         self.children.clone().into_iter().filter_map(|c|
             match c {
                 Node::Rule(rule) => Some(rule),
+                Node::Comment(..) => None,
                 Node::Property(..) => None,
             }
         ).collect::<Vec<_>>()
@@ -151,6 +153,7 @@ impl SassRule {
                 match c {
                     Node::Rule(sr) => Node::Rule(sr.evaluate(&local_context)),
                     Node::Property(lex, ex) => Node::Property(lex, ex.evaluate(&local_context)),
+                    Node::Comment(sc) => Node::Comment(sc),
                 }
             ).collect(),
         }

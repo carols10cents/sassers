@@ -41,30 +41,46 @@ impl<'a> Iterator for Parser<'a> {
                     current_sass_rule.selectors.push(selector_holding_pen);
                     let mut holding_pen = vec![];
                     while let Some(Ok(lexeme)) = self.tokenizer.next() {
-                        if lexeme.token == Token::RightCurlyBrace {
-                            if rule_stack.is_empty() {
-                                return Some(Ok(Root::Rule(current_sass_rule)))
-                            } else {
-                                let tmp_rule = current_sass_rule;
-                                current_sass_rule = rule_stack.pop().unwrap();
-                                current_sass_rule.children.push(Node::Rule(tmp_rule));
-                            }
-                        } else if lexeme.token == Token::LeftCurlyBrace {
-                            rule_stack.push(current_sass_rule);
-                            current_sass_rule = SassRule::new();
-                            current_sass_rule.selectors = holding_pen;
-                            holding_pen = vec![];
-                        } else if lexeme.token == Token::Colon {
-                            let property_value = match Expression::parse(&mut self.tokenizer) {
-                                Ok(e) => e,
-                                Err(e) => return Some(Err(e)),
-                            };
+                        match lexeme.token {
+                            Token::RightCurlyBrace => {
+                                if rule_stack.is_empty() {
+                                    return Some(Ok(Root::Rule(current_sass_rule)))
+                                } else {
+                                    let tmp_rule = current_sass_rule;
+                                    current_sass_rule = rule_stack.pop().unwrap();
+                                    current_sass_rule.children.push(Node::Rule(tmp_rule));
+                                }
+                            },
+                            Token::LeftCurlyBrace => {
+                                rule_stack.push(current_sass_rule);
+                                current_sass_rule = SassRule::new();
+                                current_sass_rule.selectors = holding_pen;
+                                holding_pen = vec![];
+                            },
+                            Token::Colon => {
+                                let property_value = match Expression::parse(&mut self.tokenizer) {
+                                    Ok(e) => e,
+                                    Err(e) => return Some(Err(e)),
+                                };
 
-                            // TODO: holding pen better have exactly one thing in it
-                            let child = Node::Property(holding_pen.pop().unwrap(), property_value);
-                            current_sass_rule.children.push(child);
-                        } else {
-                            holding_pen.push(lexeme);
+                                // TODO: holding pen better have exactly one thing in it
+                                let child = Node::Property(
+                                    holding_pen.pop().unwrap(),
+                                    property_value
+                                );
+                                current_sass_rule.children.push(child);
+                            },
+                            Token::String(_) => {
+                                holding_pen.push(lexeme);
+                            },
+                            Token::Comment(_) => {
+                                current_sass_rule.children.push(
+                                    Node::Comment(
+                                        SassComment { content: lexeme }
+                                    )
+                                );
+                            },
+                            other => unreachable!("What is this??? {:?}", other),
                         }
                     }
                     return Some(Ok(Root::Rule(current_sass_rule)))
