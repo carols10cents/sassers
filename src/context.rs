@@ -4,7 +4,7 @@ use sass::variable::SassVariable;
 
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Context {
     pub variables: HashMap<String, SassVariable>,
 }

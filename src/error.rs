@@ -25,5 +25,6 @@ pub enum ErrorKind {
     IoError,
     InvalidOutputStyle,
     TokenizerError,
+    ParserError,
     UnexpectedEof,
 }

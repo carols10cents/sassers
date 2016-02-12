@@ -6,7 +6,7 @@ use ast::node::Node;
 use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::comment::SassComment;
-use error::{Result};
+use error::{Result, SassError, ErrorKind};
 
 pub struct Parser<'a> {
     pub tokenizer: Tokenizer<'a>,
@@ -58,16 +58,46 @@ impl<'a> Iterator for Parser<'a> {
                                 holding_pen = vec![];
                             },
                             Token::Colon => {
-                                let property_value = match Expression::parse(&mut self.tokenizer) {
+                                let value = match Expression::parse(&mut self.tokenizer) {
                                     Ok(e) => e,
                                     Err(e) => return Some(Err(e)),
                                 };
 
-                                // TODO: holding pen better have exactly one thing in it
-                                let child = Node::Property(
-                                    holding_pen.pop().unwrap(),
-                                    property_value
-                                );
+                                let child = match holding_pen.pop() {
+                                    Some(name_lexeme) => {
+                                        match name_lexeme.token {
+                                            Token::String(ref s) if s.starts_with("$") => {
+                                                Node::Variable(
+                                                    SassVariable {
+                                                        name: name_lexeme.clone(),
+                                                        value: value,
+                                                    }
+                                                )
+                                            },
+                                            Token::String(_) => {
+                                                Node::Property(name_lexeme, value)
+                                            },
+                                            other => {
+                                                return Some(Err(SassError {
+                                                    offset: name_lexeme.offset.unwrap_or(0),
+                                                    kind: ErrorKind::ParserError,
+                                                    message: format!(
+                                                        "Expected to have seen a property or variable name, instead saw {:?}", other
+                                                    ),
+                                                }))
+                                            },
+                                        }
+                                    },
+                                    None => {
+                                        return Some(Err(SassError {
+                                            offset: lexeme.offset.unwrap_or(0),
+                                            kind: ErrorKind::ParserError,
+                                            message: format!(
+                                                "Expected to have seen a property or variable name, did not see any"
+                                            ),
+                                        }))
+                                    },
+                                };
                                 current_sass_rule.children.push(child);
                             },
                             Token::String(_) => {
@@ -197,6 +227,25 @@ mod tests {
                 Lexeme { token: Token::String("red".into()), offset: Some(8) }
             ),
         }))));
+        assert_eq!(parser.next(), None);
+    }
+
+    #[test]
+    fn it_returns_variables_set_within_rules() {
+        let mut parser = Parser::new("a { $foo: red; }");
+        assert_eq!(parser.next(), Some(Ok(Root::Rule(
+            SassRule {
+                selectors: vec![
+                    Lexeme { token: Token::String("a".into()), offset: Some(0) },
+                ],
+                children: vec![Node::Variable(SassVariable {
+                    name: Lexeme { token: Token::String("$foo".into()), offset: Some(4) },
+                    value: Expression::String(
+                        Lexeme { token: Token::String("red".into()), offset: Some(10) }
+                    ),
+                })],
+            }
+        ))));
         assert_eq!(parser.next(), None);
     }
 

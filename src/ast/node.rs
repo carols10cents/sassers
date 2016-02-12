@@ -1,5 +1,6 @@
 use sass::output_style::SassOutputStyle;
 use sass::rule::SassRule;
+use sass::variable::SassVariable;
 use sass::comment::SassComment;
 use token::Lexeme;
 use ast::expression::Expression;
@@ -11,6 +12,7 @@ use std::io::Write;
 pub enum Node {
     Rule(SassRule),
     Property(Lexeme, Expression),
+    Variable(SassVariable),
     Comment(SassComment),
 }
 
@@ -18,6 +20,7 @@ impl Node {
     pub fn stream<W: Write>(&self, output: &mut W, style: SassOutputStyle) -> Result<()> {
         match *self {
             Node::Rule(ref sr) => try!(sr.stream(output, style)),
+            Node::Variable(..) => {}, // variable declarations never get output
             Node::Property(ref name, ref expression) => {
                 let ref n = name.token;
                 let ref v = expression.to_string(style);

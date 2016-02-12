@@ -1,4 +1,5 @@
 use sass::output_style::SassOutputStyle;
+use sass::variable::SassVariable;
 use ast::node::Node;
 use token::{Lexeme, Token};
 use error::Result;
@@ -100,6 +101,7 @@ impl SassRule {
                 Node::Rule(..)     => false,
                 Node::Comment(..)  => true,
                 Node::Property(..) => true,
+                Node::Variable(..) => true,
             }
         ).collect::<Vec<_>>()
     }
@@ -107,9 +109,10 @@ impl SassRule {
     pub fn child_rules(&self) -> Vec<SassRule> {
         self.children.clone().into_iter().filter_map(|c|
             match c {
-                Node::Rule(rule) => Some(rule),
-                Node::Comment(..) => None,
+                Node::Rule(rule)   => Some(rule),
+                Node::Comment(..)  => None,
                 Node::Property(..) => None,
+                Node::Variable(..) => None,
             }
         ).collect::<Vec<_>>()
     }
@@ -146,14 +149,24 @@ impl SassRule {
     }
 
     pub fn evaluate(self, context: &Context) -> SassRule {
-        let local_context = context.clone();
+        let mut local_context = (*context).clone();
         SassRule {
             selectors: self.selectors,
-            children: self.children.into_iter().map(|c|
+            children: self.children.into_iter().filter_map(|c|
                 match c {
-                    Node::Rule(sr) => Node::Rule(sr.evaluate(&local_context)),
-                    Node::Property(lex, ex) => Node::Property(lex, ex.evaluate(&local_context)),
-                    Node::Comment(sc) => Node::Comment(sc),
+                    Node::Rule(sr) => Some(Node::Rule(sr.evaluate(&local_context))),
+                    Node::Property(lex, ex) => {
+                        Some(Node::Property(lex, ex.evaluate(&local_context)))
+                    },
+                    Node::Comment(sc) => Some(Node::Comment(sc)),
+                    Node::Variable(sv) => {
+                        let evaluated_var = sv.value.evaluate(&local_context);
+                        local_context.add_variable(SassVariable {
+                            name: sv.name,
+                            value: evaluated_var,
+                        });
+                        None
+                    },
                 }
             ).collect(),
         }
