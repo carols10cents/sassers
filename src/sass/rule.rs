@@ -51,6 +51,15 @@ impl SassRule {
         let mut properties = self.child_properties().into_iter();
         let mut has_properties = false;
 
+        if style == SassOutputStyle::Compressed {
+            properties = properties.filter(|p|
+                match **p {
+                    Node::Comment(..) => false,
+                    _ => true,
+                }
+            ).collect::<Vec<_>>().into_iter();
+        }
+
         // TODO: peek?
         if let Some(prop) = properties.next() {
             has_properties = true;
