@@ -39,7 +39,7 @@ impl<'a> Iterator for Parser<'a> {
                 },
                 Token::LeftCurlyBrace => {
                     current_sass_rule.selectors.push(selector_holding_pen);
-                    let mut holding_pen = vec![];
+                    let mut ambiguous_holding_pen = vec![];
                     while let Some(Ok(lexeme)) = self.tokenizer.next() {
                         match lexeme.token {
                             Token::RightCurlyBrace => {
@@ -54,8 +54,8 @@ impl<'a> Iterator for Parser<'a> {
                             Token::LeftCurlyBrace => {
                                 rule_stack.push(current_sass_rule);
                                 current_sass_rule = SassRule::new();
-                                current_sass_rule.selectors = holding_pen;
-                                holding_pen = vec![];
+                                current_sass_rule.selectors = ambiguous_holding_pen;
+                                ambiguous_holding_pen = vec![];
                             },
                             Token::Colon => {
                                 let value = match Expression::parse(&mut self.tokenizer) {
@@ -63,7 +63,7 @@ impl<'a> Iterator for Parser<'a> {
                                     Err(e) => return Some(Err(e)),
                                 };
 
-                                let child = match holding_pen.pop() {
+                                let child = match ambiguous_holding_pen.pop() {
                                     Some(name_lexeme) => {
                                         match name_lexeme.token {
                                             Token::String(ref s) if s.starts_with("$") => {
@@ -101,7 +101,7 @@ impl<'a> Iterator for Parser<'a> {
                                 current_sass_rule.children.push(child);
                             },
                             Token::String(_) => {
-                                holding_pen.push(lexeme);
+                                ambiguous_holding_pen.push(lexeme);
                             },
                             Token::Comment(_) => {
                                 current_sass_rule.children.push(
