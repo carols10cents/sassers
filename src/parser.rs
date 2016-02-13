@@ -1,4 +1,4 @@
-use token::{Token, Lexeme};
+use token::Token;
 use tokenizer::Tokenizer;
 use ast::expression::Expression;
 use ast::root::Root;
@@ -18,7 +18,7 @@ impl<'a> Iterator for Parser<'a> {
     fn next(&mut self) -> Option<Result<Root>> {
         let mut current_sass_rule = SassRule::new();
         let mut rule_stack = vec![];
-        let mut selector_holding_pen = Lexeme::new();
+        let mut ambiguous_holding_pen = vec![];
 
         while let Some(Ok(lexeme)) = self.tokenizer.next() {
             match lexeme.token {
@@ -38,8 +38,8 @@ impl<'a> Iterator for Parser<'a> {
                     )))
                 },
                 Token::LeftCurlyBrace => {
-                    current_sass_rule.selectors.push(selector_holding_pen);
-                    let mut ambiguous_holding_pen = vec![];
+                    current_sass_rule.selectors.extend_from_slice(&ambiguous_holding_pen);
+                    ambiguous_holding_pen = vec![];
                     while let Some(Ok(lexeme)) = self.tokenizer.next() {
                         match lexeme.token {
                             Token::RightCurlyBrace => {
@@ -110,20 +110,30 @@ impl<'a> Iterator for Parser<'a> {
                                     )
                                 );
                             },
+                            Token::Comma => {},
                             other => unreachable!("What is this??? {:?}", other),
                         }
                     }
                     return Some(Ok(Root::Rule(current_sass_rule)))
                 },
                 Token::Comma => {
-                    current_sass_rule.selectors.push(selector_holding_pen);
-                    selector_holding_pen = Lexeme::new();
+                    current_sass_rule.selectors.extend_from_slice(&ambiguous_holding_pen);
+                    ambiguous_holding_pen = vec![];
                 },
                 Token::Comment(_) => {
                     return Some(Ok(Root::Comment(SassComment { content: lexeme })))
                 },
                 _ => {
-                    selector_holding_pen = selector_holding_pen.combine(&lexeme);
+                    match ambiguous_holding_pen.pop() {
+                        Some(held_lexeme) => {
+                            ambiguous_holding_pen.push(
+                                held_lexeme.combine(&lexeme)
+                            );
+                        },
+                        None => {
+                           ambiguous_holding_pen = vec![lexeme];
+                        },
+                    }
                 }
             }
         }

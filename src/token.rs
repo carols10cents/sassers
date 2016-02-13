@@ -7,13 +7,6 @@ pub struct Lexeme {
 }
 
 impl Lexeme {
-    pub fn new() -> Lexeme {
-        Lexeme {
-            token: Token::String("".into()),
-            offset: None,
-        }
-    }
-
     pub fn combine(&self, other: &Lexeme) -> Lexeme {
         let offset = match self.offset {
             Some(o) => Some(o),
