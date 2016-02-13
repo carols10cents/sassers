@@ -58,7 +58,7 @@ impl SassOutputStyle {
     pub fn brace_property_separator(&self) -> String {
         String::from(match *self {
             SassOutputStyle::Nested => "\n",
-            SassOutputStyle::Expanded => "\n",
+            SassOutputStyle::Expanded => "",
             SassOutputStyle::Compact => " ",
             _ => "",
         })
@@ -77,7 +77,8 @@ impl SassOutputStyle {
         match *self {
             SassOutputStyle::Compact => String::from(" "),
             SassOutputStyle::Compressed => String::from(";"),
-            _ => String::from("\n"),
+            SassOutputStyle::Nested => String::from("\n"),
+            _ => String::from(""),
         }
     }
 
