@@ -44,7 +44,14 @@ pub enum Token {
 
 impl Token {
     pub fn combine(&self, other: &Token) -> Token {
-        Token::String(format!("{} {}", self, other))
+        if *other == Token::String("=".into()) ||
+           *other == Token::String("]".into()) ||
+           *other == Token::Star ||
+           self.to_string().ends_with("=") {
+            Token::String(format!("{}{}", self, other))
+        } else {
+            Token::String(format!("{} {}", self, other))
+        }
     }
 }
 
