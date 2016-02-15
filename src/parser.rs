@@ -100,6 +100,12 @@ impl<'a> Iterator for Parser<'a> {
                                 };
                                 current_sass_rule.children.push(child);
                             },
+                            Token::Comma => {
+                                // TODO: else return error
+                                if let Some(Ok(after_comma)) = self.tokenizer.next() {
+                                    ambiguous_holding_pen.push(after_comma);
+                                }
+                            },
                             Token::String(_) => {
                                 match ambiguous_holding_pen.pop() {
                                     Some(held_lexeme) => {
@@ -119,7 +125,6 @@ impl<'a> Iterator for Parser<'a> {
                                     )
                                 );
                             },
-                            Token::Comma => {},
                             other => unreachable!("What is this??? {:?}", other),
                         }
                     }
@@ -194,20 +199,26 @@ mod tests {
 
     #[test]
     fn it_returns_nested_rules() {
-        let mut parser = Parser::new("div { span img { color: blue; } }");
+        let mut parser = Parser::new("div { span img, span a { color: blue; } }");
         assert_eq!(parser.next(), Some(Ok(Root::Rule(
             SassRule {
                 selectors: vec![Lexeme { token: Token::String("div".into()), offset: Some(0) }],
                 children: vec![Node::Rule(
                     SassRule {
-                        selectors: vec![Lexeme {
-                            token: Token::String("span img".into()),
-                            offset: Some(6)
-                        }],
+                        selectors: vec![
+                            Lexeme {
+                                token: Token::String("span img".into()),
+                                offset: Some(6)
+                            },
+                            Lexeme {
+                                token: Token::String("span a".into()),
+                                offset: Some(16)
+                            },
+                        ],
                         children: vec![Node::Property(
-                            Lexeme { token: Token::String("color".into()), offset: Some(17) },
+                            Lexeme { token: Token::String("color".into()), offset: Some(25) },
                             Expression::String(
-                                Lexeme { token: Token::String("blue".into()), offset: Some(24) }
+                                Lexeme { token: Token::String("blue".into()), offset: Some(32) }
                             ),
                         )],
                     }
