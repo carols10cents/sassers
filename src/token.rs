@@ -44,16 +44,7 @@ pub enum Token {
 
 impl Token {
     pub fn combine(&self, other: &Token) -> Token {
-        match (self, other) {
-            (&Token::String(ref my_str), &Token::String(ref other_str)) => {
-                if my_str.len() > 0 {
-                    Token::String(format!("{} {}", my_str, other_str))
-                } else {
-                    Token::String(other_str.clone())
-                }
-            },
-            (s, o) => panic!("Don't know how to combine {:?} and {:?}", s, o),
-        }
+        Token::String(format!("{} {}", self, other))
     }
 }
 
