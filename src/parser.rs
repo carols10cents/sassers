@@ -106,7 +106,14 @@ impl<'a> Iterator for Parser<'a> {
                                     ambiguous_holding_pen.push(after_comma);
                                 }
                             },
-                            Token::String(_) => {
+                            Token::Comment(_) => {
+                                current_sass_rule.children.push(
+                                    Node::Comment(
+                                        SassComment { content: lexeme }
+                                    )
+                                );
+                            },
+                            _ => {
                                 match ambiguous_holding_pen.pop() {
                                     Some(held_lexeme) => {
                                         ambiguous_holding_pen.push(
@@ -118,14 +125,6 @@ impl<'a> Iterator for Parser<'a> {
                                     },
                                 }
                             },
-                            Token::Comment(_) => {
-                                current_sass_rule.children.push(
-                                    Node::Comment(
-                                        SassComment { content: lexeme }
-                                    )
-                                );
-                            },
-                            other => unreachable!("What is this??? {:?}", other),
                         }
                     }
                     return Some(Ok(Root::Rule(current_sass_rule)))
