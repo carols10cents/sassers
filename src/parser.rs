@@ -101,7 +101,16 @@ impl<'a> Iterator for Parser<'a> {
                                 current_sass_rule.children.push(child);
                             },
                             Token::String(_) => {
-                                ambiguous_holding_pen.push(lexeme);
+                                match ambiguous_holding_pen.pop() {
+                                    Some(held_lexeme) => {
+                                        ambiguous_holding_pen.push(
+                                            held_lexeme.combine(&lexeme)
+                                        );
+                                    },
+                                    None => {
+                                       ambiguous_holding_pen = vec![lexeme];
+                                    },
+                                }
                             },
                             Token::Comment(_) => {
                                 current_sass_rule.children.push(
@@ -185,20 +194,20 @@ mod tests {
 
     #[test]
     fn it_returns_nested_rules() {
-        let mut parser = Parser::new("div { img { color: blue; } }");
+        let mut parser = Parser::new("div { span img { color: blue; } }");
         assert_eq!(parser.next(), Some(Ok(Root::Rule(
             SassRule {
                 selectors: vec![Lexeme { token: Token::String("div".into()), offset: Some(0) }],
                 children: vec![Node::Rule(
                     SassRule {
                         selectors: vec![Lexeme {
-                            token: Token::String("img".into()),
+                            token: Token::String("span img".into()),
                             offset: Some(6)
                         }],
                         children: vec![Node::Property(
-                            Lexeme { token: Token::String("color".into()), offset: Some(12) },
+                            Lexeme { token: Token::String("color".into()), offset: Some(17) },
                             Expression::String(
-                                Lexeme { token: Token::String("blue".into()), offset: Some(19) }
+                                Lexeme { token: Token::String("blue".into()), offset: Some(24) }
                             ),
                         )],
                     }
