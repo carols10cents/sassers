@@ -8,6 +8,7 @@ use error::{Result, SassError, ErrorKind};
 pub enum Expression {
     List(Vec<Expression>),
     Number(NumberValue),
+    Operator(Lexeme),
     String(Lexeme),
 }
 
@@ -21,6 +22,7 @@ impl Expression {
                 ).collect::<Vec<_>>().join(" ")
             },
             Expression::Number(ref nv) => nv.to_string(),
+            Expression::Operator(ref lex) => lex.token.to_string(),
             Expression::String(ref lex) => lex.token.to_string(),
         }
     }
@@ -28,21 +30,29 @@ impl Expression {
     pub fn parse<T: Iterator<Item = Result<Lexeme>>>(tokenizer: &mut T) -> Result<Expression> {
         let mut list = vec![];
         while let Some(Ok(lexeme)) = tokenizer.next() {
-            if lexeme.token == Token::Semicolon {
-                if list.len() == 1 {
-                    return Ok(list.pop().unwrap())
-                } else {
-                    return Ok(Expression::List(list))
+            match lexeme.token {
+                Token::Semicolon => {
+                    if list.len() == 1 {
+                        return Ok(list.pop().unwrap())
+                    } else {
+                        return Ok(Expression::List(list))
+                    }
+                },
+                Token::Number(_, _) => {
+                    list.push(Expression::Number(NumberValue::from_scalar(lexeme)));
+                },
+                Token::Plus | Token::Minus | Token::Star | Token::Slash | Token::Percent => {
+                    list.push(Expression::Operator(lexeme));
+                },
+                _ => {
+                    list.push(Expression::String(lexeme));
                 }
-            } else if let Token::Number(_, _) = lexeme.token {
-                list.push(Expression::Number(NumberValue::from_scalar(lexeme)))
-            } else {
-                list.push(Expression::String(lexeme));
             }
         }
 
         let error_offset = match list.pop() {
             Some(Expression::String(lexeme)) => lexeme.offset.unwrap_or(0),
+            Some(Expression::Operator(lexeme)) => lexeme.offset.unwrap_or(0),
             Some(Expression::Number(nv)) => nv.offset().unwrap_or(0),
             Some(Expression::List(_)) => unreachable!(), // for now until nested lists
             None => 0,
@@ -62,6 +72,7 @@ impl Expression {
                 Expression::List(exprs.into_iter().map(|e| e.evaluate(&context)).collect())
             },
             Expression::Number(nv) => Expression::Number(nv),
+            Expression::Operator(op) => Expression::Operator(op),
             Expression::String(lex) => {
                 context.get_variable(&lex).unwrap_or(Expression::String(lex))
             },
@@ -83,6 +94,10 @@ mod tests {
         Lexeme { token: Token::String("blue".into()), offset: None }
     }
 
+    fn plus() -> Lexeme {
+        Lexeme { token: Token::Plus, offset: None }
+    }
+
     fn one() -> Lexeme {
         Lexeme { token: Token::Number(1.0, None), offset: None }
     }
@@ -102,11 +117,17 @@ mod tests {
 
     #[test]
     fn it_parses_a_list() {
-        let mut fake_tokenizer = vec![Ok(one()), Ok(one()), Ok(semicolon())].into_iter();
+        let mut fake_tokenizer = vec![
+            Ok(one()),
+            Ok(plus()),
+            Ok(one()),
+            Ok(semicolon())
+        ].into_iter();
         assert_eq!(
             Expression::parse(&mut fake_tokenizer),
             Ok(Expression::List(vec![
                 Expression::Number(NumberValue::from_scalar(one())),
+                Expression::Operator(plus()),
                 Expression::Number(NumberValue::from_scalar(one())),
             ]))
         );
