@@ -63,15 +63,15 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
         },
         SassOutputStyle::AST => {
             let mut parser = Parser::new(&imports_resolved);
-            while let Some(ast_node) = parser.next() {
-                try!(write!(output, "{:?}\n", ast_node));
+            while let Some(ast_root) = parser.next() {
+                try!(write!(output, "{:?}\n", ast_root));
             }
         },
         other_style => {
             let mut parser  = Parser::new(&imports_resolved);
             let mut context = Context::new();
-            while let Some(Ok(ast_node)) = parser.next() {
-                let evaluated = evaluator::evaluate(ast_node, &mut context);
+            while let Some(Ok(ast_root)) = parser.next() {
+                let evaluated = evaluator::evaluate(ast_root, &mut context);
                 if let Some(root) = evaluated {
                     let optimized = optimizer::optimize(root);
                     for r in optimized {
