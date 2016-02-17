@@ -2,6 +2,7 @@ use sass::output_style::SassOutputStyle;
 use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::comment::SassComment;
+use context::Context;
 use error::{Result};
 
 use std::io::Write;
@@ -25,6 +26,21 @@ impl Root {
                 }
             },
             Root::Variable(..) => Ok(()), // variable declarations never get output
+        }
+    }
+
+    pub fn evaluate(self, context: &mut Context) -> Option<Root> {
+        match self {
+            Root::Rule(sr) => Some(Root::Rule(sr.evaluate(&context))),
+            Root::Variable(sv) => {
+                let evaluated_var = sv.value.evaluate(&context);
+                context.add_variable(SassVariable {
+                    name: sv.name,
+                    value: evaluated_var,
+                });
+                None
+            },
+            Root::Comment(c) => Some(Root::Comment(c)),
         }
     }
 }

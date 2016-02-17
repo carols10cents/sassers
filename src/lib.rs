@@ -11,7 +11,6 @@ use std::io::Write;
 mod ast;
 mod context;
 mod error;
-mod evaluator;
 mod sass;
 mod optimizer;
 mod parser;
@@ -71,7 +70,7 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
             let mut parser  = Parser::new(&imports_resolved);
             let mut context = Context::new();
             while let Some(Ok(ast_root)) = parser.next() {
-                let evaluated = evaluator::evaluate(ast_root, &mut context);
+                let evaluated = ast_root.evaluate(&mut context);
                 if let Some(root) = evaluated {
                     let optimized = optimizer::optimize(root);
                     for r in optimized {
