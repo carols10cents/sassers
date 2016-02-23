@@ -1,4 +1,4 @@
-use token::{Lexeme};
+use token::{Lexeme, Token};
 
 use std::fmt;
 
@@ -19,6 +19,36 @@ impl<'b> NumberValue {
             computed: false,
         }
     }
+
+    pub fn extract_scalar(&self) -> f32 {
+        match self.scalar.token {
+            Token::Number(num, _) => num,
+            _ => panic!("Had a non-numeric Token in a NumberValue!!!"),
+        }
+    }
+
+    pub fn apply_math(&self, operator: &Lexeme, other: &NumberValue) -> NumberValue {
+        let f = self.extract_scalar();
+        let s = other.extract_scalar();
+
+        let result = match operator.token {
+            Token::Plus    => f + s,
+            Token::Minus   => f - s,
+            Token::Star    => f * s,
+            Token::Slash   => f / s,
+            Token::Percent => f % s,
+            _ => unimplemented!(),
+        };
+
+        NumberValue {
+            scalar: Lexeme {
+                token: Token::Number(result, None),
+                offset: self.offset(),
+            },
+            computed: true,
+        }
+    }
+
 }
 
 impl fmt::Display for NumberValue {
