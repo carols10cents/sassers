@@ -88,6 +88,12 @@ impl Expression {
                         Expression::Number(nv) => {
                             if last_was_an_operator {
                                 value_stack.push(Expression::Number(nv));
+                            } else {
+                                let list = create_list(
+                                    value_stack.pop(),
+                                    Expression::Number(nv),
+                                );
+                                value_stack.push(list);
                             }
                             last_was_an_operator = false;
                         },
@@ -96,7 +102,18 @@ impl Expression {
                             last_was_an_operator = true;
                         },
                         Expression::String(lex) => {
-                            value_stack.push(Expression::String(lex));
+                            let var_eval = context.get_variable(&lex)
+                                            .unwrap_or(Expression::String(lex));
+
+                            if last_was_an_operator {
+                                value_stack.push(var_eval);
+                            } else {
+                                let list = create_list(
+                                    value_stack.pop(),
+                                    var_eval,
+                                );
+                                value_stack.push(list);
+                            }
                             last_was_an_operator = false;
                         },
                         Expression::List(list) => {
@@ -137,6 +154,16 @@ fn apply_math(first: Option<Expression>, operator: Option<Expression>, second: O
         },
         _ => first,
     }
+}
+
+fn create_list(head: Option<Expression>, tail: Expression) -> Expression {
+    let mut list = match head {
+        Some(Expression::List(v)) => v,
+        Some(e) => vec![e],
+        None => vec![],
+    };
+    list.push(tail);
+    Expression::List(list)
 }
 
 #[cfg(test)]
