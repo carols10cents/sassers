@@ -1,4 +1,4 @@
-use token::Token;
+use token::{Token, Lexeme};
 use tokenizer::Tokenizer;
 use ast::expression::Expression;
 use ast::root::Root;
@@ -24,8 +24,12 @@ impl<'a> Iterator for Parser<'a> {
             match lexeme.token {
                 Token::String(ref s) if s.starts_with("$") => {
                     let variable_name = lexeme.clone();
-                    // TODO: this better be a colon
-                    self.tokenizer.next();
+
+                    if let Err(e) = Parser::expect_token(
+                        Token::Colon,
+                        self.tokenizer.next()
+                    ) { return Some(Err(e)) };
+
                     let variable_value = match Expression::parse(&mut self.tokenizer) {
                         Ok(e) => e,
                         Err(e) => return Some(Err(e)),
@@ -160,6 +164,40 @@ impl<'a> Parser<'a> {
             tokenizer: Tokenizer::new(&text),
         }
     }
+
+    pub fn expect_token(expected: Token, actual: Option<Result<Lexeme>>) -> Result<Lexeme> {
+        match actual {
+            None => Err(SassError {
+                offset: 0,
+                kind: ErrorKind::UnexpectedEof,
+                message: format!(
+                    "Expected to see `{}`, instead reached EOF.",
+                    expected,
+                ),
+            }),
+            Some(res) => {
+                match res {
+                    Err(e) => Err(e),
+                    Ok(actual) => {
+                        if actual.token == expected {
+                            Ok(actual)
+                        } else {
+                            Err(SassError {
+                                offset: actual.offset.unwrap_or(0),
+                                kind: ErrorKind::ParserError,
+                                message: format!(
+                                    "Expected to see `{}`, instead saw `{}`.",
+                                    expected,
+                                    actual.token,
+                                ),
+                            })
+                        }
+
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -172,6 +210,7 @@ mod tests {
     use ast::root::Root;
     use ast::node::Node;
     use token::{Token, Lexeme};
+    use error::{SassError, ErrorKind};
 
     #[test]
     fn it_returns_none_for_empty_string() {
@@ -285,5 +324,15 @@ mod tests {
             content: Lexeme { token: Token::Comment("/* hi */".into()), offset: Some(0) },
         }))));
         assert_eq!(parser.next(), None);
+    }
+
+    #[test]
+    fn it_errors_with_malformed_variable_declaration() {
+        let mut parser = Parser::new("$var no-colon;");
+        assert_eq!(parser.next(), Some(Err(SassError {
+            offset: 5,
+            kind: ErrorKind::ParserError,
+            message: String::from("Expected to see `:`, instead saw `no-colon`."),
+        })));
     }
 }
