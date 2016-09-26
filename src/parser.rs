@@ -17,7 +17,6 @@ impl<'a> Iterator for Parser<'a> {
 
     fn next(&mut self) -> Option<Result<Root>> {
         let mut current_sass_rule = SassRule::new();
-        let mut rule_stack = vec![];
         let mut ambiguous_holding_pen = vec![];
 
         while let Some(Ok(lexeme)) = self.tokenizer.next() {
@@ -42,95 +41,12 @@ impl<'a> Iterator for Parser<'a> {
                     )))
                 },
                 Token::LeftCurlyBrace => {
-                    current_sass_rule.selectors.extend_from_slice(&ambiguous_holding_pen);
-                    ambiguous_holding_pen = vec![];
-                    while let Some(Ok(lexeme)) = self.tokenizer.next() {
-                        match lexeme.token {
-                            Token::RightCurlyBrace => {
-                                if rule_stack.is_empty() {
-                                    return Some(Ok(Root::Rule(current_sass_rule)))
-                                } else {
-                                    let tmp_rule = current_sass_rule;
-                                    current_sass_rule = rule_stack.pop().unwrap();
-                                    current_sass_rule.children.push(Node::Rule(tmp_rule));
-                                }
-                            },
-                            Token::LeftCurlyBrace => {
-                                rule_stack.push(current_sass_rule);
-                                current_sass_rule = SassRule::new();
-                                current_sass_rule.selectors = ambiguous_holding_pen;
-                                ambiguous_holding_pen = vec![];
-                            },
-                            Token::Colon => {
-                                let value = match Expression::parse(&mut self.tokenizer) {
-                                    Ok(e) => e,
-                                    Err(e) => return Some(Err(e)),
-                                };
-
-                                let child = match ambiguous_holding_pen.pop() {
-                                    Some(name_lexeme) => {
-                                        match name_lexeme.token {
-                                            Token::String(ref s) if s.starts_with("$") => {
-                                                Node::Variable(
-                                                    SassVariable {
-                                                        name: name_lexeme.clone(),
-                                                        value: value,
-                                                    }
-                                                )
-                                            },
-                                            Token::String(_) => {
-                                                Node::Property(name_lexeme, value)
-                                            },
-                                            other => {
-                                                return Some(Err(SassError {
-                                                    offset: name_lexeme.offset.unwrap_or(0),
-                                                    kind: ErrorKind::ParserError,
-                                                    message: format!(
-                                                        "Expected to have seen a property or variable name, instead saw {:?}", other
-                                                    ),
-                                                }))
-                                            },
-                                        }
-                                    },
-                                    None => {
-                                        return Some(Err(SassError {
-                                            offset: lexeme.offset.unwrap_or(0),
-                                            kind: ErrorKind::ParserError,
-                                            message: format!(
-                                                "Expected to have seen a property or variable name, did not see any"
-                                            ),
-                                        }))
-                                    },
-                                };
-                                current_sass_rule.children.push(child);
-                            },
-                            Token::Comma => {
-                                // TODO: else return error
-                                if let Some(Ok(after_comma)) = self.tokenizer.next() {
-                                    ambiguous_holding_pen.push(after_comma);
-                                }
-                            },
-                            Token::Comment(_) => {
-                                current_sass_rule.children.push(
-                                    Node::Comment(
-                                        SassComment { content: lexeme }
-                                    )
-                                );
-                            },
-                            _ => {
-                                match ambiguous_holding_pen.pop() {
-                                    Some(held_lexeme) => {
-                                        ambiguous_holding_pen.push(
-                                            held_lexeme.combine(&lexeme)
-                                        );
-                                    },
-                                    None => {
-                                       ambiguous_holding_pen = vec![lexeme];
-                                    },
-                                }
-                            },
-                        }
-                    }
+                    current_sass_rule.selectors
+                                     .extend_from_slice(&ambiguous_holding_pen);
+                    current_sass_rule.children = match self.parse_body() {
+                        Ok(body) => body,
+                        Err(e) => return Some(Err(e)),
+                    };
                     return Some(Ok(Root::Rule(current_sass_rule)))
                 },
                 Token::Comma => {
@@ -197,6 +113,111 @@ impl<'a> Parser<'a> {
                 }
             }
         }
+    }
+
+    pub fn parse_body(&mut self) -> Result<Vec<Node>> {
+        let mut rule_stack = vec![];
+        let mut body = vec![];
+        let mut ambiguous_holding_pen = vec![];
+
+        while let Some(Ok(lexeme)) = self.tokenizer.next() {
+            match lexeme.token {
+                Token::RightCurlyBrace => {
+                    if rule_stack.is_empty() {
+                        return Ok(body);
+                    } else {
+                        body.push(Node::Rule(rule_stack.pop().unwrap()));
+                    }
+                },
+                Token::LeftCurlyBrace => {
+                    let mut rule = SassRule::new();
+                    rule.selectors = ambiguous_holding_pen;
+                    ambiguous_holding_pen = vec![];
+                    rule_stack.push(rule);
+                },
+                Token::Colon => {
+                    let value = try!(Expression::parse(&mut self.tokenizer));
+
+                    let child = match ambiguous_holding_pen.pop() {
+                        Some(name_lexeme) => {
+                            match name_lexeme.token {
+                                Token::String(ref s) if s.starts_with("$") => {
+                                    Node::Variable(
+                                        SassVariable {
+                                            name: name_lexeme.clone(),
+                                            value: value,
+                                        }
+                                    )
+                                },
+                                Token::String(_) => {
+                                    Node::Property(name_lexeme, value)
+                                },
+                                other => {
+                                    return Err(SassError {
+                                        offset: name_lexeme.offset.unwrap_or(0),
+                                        kind: ErrorKind::ParserError,
+                                        message: format!(
+                                            "Expected to have seen a property or variable name, instead saw {:?}", other
+                                        ),
+                                    })
+                                },
+                            }
+                        },
+                        None => {
+                            return Err(SassError {
+                                offset: lexeme.offset.unwrap_or(0),
+                                kind: ErrorKind::ParserError,
+                                message: String::from(
+                                    "Expected to have seen a property or \
+                                     variable name, did not see any"
+                                ),
+                            })
+                        }
+                    };
+                    if rule_stack.is_empty() {
+                        body.push(child);
+                    } else {
+                        // TODO: mut ref to last?
+                        let mut rule = rule_stack.pop().unwrap();
+                        rule.children.push(child);
+                        rule_stack.push(rule);
+                    }
+                },
+                Token::Comma => {
+                    // TODO: else return error
+                    if let Some(Ok(after_comma)) = self.tokenizer.next() {
+                        ambiguous_holding_pen.push(after_comma);
+                    }
+                },
+                Token::Comment(_) => {
+                    body.push(
+                        Node::Comment(
+                            SassComment { content: lexeme }
+                        )
+                    );
+                },
+                _ => {
+                    match ambiguous_holding_pen.pop() {
+                        Some(held_lexeme) => {
+                            ambiguous_holding_pen.push(
+                                held_lexeme.combine(&lexeme)
+                            );
+                        },
+                        None => {
+                           ambiguous_holding_pen = vec![lexeme];
+                        },
+                    }
+                },
+            }
+        }
+
+        Err(SassError {
+            offset: 0,
+            kind: ErrorKind::UnexpectedEof,
+            message: String::from(
+                "Expected to see rule body ending in `}`, instead reached EOF."
+            ),
+        })
     }
 }
 
