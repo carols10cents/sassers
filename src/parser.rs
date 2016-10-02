@@ -199,11 +199,20 @@ impl<'a> Parser<'a> {
                     }
                 },
                 Token::Comment(_) => {
-                    body.push(
-                        Node::Comment(
+                    if rule_stack.is_empty() {
+                        body.push(
+                            Node::Comment(
+                                SassComment { content: lexeme }
+                            )
+                        );
+                    } else {
+                        // TODO: mut ref to last?
+                        let mut rule = rule_stack.pop().unwrap();
+                        rule.children.push(Node::Comment(
                             SassComment { content: lexeme }
-                        )
-                    );
+                        ));
+                        rule_stack.push(rule);
+                    }
                 },
                 _ => {
                     match ambiguous_holding_pen.pop() {
