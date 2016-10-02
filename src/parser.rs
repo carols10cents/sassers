@@ -126,7 +126,16 @@ impl<'a> Parser<'a> {
                     if rule_stack.is_empty() {
                         return Ok(body);
                     } else {
-                        body.push(Node::Rule(rule_stack.pop().unwrap()));
+                        let tmp_rule = rule_stack.pop().unwrap();
+
+                        if rule_stack.is_empty() {
+                            body.push(Node::Rule(tmp_rule));
+                        } else {
+                            // TODO: mut ref to last?
+                            let mut rule = rule_stack.pop().unwrap();
+                            rule.children.push(Node::Rule(tmp_rule));
+                            rule_stack.push(rule);
+                        }
                     }
                 },
                 Token::LeftCurlyBrace => {
@@ -282,6 +291,60 @@ mod tests {
                         )],
                     }
                 )],
+            }
+        ))));
+        assert_eq!(parser.next(), None);
+    }
+
+    #[test]
+    fn it_returns_rules_without_properties() {
+        let mut parser = Parser::new("div { empty { span { color: red; } } }");
+        assert_eq!(parser.next(), Some(Ok(Root::Rule(
+            SassRule {
+                selectors: vec![
+                    Lexeme {
+                        token: Token::String("div".into()),
+                        offset: Some(0)
+                    },
+                ],
+                children: vec![
+                    Node::Rule(
+                        SassRule {
+                            selectors: vec![
+                                Lexeme {
+                                    token: Token::String("empty".into()),
+                                    offset: Some(6)
+                                },
+                            ],
+                            children: vec![
+                                Node::Rule(
+                                    SassRule {
+                                        selectors: vec![
+                                            Lexeme {
+                                                token: Token::String("span".into()),
+                                                offset: Some(14)
+                                            }
+                                        ],
+                                        children: vec![
+                                            Node::Property(
+                                                Lexeme {
+                                                    token: Token::String("color".into()),
+                                                    offset: Some(21)
+                                                },
+                                                Expression::String(
+                                                    Lexeme {
+                                                        token: Token::String("red".into()),
+                                                        offset: Some(28)
+                                                    }
+                                                )
+                                            )
+                                        ],
+                                    }
+                                ),
+                            ],
+                        }
+                    ),
+                ]
             }
         ))));
         assert_eq!(parser.next(), None);
