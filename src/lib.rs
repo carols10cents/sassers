@@ -63,7 +63,7 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
         SassOutputStyle::AST => {
             let mut parser = Parser::new(&imports_resolved);
             while let Some(ast_root) = parser.next() {
-                try!(write!(output, "{:?}\n", ast_root));
+                try!(write!(output, "{:#?}\n", ast_root));
             }
         },
         other_style => {

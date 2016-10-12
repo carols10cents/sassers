@@ -20,7 +20,7 @@ impl SassComment {
                 let c = comment.lines().map(|s| s.trim()).collect::<Vec<_>>().join(" ");
                 format!("{}", c)
             },
-            SassOutputStyle::Debug => format!("{:?}\n", self),
+            SassOutputStyle::Debug => format!("{:#?}\n", self),
             _ => unreachable!(),
         };
         Ok(try!(write!(output, "{}", s)))

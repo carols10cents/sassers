@@ -30,7 +30,7 @@ impl Node {
                     SassOutputStyle::Expanded   => format!("  {}: {};", n, v),
                     SassOutputStyle::Compact    => format!("{}: {};", n, v),
                     SassOutputStyle::Compressed => format!("{}:{}", n, v),
-                    SassOutputStyle::Debug      => format!("{:?}\n", self),
+                    SassOutputStyle::Debug      => format!("{:#?}\n", self),
                     _ => unreachable!(),
                 };
                 try!(write!(output, "{}", property));

@@ -5,10 +5,9 @@ use token::{Lexeme, Token};
 use error::Result;
 use context::Context;
 
-use std::fmt;
 use std::io::Write;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct SassRule {
     pub selectors: Vec<Lexeme>,
     pub children: Vec<Node>,
@@ -184,14 +183,6 @@ impl SassRule {
 
 fn compress_selectors(selector_string: String) -> String {
     selector_string.replace(" > ", ">").replace(" + ", "+")
-}
-
-impl fmt::Debug for SassRule {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let children = self.children.iter().map(|c| format!("{:?}", c)).collect::<Vec<_>>().join("\n");
-        let indented_children = children.split("\n").collect::<Vec<_>>().join("\n  ");
-        write!(f, "\n{:?} {{\n  {}\n}}", self.selectors, indented_children)
-    }
 }
 
 #[cfg(test)]
