@@ -171,6 +171,7 @@ mod tests {
     use super::*;
     use token::{Lexeme, Token};
     use ast::number_value::NumberValue;
+    use context::Context;
 
     fn semicolon() -> Lexeme {
         Lexeme { token: Token::Semicolon, offset: None }
@@ -184,8 +185,16 @@ mod tests {
         Lexeme { token: Token::Plus, offset: None }
     }
 
+    fn slash() -> Lexeme {
+        Lexeme { token: Token::Slash, offset: None }
+    }
+
     fn one() -> Lexeme {
         Lexeme { token: Token::Number(1.0, None), offset: None }
+    }
+
+    fn two() -> Lexeme {
+        Lexeme { token: Token::Number(2.0, None), offset: None }
     }
 
     fn one_px() -> Lexeme {
@@ -234,6 +243,24 @@ mod tests {
         assert_eq!(
             Expression::parse(&mut fake_tokenizer),
             Ok(Expression::Number(NumberValue::from_scalar(one_px())))
+        );
+    }
+
+    #[test]
+    fn it_evaluates_a_list() {
+        let ex = Expression::List(vec![
+            Expression::Number(NumberValue::from_scalar(one())),
+            Expression::Operator(slash()),
+            Expression::Number(NumberValue::from_scalar(two())),
+            Expression::Operator(plus()),
+            Expression::Number(NumberValue::from_scalar(one())),
+            Expression::Operator(slash()),
+            Expression::Number(NumberValue::from_scalar(two())),
+        ]);
+        let fake_context = Context::new();
+        assert_eq!(
+            ex.evaluate(&fake_context),
+            Expression::Number(NumberValue { scalar: one(), computed: true })
         );
     }
 }
