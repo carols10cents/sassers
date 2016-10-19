@@ -125,7 +125,7 @@ impl Expression {
 
                 debug!("Processing: \nfirst = {:#?}\nop = {:#?}\nsecond = {:#?}", first, op, second);
 
-                value_stack.push(apply_math(first, op, second));
+                value_stack.push(first.apply_math(op, second));
             }
 
             value_stack.pop().unwrap()
@@ -146,21 +146,42 @@ impl Expression {
             },
         }
     }
-}
 
-fn apply_math(first: Expression, operator: Expression, second: Expression) -> Expression {
+    fn apply_math(self, operator: Expression, second: Expression) -> Expression {
+        match (self.clone(), second.clone()) {
+            (Expression::Number(f), Expression::Number(s)) => {
+                match operator {
+                    Expression::Operator(ref o) if o.token == Token::Slash => {
+                        if f.computed || s.computed {
+                            let result = f.apply_math(&o, &s);
+                            Expression::Number(result)
+                        } else {
+                            Expression::List(vec![self, operator.clone(), second.clone()])
+                        }
+                    },
+                    Expression::Operator(o) => {
+                        let result = f.apply_math(&o, &s);
+                        Expression::Number(result)
+                    },
+                    _ => unreachable!(),
+                }
+            },
+            (Expression::List(f), Expression::List(s)) => {
+                // let eval_first = Expression::List(f).evaluate()
+                debug!("list list case");
+                self
+            },
+            (Expression::List(f), Expression::Number(s)) => {
+                debug!("list number case");
+                self
+            },
+            (Expression::Number(f), Expression::List(s)) => {
+                debug!("number list case");
+                self
+            },
 
-    match (first.clone(), second) {
-        (Expression::Number(f), Expression::Number(s)) => {
-            match operator {
-                Expression::Operator(o) => {
-                    let result = f.apply_math(&o, &s);
-                    Expression::Number(result)
-                },
-                _ => unreachable!(),
-            }
-        },
-        _ => first,
+            _ => unreachable!(),
+        }
     }
 }
 
