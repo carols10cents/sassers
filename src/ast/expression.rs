@@ -66,7 +66,7 @@ impl Expression {
         })
     }
 
-    fn evaluate_list(self, context: &Context, _: bool) -> Expression {
+    fn evaluate_list(self, context: &Context, force_slash: bool) -> Expression {
         if let Expression::List(exprs) = self {
             let mut last_was_an_operator = true;
             // TODO: I'd love to have more types here, to ensure only values are
@@ -125,7 +125,7 @@ impl Expression {
 
                 debug!("Processing: \nfirst = {:#?}\nop = {:#?}\nsecond = {:#?}", first, op, second);
 
-                value_stack.push(first.apply_math(op, second));
+                value_stack.push(first.apply_math(op, second, context, force_slash));
             }
 
             value_stack.pop().unwrap()
@@ -147,12 +147,12 @@ impl Expression {
         }
     }
 
-    fn apply_math(self, operator: Expression, second: Expression) -> Expression {
+    fn apply_math(self, operator: Expression, second: Expression, context: &Context, force_slash: bool) -> Expression {
         match (self.clone(), second.clone()) {
             (Expression::Number(f), Expression::Number(s)) => {
                 match operator {
                     Expression::Operator(ref o) if o.token == Token::Slash => {
-                        if f.computed || s.computed {
+                        if force_slash || (f.computed || s.computed) {
                             let result = f.apply_math(&o, &s);
                             Expression::Number(result)
                         } else {
@@ -167,9 +167,12 @@ impl Expression {
                 }
             },
             (Expression::List(f), Expression::List(s)) => {
-                // let eval_first = Expression::List(f).evaluate()
                 debug!("list list case");
-                self
+                let eval_first = Expression::List(f).evaluate_list(context, true);
+                debug!("evaled first = {:#?}", eval_first);
+                let eval_second = Expression::List(s).evaluate_list(context, true);
+                debug!("evaled second = {:#?}", eval_second);
+                eval_first.apply_math(operator, eval_second, context, true)
             },
             (Expression::List(f), Expression::Number(s)) => {
                 debug!("list number case");
@@ -278,13 +281,17 @@ mod tests {
     #[test]
     fn it_evaluates_a_list() {
         let ex = Expression::List(vec![
-            Expression::Number(NumberValue::from_scalar(one())),
-            Expression::Operator(slash()),
-            Expression::Number(NumberValue::from_scalar(two())),
+            Expression::List(vec![
+                Expression::Number(NumberValue::from_scalar(one())),
+                Expression::Operator(slash()),
+                Expression::Number(NumberValue::from_scalar(two())),
+            ]),
             Expression::Operator(plus()),
-            Expression::Number(NumberValue::from_scalar(one())),
-            Expression::Operator(slash()),
-            Expression::Number(NumberValue::from_scalar(two())),
+            Expression::List(vec![
+                Expression::Number(NumberValue::from_scalar(one())),
+                Expression::Operator(slash()),
+                Expression::Number(NumberValue::from_scalar(two())),
+            ]),
         ]);
         let fake_context = Context::new();
         assert_eq!(
