@@ -66,6 +66,74 @@ impl Expression {
         })
     }
 
+    fn evaluate_list(self, context: &Context, _: bool) -> Expression {
+        if let Expression::List(exprs) = self {
+            let mut last_was_an_operator = true;
+            // TODO: I'd love to have more types here, to ensure only values are
+            // on the value stack and only operators are on the operator stack...
+            let mut value_stack: Vec<Expression> = Vec::new();
+            let mut op_stack: Vec<Expression> = Vec::new();
+
+            // Split into value stacks and operator stacks
+
+            let mut exprs = exprs.into_iter();
+            while let Some(part) = exprs.next() {
+                match part {
+                    Expression::Number(nv) => {
+                        if last_was_an_operator {
+                            value_stack.push(Expression::Number(nv));
+                        } else {
+                            let list = create_list(
+                                value_stack.pop(),
+                                Expression::Number(nv),
+                            );
+                            value_stack.push(list);
+                        }
+                        last_was_an_operator = false;
+                    },
+                    Expression::Operator(op) => {
+                        op_stack.push(Expression::Operator(op));
+                        last_was_an_operator = true;
+                    },
+                    Expression::String(lex) => {
+                        let var_eval = context.get_variable(&lex)
+                                        .unwrap_or(Expression::String(lex));
+
+                        if last_was_an_operator {
+                            value_stack.push(var_eval);
+                        } else {
+                            let list = create_list(
+                                value_stack.pop(),
+                                var_eval,
+                            );
+                            value_stack.push(list);
+                        }
+                        last_was_an_operator = false;
+                    },
+                    Expression::List(list) => {
+                        value_stack.push(Expression::List(list));
+                        last_was_an_operator = false;
+                    },
+                }
+            }
+
+            // Process the stacks
+            while !op_stack.is_empty() {
+                let op = op_stack.pop();
+                let second = value_stack.pop();
+                let first = value_stack.pop();
+
+                debug!("Processing: \nfirst = {:#?}\nop = {:#?}\nsecond = {:#?}", first, op, second);
+
+                value_stack.push(apply_math(first, op, second));
+            }
+
+            value_stack.pop().unwrap()
+        } else {
+            self
+        }
+    }
+
     pub fn evaluate(self, context: &Context) -> Expression {
         match self {
             Expression::Number(nv) => Expression::Number(nv),
@@ -74,64 +142,7 @@ impl Expression {
                 context.get_variable(&lex).unwrap_or(Expression::String(lex))
             },
             Expression::List(exprs) => {
-                let mut last_was_an_operator = true;
-                // TODO: I'd love to have more types here, to ensure only values are
-                // on the value stack and only operators are on the operator stack...
-                let mut value_stack: Vec<Expression> = Vec::new();
-                let mut op_stack: Vec<Expression> = Vec::new();
-
-                // Split into value stacks and operator stacks
-
-                let mut exprs = exprs.into_iter();
-                while let Some(part) = exprs.next() {
-                    match part {
-                        Expression::Number(nv) => {
-                            if last_was_an_operator {
-                                value_stack.push(Expression::Number(nv));
-                            } else {
-                                let list = create_list(
-                                    value_stack.pop(),
-                                    Expression::Number(nv),
-                                );
-                                value_stack.push(list);
-                            }
-                            last_was_an_operator = false;
-                        },
-                        Expression::Operator(op) => {
-                            op_stack.push(Expression::Operator(op));
-                            last_was_an_operator = true;
-                        },
-                        Expression::String(lex) => {
-                            let var_eval = context.get_variable(&lex)
-                                            .unwrap_or(Expression::String(lex));
-
-                            if last_was_an_operator {
-                                value_stack.push(var_eval);
-                            } else {
-                                let list = create_list(
-                                    value_stack.pop(),
-                                    var_eval,
-                                );
-                                value_stack.push(list);
-                            }
-                            last_was_an_operator = false;
-                        },
-                        Expression::List(list) => {
-                            value_stack.push(Expression::List(list));
-                            last_was_an_operator = false;
-                        },
-                    }
-                }
-
-                // Process the stacks
-                while !op_stack.is_empty() {
-                    let op = op_stack.pop();
-                    let second = value_stack.pop();
-                    let first = value_stack.pop();
-                    value_stack.push(apply_math(first, op, second));
-                }
-
-                value_stack.pop().unwrap()
+                Expression::List(exprs).evaluate_list(context, false)
             },
         }
     }
