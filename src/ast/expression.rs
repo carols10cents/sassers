@@ -78,20 +78,33 @@ impl Expression {
 
             let mut exprs = exprs.into_iter();
             while let Some(part) = exprs.next() {
+                debug!("Processing list item {:#?}", part);
                 match part {
                     Expression::Number(nv) => {
                         if last_was_an_operator {
+                            debug!("Push on value stack {:#?}", nv);
                             value_stack.push(Expression::Number(nv));
                         } else {
                             let list = create_list(
                                 value_stack.pop(),
                                 Expression::Number(nv),
                             );
+                            debug!("Push on list on value stack {:#?}", list);
                             value_stack.push(list);
                         }
                         last_was_an_operator = false;
                     },
+                    Expression::Operator(ref op) if op.token == Token::Slash && !force_slash => {
+                        let list = create_list(
+                            value_stack.pop(),
+                            Expression::Operator(op.clone()),
+                        );
+                        debug!("Push on list on value stack {:#?}", list);
+                        value_stack.push(list);
+
+                    },
                     Expression::Operator(op) => {
+                        debug!("Push on op stack {:#?}", op);
                         op_stack.push(Expression::Operator(op));
                         last_was_an_operator = true;
                     },
@@ -111,6 +124,7 @@ impl Expression {
                         last_was_an_operator = false;
                     },
                     Expression::List(list) => {
+                        debug!("Push list on value stack {:#?}", list);
                         value_stack.push(Expression::List(list));
                         last_was_an_operator = false;
                     },
@@ -123,7 +137,10 @@ impl Expression {
                 let second = value_stack.pop().expect("Expected a second argument on the value stack");
                 let first = value_stack.pop().expect("Expected a first argument on the value stack");
 
-                value_stack.push(first.apply_math(op, second, context, force_slash));
+                let math_result = first.apply_math(op, second, context, force_slash);
+                debug!("Math result: {:#?}", math_result);
+
+                value_stack.push(math_result);
             }
 
             value_stack.pop().unwrap()
@@ -146,6 +163,7 @@ impl Expression {
     }
 
     fn apply_math(self, operator: Expression, second: Expression, context: &Context, force_slash: bool) -> Expression {
+        debug!("Applying math to:\nfirst: {:#?}\nop: {:#?}\nsecond: {:#?}", self, operator, second);
         match (self.clone(), second.clone()) {
             (Expression::Number(f), Expression::Number(s)) => {
                 match operator {
@@ -275,17 +293,13 @@ mod tests {
     #[test]
     fn it_evaluates_a_list() {
         let ex = Expression::List(vec![
-            Expression::List(vec![
-                Expression::Number(NumberValue::from_scalar(one())),
-                Expression::Operator(slash()),
-                Expression::Number(NumberValue::from_scalar(two())),
-            ]),
+            Expression::Number(NumberValue::from_scalar(one())),
+            Expression::Operator(slash()),
+            Expression::Number(NumberValue::from_scalar(two())),
             Expression::Operator(plus()),
-            Expression::List(vec![
-                Expression::Number(NumberValue::from_scalar(one())),
-                Expression::Operator(slash()),
-                Expression::Number(NumberValue::from_scalar(two())),
-            ]),
+            Expression::Number(NumberValue::from_scalar(one())),
+            Expression::Operator(slash()),
+            Expression::Number(NumberValue::from_scalar(two())),
         ]);
         let fake_context = Context::new();
         assert_eq!(
