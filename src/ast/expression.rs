@@ -123,8 +123,6 @@ impl Expression {
                 let second = value_stack.pop().expect("Expected a second argument on the value stack");
                 let first = value_stack.pop().expect("Expected a first argument on the value stack");
 
-                debug!("Processing: \nfirst = {:#?}\nop = {:#?}\nsecond = {:#?}", first, op, second);
-
                 value_stack.push(first.apply_math(op, second, context, force_slash));
             }
 
@@ -167,23 +165,11 @@ impl Expression {
                 }
             },
             (Expression::List(f), Expression::List(s)) => {
-                debug!("list list case");
                 let eval_first = Expression::List(f).evaluate_list(context, true);
-                debug!("evaled first = {:#?}", eval_first);
                 let eval_second = Expression::List(s).evaluate_list(context, true);
-                debug!("evaled second = {:#?}", eval_second);
                 eval_first.apply_math(operator, eval_second, context, true)
             },
-            (Expression::List(f), Expression::Number(s)) => {
-                debug!("list number case");
-                self
-            },
-            (Expression::Number(f), Expression::List(s)) => {
-                debug!("number list case");
-                self
-            },
-
-            _ => unreachable!(),
+            _ => unimplemented!(),
         }
     }
 }
