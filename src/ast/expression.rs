@@ -169,6 +169,14 @@ impl Expression {
                 let eval_second = Expression::List(s).evaluate_list(context, true);
                 eval_first.apply_math(operator, eval_second, context, true)
             },
+            (Expression::List(f), Expression::Number(s)) => {
+                let eval_first = Expression::List(f).evaluate_list(context, true);
+                eval_first.apply_math(operator, Expression::Number(s), context, true)
+            },
+            (Expression::Number(f), Expression::List(s)) => {
+                let eval_second = Expression::List(s).evaluate_list(context, true);
+                Expression::Number(f).apply_math(operator, eval_second, context, true)
+            },
             _ => unimplemented!(),
         }
     }
