@@ -119,9 +119,9 @@ impl Expression {
 
             // Process the stacks
             while !op_stack.is_empty() {
-                let op = op_stack.pop();
-                let second = value_stack.pop();
-                let first = value_stack.pop();
+                let op = op_stack.pop().unwrap();
+                let second = value_stack.pop().expect("Expected a second argument on the value stack");
+                let first = value_stack.pop().expect("Expected a first argument on the value stack");
 
                 debug!("Processing: \nfirst = {:#?}\nop = {:#?}\nsecond = {:#?}", first, op, second);
 
@@ -148,10 +148,7 @@ impl Expression {
     }
 }
 
-fn apply_math(first: Option<Expression>, operator: Option<Expression>, second: Option<Expression>) -> Expression {
-    let first = first.unwrap();
-    let operator = operator.unwrap();
-    let second = second.unwrap();
+fn apply_math(first: Expression, operator: Expression, second: Expression) -> Expression {
 
     match (first.clone(), second) {
         (Expression::Number(f), Expression::Number(s)) => {
