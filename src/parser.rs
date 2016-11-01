@@ -54,7 +54,11 @@ impl<'a> Iterator for Parser<'a> {
                     ambiguous_holding_pen = vec![];
                 },
                 Token::Comment(_) => {
-                    return Some(Ok(Root::Comment(SassComment { content: lexeme })))
+                    if ambiguous_holding_pen.is_empty() {
+                        return Some(Ok(Root::Comment(
+                            SassComment { content: lexeme }
+                        )))
+                    }
                 },
                 _ => {
                     match ambiguous_holding_pen.pop() {
