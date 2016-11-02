@@ -27,6 +27,50 @@ impl Expression {
         }
     }
 
+    fn parse_parenthetical<T: Iterator<Item = Result<Lexeme>>>(tokenizer: &mut T) -> Result<Expression> {
+        let mut list = vec![];
+        while let Some(Ok(lexeme)) = tokenizer.next() {
+            match lexeme.token {
+                Token::RightParen => {
+                    return Ok(Expression::List(list))
+                },
+                Token::LeftParen => {
+                    list.push(
+                        try!(Expression::parse_parenthetical(tokenizer))
+                    );
+                },
+                Token::Number(_, _) => {
+                    list.push(
+                        Expression::Number(NumberValue::from_scalar(lexeme))
+                    );
+                },
+                Token::Plus | Token::Minus | Token::Star |
+                              Token::Slash | Token::Percent => {
+                    list.push(Expression::Operator(lexeme));
+                },
+                Token::Comment(_) => {},
+                _ => {
+                    list.push(Expression::String(lexeme));
+                }
+            }
+        }
+
+        let error_offset = match list.pop() {
+            Some(Expression::String(lexeme)) => lexeme.offset.unwrap_or(0),
+            Some(Expression::Operator(lexeme)) => lexeme.offset.unwrap_or(0),
+            Some(Expression::Number(nv)) => nv.offset().unwrap_or(0),
+            Some(Expression::List(_)) => unreachable!(), // for now until nested lists
+            None => 0,
+        };
+        Err(SassError {
+            offset: error_offset,
+            kind: ErrorKind::UnexpectedEof,
+            message: String::from(
+                "Expected right paren while parsing a value expression; reached EOF instead."
+            ),
+        })
+    }
+
     pub fn parse<T: Iterator<Item = Result<Lexeme>>>(tokenizer: &mut T) -> Result<Expression> {
         let mut list = vec![];
         while let Some(Ok(lexeme)) = tokenizer.next() {
@@ -38,10 +82,18 @@ impl Expression {
                         return Ok(Expression::List(list))
                     }
                 },
-                Token::Number(_, _) => {
-                    list.push(Expression::Number(NumberValue::from_scalar(lexeme)));
+                Token::LeftParen => {
+                    list.push(
+                        try!(Expression::parse_parenthetical(tokenizer))
+                    );
                 },
-                Token::Plus | Token::Minus | Token::Star | Token::Slash | Token::Percent => {
+                Token::Number(_, _) => {
+                    list.push(
+                        Expression::Number(NumberValue::from_scalar(lexeme))
+                    );
+                },
+                Token::Plus | Token::Minus | Token::Star |
+                              Token::Slash | Token::Percent => {
                     list.push(Expression::Operator(lexeme));
                 },
                 Token::Comment(_) => {},
