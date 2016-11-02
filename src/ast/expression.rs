@@ -44,6 +44,7 @@ impl Expression {
                 Token::Plus | Token::Minus | Token::Star | Token::Slash | Token::Percent => {
                     list.push(Expression::Operator(lexeme));
                 },
+                Token::Comment(_) => {},
                 _ => {
                     list.push(Expression::String(lexeme));
                 }
