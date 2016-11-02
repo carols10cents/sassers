@@ -203,13 +203,14 @@ impl<'a> Parser<'a> {
                     }
                 },
                 Token::Comment(_) => {
-                    if rule_stack.is_empty() {
+                    if rule_stack.is_empty() &&
+                       ambiguous_holding_pen.is_empty() {
                         body.push(
                             Node::Comment(
                                 SassComment { content: lexeme }
                             )
                         );
-                    } else {
+                    } else if !rule_stack.is_empty() {
                         // TODO: mut ref to last?
                         let mut rule = rule_stack.pop().unwrap();
                         rule.children.push(Node::Comment(
