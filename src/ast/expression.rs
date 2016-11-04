@@ -58,7 +58,7 @@ impl Expression {
         let error_offset = match list.pop() {
             Some(Expression::String(lexeme)) => lexeme.offset.unwrap_or(0),
             Some(Expression::Operator(lexeme)) => lexeme.offset.unwrap_or(0),
-            Some(Expression::Number(nv)) => nv.offset().unwrap_or(0),
+            Some(Expression::Number(nv)) => nv.offset.unwrap_or(0),
             Some(Expression::List(_)) => unreachable!(), // for now until nested lists
             None => 0,
         };
@@ -106,7 +106,7 @@ impl Expression {
         let error_offset = match list.pop() {
             Some(Expression::String(lexeme)) => lexeme.offset.unwrap_or(0),
             Some(Expression::Operator(lexeme)) => lexeme.offset.unwrap_or(0),
-            Some(Expression::Number(nv)) => nv.offset().unwrap_or(0),
+            Some(Expression::Number(nv)) => nv.offset.unwrap_or(0),
             Some(Expression::List(_)) => unreachable!(), // for now until nested lists
             None => 0,
         };
@@ -285,7 +285,7 @@ impl Expression {
                                     token: Token::String(
                                         format!("{}{}", f, first_in_list.to_string(SassOutputStyle::Expanded))
                                     ),
-                                    offset: f.offset(),
+                                    offset: f.offset,
                                 }
                             )
                         } else {
@@ -343,16 +343,28 @@ mod tests {
         Lexeme { token: Token::Slash, offset: None }
     }
 
-    fn one() -> Lexeme {
+    fn one_lexeme() -> Lexeme {
         Lexeme { token: Token::Number(1.0, None), offset: None }
     }
 
-    fn two() -> Lexeme {
+    fn one() -> NumberValue {
+        NumberValue::from_scalar(one_lexeme())
+    }
+
+    fn two_lexeme() -> Lexeme {
         Lexeme { token: Token::Number(2.0, None), offset: None }
     }
 
-    fn one_px() -> Lexeme {
+    fn two() -> NumberValue {
+        NumberValue::from_scalar(two_lexeme())
+    }
+
+    fn one_px_lexeme() -> Lexeme {
         Lexeme { token: Token::Number(1.0, Some("px".into())), offset: None }
+    }
+
+    fn one_px() -> NumberValue {
+        NumberValue::from_scalar(one_px_lexeme())
     }
 
     #[test]
@@ -367,54 +379,65 @@ mod tests {
     #[test]
     fn it_parses_a_list() {
         let mut fake_tokenizer = vec![
-            Ok(one()),
+            Ok(one_lexeme()),
             Ok(plus()),
-            Ok(one()),
+            Ok(one_lexeme()),
             Ok(semicolon())
         ].into_iter();
         assert_eq!(
             Expression::parse(&mut fake_tokenizer),
             Ok(Expression::List(vec![
-                Expression::Number(NumberValue::from_scalar(one())),
+                Expression::Number(one()),
                 Expression::Operator(plus()),
-                Expression::Number(NumberValue::from_scalar(one())),
+                Expression::Number(one()),
             ]))
         );
     }
 
     #[test]
     fn it_parses_a_number_without_units() {
-        let mut fake_tokenizer = vec![Ok(one()), Ok(semicolon())].into_iter();
+        let mut fake_tokenizer = vec![
+            Ok(one_lexeme()),
+            Ok(semicolon())
+        ].into_iter();
         assert_eq!(
             Expression::parse(&mut fake_tokenizer),
-            Ok(Expression::Number(NumberValue::from_scalar(one())))
+            Ok(Expression::Number(one()))
         );
     }
 
     #[test]
     fn it_parses_a_number_with_units() {
-        let mut fake_tokenizer = vec![Ok(one_px()), Ok(semicolon())].into_iter();
+        let mut fake_tokenizer = vec![
+            Ok(one_px_lexeme()),
+            Ok(semicolon())
+        ].into_iter();
         assert_eq!(
             Expression::parse(&mut fake_tokenizer),
-            Ok(Expression::Number(NumberValue::from_scalar(one_px())))
+            Ok(Expression::Number(one_px()))
         );
     }
 
     #[test]
     fn it_evaluates_a_list() {
         let ex = Expression::List(vec![
-            Expression::Number(NumberValue::from_scalar(one())),
+            Expression::Number(one()),
             Expression::Operator(slash()),
-            Expression::Number(NumberValue::from_scalar(two())),
+            Expression::Number(two()),
             Expression::Operator(plus()),
-            Expression::Number(NumberValue::from_scalar(one())),
+            Expression::Number(one()),
             Expression::Operator(slash()),
-            Expression::Number(NumberValue::from_scalar(two())),
+            Expression::Number(two()),
         ]);
         let fake_context = Context::new();
         assert_eq!(
             ex.evaluate(&fake_context),
-            Expression::Number(NumberValue { scalar: one(), computed: true })
+            Expression::Number(NumberValue {
+                scalar: 1.0,
+                computed: true,
+                units: None,
+                offset: None,
+            })
         );
     }
 }
