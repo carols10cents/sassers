@@ -196,14 +196,13 @@ impl Expression {
 
     pub fn evaluate(self, context: &Context) -> Expression {
         match self {
-            Expression::Number(nv) => Expression::Number(nv),
-            Expression::Operator(op) => Expression::Operator(op),
             Expression::String(lex) => {
                 context.get_variable(&lex).unwrap_or(Expression::String(lex))
             },
             Expression::List(exprs) => {
                 Expression::evaluate_list(exprs, context, false)
             },
+            other => other,
         }
     }
 
