@@ -131,7 +131,7 @@ impl Expression {
                         debug!("Push on value stack {:#?}", nv);
                         value_stack.push(Expression::Number(nv));
                     } else {
-                        let list = create_list(
+                        let list = Expression::create_list(
                             value_stack.pop(),
                             Expression::Number(nv),
                         );
@@ -142,7 +142,7 @@ impl Expression {
                 },
                 Expression::Operator(Lexeme {
                     token: Token::Slash, offset: o }) if !force_slash => {
-                    let list = create_list(
+                    let list = Expression::create_list(
                         value_stack.pop(),
                         Expression::Operator(Lexeme {
                             token: Token::Slash, offset: o
@@ -163,7 +163,7 @@ impl Expression {
                     if last_was_an_operator {
                         value_stack.push(var_eval);
                     } else {
-                        let list = create_list(
+                        let list = Expression::create_list(
                             value_stack.pop(),
                             var_eval,
                         );
@@ -297,16 +297,16 @@ impl Expression {
             _ => unimplemented!(),
         }
     }
-}
 
-fn create_list(head: Option<Expression>, tail: Expression) -> Expression {
-    let mut list = match head {
-        Some(Expression::List(v)) => v,
-        Some(e) => vec![e],
-        None => vec![],
-    };
-    list.push(tail);
-    Expression::List(list)
+    fn create_list(head: Option<Expression>, tail: Expression) -> Expression {
+        let mut list = match head {
+            Some(Expression::List(v)) => v,
+            Some(e) => vec![e],
+            None => vec![],
+        };
+        list.push(tail);
+        Expression::List(list)
+    }
 }
 
 #[cfg(test)]
