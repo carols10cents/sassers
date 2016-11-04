@@ -123,89 +123,86 @@ impl Expression {
         })
     }
 
-    fn evaluate_list(self, context: &Context, force_slash: bool) -> Expression {
-        if let Expression::List(exprs) = self {
-            let mut last_was_an_operator = true;
-            // TODO: I'd love to have more types here, to ensure only values are
-            // on the value stack and only operators are on the operator stack...
-            let mut value_stack: Vec<Expression> = Vec::new();
-            let mut op_stack: Vec<Expression> = Vec::new();
+    fn evaluate_list(exprs: Vec<Expression>, context: &Context, force_slash: bool) -> Expression {
 
-            // Split into value stacks and operator stacks
+        let mut last_was_an_operator = true;
+        // TODO: I'd love to have more types here, to ensure only values are
+        // on the value stack and only operators are on the operator stack...
+        let mut value_stack: Vec<Expression> = Vec::new();
+        let mut op_stack: Vec<Expression> = Vec::new();
 
-            let mut exprs = exprs.into_iter();
-            while let Some(part) = exprs.next() {
-                debug!("Processing list item {:#?}", part);
-                match part {
-                    Expression::Number(nv) => {
-                        if last_was_an_operator {
-                            debug!("Push on value stack {:#?}", nv);
-                            value_stack.push(Expression::Number(nv));
-                        } else {
-                            let list = create_list(
-                                value_stack.pop(),
-                                Expression::Number(nv),
-                            );
-                            debug!("Push on list on value stack {:#?}", list);
-                            value_stack.push(list);
-                        }
-                        last_was_an_operator = false;
-                    },
-                    Expression::Operator(Lexeme {
-                        token: Token::Slash, offset: o }) if !force_slash => {
+        // Split into value stacks and operator stacks
+
+        let mut exprs = exprs.into_iter();
+        while let Some(part) = exprs.next() {
+            debug!("Processing list item {:#?}", part);
+            match part {
+                Expression::Number(nv) => {
+                    if last_was_an_operator {
+                        debug!("Push on value stack {:#?}", nv);
+                        value_stack.push(Expression::Number(nv));
+                    } else {
                         let list = create_list(
                             value_stack.pop(),
-                            Expression::Operator(Lexeme {
-                                token: Token::Slash, offset: o
-                            }),
+                            Expression::Number(nv),
                         );
                         debug!("Push on list on value stack {:#?}", list);
                         value_stack.push(list);
-                    },
-                    Expression::Operator(op) => {
-                        debug!("Push on op stack {:#?}", op);
-                        op_stack.push(Expression::Operator(op));
-                        last_was_an_operator = true;
-                    },
-                    Expression::String(lex) => {
-                        let var_eval = context.get_variable(&lex)
-                                        .unwrap_or(Expression::String(lex));
+                    }
+                    last_was_an_operator = false;
+                },
+                Expression::Operator(Lexeme {
+                    token: Token::Slash, offset: o }) if !force_slash => {
+                    let list = create_list(
+                        value_stack.pop(),
+                        Expression::Operator(Lexeme {
+                            token: Token::Slash, offset: o
+                        }),
+                    );
+                    debug!("Push on list on value stack {:#?}", list);
+                    value_stack.push(list);
+                },
+                Expression::Operator(op) => {
+                    debug!("Push on op stack {:#?}", op);
+                    op_stack.push(Expression::Operator(op));
+                    last_was_an_operator = true;
+                },
+                Expression::String(lex) => {
+                    let var_eval = context.get_variable(&lex)
+                                    .unwrap_or(Expression::String(lex));
 
-                        if last_was_an_operator {
-                            value_stack.push(var_eval);
-                        } else {
-                            let list = create_list(
-                                value_stack.pop(),
-                                var_eval,
-                            );
-                            value_stack.push(list);
-                        }
-                        last_was_an_operator = false;
-                    },
-                    Expression::List(list) => {
-                        debug!("Push list on value stack {:#?}", list);
-                        value_stack.push(Expression::List(list));
-                        last_was_an_operator = false;
-                    },
-                }
+                    if last_was_an_operator {
+                        value_stack.push(var_eval);
+                    } else {
+                        let list = create_list(
+                            value_stack.pop(),
+                            var_eval,
+                        );
+                        value_stack.push(list);
+                    }
+                    last_was_an_operator = false;
+                },
+                Expression::List(list) => {
+                    debug!("Push list on value stack {:#?}", list);
+                    value_stack.push(Expression::List(list));
+                    last_was_an_operator = false;
+                },
             }
-
-            // Process the stacks
-            while !op_stack.is_empty() {
-                let op = op_stack.pop().unwrap();
-                let second = value_stack.pop().expect("Expected a second argument on the value stack");
-                let first = value_stack.pop().expect("Expected a first argument on the value stack");
-
-                let math_result = first.apply_math(op, second, context, force_slash);
-                debug!("Math result: {:#?}", math_result);
-
-                value_stack.push(math_result);
-            }
-
-            value_stack.pop().unwrap()
-        } else {
-            self
         }
+
+        // Process the stacks
+        while !op_stack.is_empty() {
+            let op = op_stack.pop().unwrap();
+            let second = value_stack.pop().expect("Expected a second argument on the value stack");
+            let first = value_stack.pop().expect("Expected a first argument on the value stack");
+
+            let math_result = first.apply_math(op, second, context, force_slash);
+            debug!("Math result: {:#?}", math_result);
+
+            value_stack.push(math_result);
+        }
+
+        value_stack.pop().unwrap()
     }
 
     pub fn evaluate(self, context: &Context) -> Expression {
@@ -216,7 +213,7 @@ impl Expression {
                 context.get_variable(&lex).unwrap_or(Expression::String(lex))
             },
             Expression::List(exprs) => {
-                Expression::List(exprs).evaluate_list(context, false)
+                Expression::evaluate_list(exprs, context, false)
             },
         }
     }
@@ -263,17 +260,17 @@ impl Expression {
                 }
             },
             (Expression::List(f), Expression::List(s)) => {
-                let eval_first = Expression::List(f).evaluate_list(context, true);
-                let eval_second = Expression::List(s).evaluate_list(context, true);
+                let eval_first = Expression::evaluate_list(f, context, true);
+                let eval_second = Expression::evaluate_list(s, context, true);
                 eval_first.apply_math(operator, eval_second, context, true)
             },
             (Expression::List(f), Expression::Number(s)) => {
-                let eval_first = Expression::List(f).evaluate_list(context, true);
+                let eval_first = Expression::evaluate_list(f, context, true);
                 eval_first.apply_math(operator, Expression::Number(s), context, true)
             },
             (Expression::Number(f), Expression::List(s)) => {
                 if s.iter().any(|e| e.is_slash()) {
-                    let evaled_list = Expression::List(s).evaluate_list(context, true);
+                    let evaled_list = Expression::evaluate_list(s, context, true);
                     Expression::Number(f).apply_math(
                         operator,
                         evaled_list,
