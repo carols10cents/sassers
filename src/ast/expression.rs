@@ -147,14 +147,16 @@ impl Expression {
                         }
                         last_was_an_operator = false;
                     },
-                    Expression::Operator(ref op) if op.token == Token::Slash && !force_slash => {
+                    Expression::Operator(Lexeme {
+                        token: Token::Slash, offset: o }) if !force_slash => {
                         let list = create_list(
                             value_stack.pop(),
-                            Expression::Operator(op.clone()),
+                            Expression::Operator(Lexeme {
+                                token: Token::Slash, offset: o
+                            }),
                         );
                         debug!("Push on list on value stack {:#?}", list);
                         value_stack.push(list);
-
                     },
                     Expression::Operator(op) => {
                         debug!("Push on op stack {:#?}", op);
@@ -234,9 +236,16 @@ impl Expression {
         match (self.clone(), second.clone()) {
             (Expression::Number(f), Expression::Number(s)) => {
                 match operator {
-                    Expression::Operator(ref o) if o.token == Token::Slash => {
+                    Expression::Operator(Lexeme {
+                        token: Token::Slash, offset: o }) => {
                         if force_slash || (f.computed || s.computed) {
-                            let result = f.apply_math(&o, &s);
+                            let result = f.apply_math(
+                                &Lexeme {
+                                    token: Token::Slash,
+                                    offset: o
+                                },
+                                &s
+                            );
                             Expression::Number(result)
                         } else {
                             Expression::List(vec![self, operator.clone(), second.clone()])
