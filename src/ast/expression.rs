@@ -54,19 +54,8 @@ impl Expression {
                         try!(Expression::parse_parenthetical(tokenizer))
                     );
                 },
-                Token::Number(_, _) => {
-                    list.push(
-                        Expression::Number(NumberValue::from_scalar(lexeme))
-                    );
-                },
-                Token::Plus | Token::Minus | Token::Star |
-                              Token::Slash | Token::Percent => {
-                    list.push(Expression::Operator(lexeme));
-                },
                 Token::Comment(_) => {},
-                _ => {
-                    list.push(Expression::String(lexeme));
-                }
+                _ => list.push(lexeme.into()),
             }
         }
 
