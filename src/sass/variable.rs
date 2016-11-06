@@ -1,9 +1,9 @@
-use token::Lexeme;
 use ast::expression::Expression;
+use token::TokenOffset;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SassVariable {
-    pub name: Lexeme,
+    pub name: TokenOffset,
     pub value: Expression,
 }
 

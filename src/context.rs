@@ -1,6 +1,6 @@
-use token::Lexeme;
 use ast::expression::Expression;
 use sass::variable::SassVariable;
+use token::TokenOffset;
 
 use std::collections::HashMap;
 
@@ -20,7 +20,9 @@ impl Context {
         self.variables.insert(variable.name_string(), variable);
     }
 
-    pub fn get_variable(&self, lexeme: &Lexeme) -> Option<Expression> {
-        self.variables.get(&lexeme.token.to_string()).and_then(|sv| Some(sv.value.clone()))
+    pub fn get_variable(&self, token_offset: &TokenOffset) -> Option<Expression> {
+        self.variables.get(
+            &token_offset.token.to_string()
+        ).and_then( |sv| Some(sv.value.clone()) )
     }
 }

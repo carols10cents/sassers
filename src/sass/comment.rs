@@ -1,12 +1,12 @@
 use sass::output_style::SassOutputStyle;
-use token::Lexeme;
 use error::Result;
+use token::TokenOffset;
 
 use std::io::Write;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SassComment {
-    pub content: Lexeme,
+    pub content: TokenOffset,
 }
 
 impl SassComment {

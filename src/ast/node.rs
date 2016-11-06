@@ -2,8 +2,8 @@ use sass::output_style::SassOutputStyle;
 use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::comment::SassComment;
-use token::Lexeme;
 use ast::expression::Expression;
+use token::TokenOffset;
 use error::{Result};
 
 use std::io::Write;
@@ -11,7 +11,7 @@ use std::io::Write;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Node {
     Rule(SassRule),
-    Property(Lexeme, Expression),
+    Property(TokenOffset, Expression),
     Variable(SassVariable),
     Comment(SassComment),
 }

@@ -1,7 +1,7 @@
 use sass::output_style::SassOutputStyle;
 use sass::variable::SassVariable;
 use ast::node::Node;
-use token::{Lexeme, Token};
+use token::{Token, TokenOffset};
 use error::Result;
 use context::Context;
 
@@ -9,7 +9,7 @@ use std::io::Write;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct SassRule {
-    pub selectors: Vec<Lexeme>,
+    pub selectors: Vec<TokenOffset>,
     pub children: Vec<Node>,
 }
 
@@ -141,10 +141,10 @@ impl SassRule {
         }
     }
 
-    pub fn collapse_with_parent_selectors(self, parents: &Vec<Lexeme>) -> Vec<SassRule> {
+    pub fn collapse_with_parent_selectors(self, parents: &Vec<TokenOffset>) -> Vec<SassRule> {
         let new_selectors = parents.iter().flat_map(|p|
             self.selectors.iter().map(|c|
-                Lexeme {
+                TokenOffset {
                     token: Token::String(format!("{} {}", p.token, c.token)),
                     offset: p.offset,
                 }
@@ -190,48 +190,54 @@ mod tests {
     use super::*;
     use ast::node::Node;
     use ast::expression::Expression;
-    use token::{Token, Lexeme};
+    use token::{Token, TokenOffset, OperatorOrToken};
 
     #[test]
     fn it_collapses_subrules_without_properties() {
         let innermost_rule = SassRule {
-            selectors: vec![Lexeme {
+            selectors: vec![TokenOffset {
                 token: Token::String("strong".into()),
                 offset: Some(6)
             }],
             children: vec![
                 Node::Property(
-                    Lexeme { token: Token::String("font-weight".into()), offset: Some(12) },
-                    Expression::String(
-                        Lexeme { token: Token::String("bold".into()), offset: Some(19) }
-                    ),
+                    TokenOffset { token: Token::String("font-weight".into()), offset: Some(12) },
+                    Expression::Value(OperatorOrToken::Token(
+                        TokenOffset {
+                            token: Token::String("bold".into()),
+                            offset: Some(19)
+                        }
+                    )),
                 ),
             ],
         };
 
         let further_in_rule = SassRule {
-            selectors: vec![Lexeme {
+            selectors: vec![TokenOffset {
                 token: Token::String("img".into()),
                 offset: Some(6)
             }],
             children: vec![
                 Node::Property(
-                    Lexeme { token: Token::String("color".into()), offset: Some(12) },
-                    Expression::String(
-                        Lexeme { token: Token::String("blue".into()), offset: Some(19) }
-                    ),
+                    TokenOffset { token: Token::String("color".into()), offset: Some(12) },
+                    Expression::Value(OperatorOrToken::Token(
+                        TokenOffset {
+                            token: Token::String("blue".into()),
+                            offset: Some(19)
+                        }
+                    )),
                 ),
                 Node::Rule(innermost_rule),
             ],
         };
 
         let middle_rule = SassRule {
-            selectors: vec![Lexeme { token: Token::String("span".into()), offset: Some(0) }],
+            selectors: vec![TokenOffset { token: Token::String("span".into()), offset: Some(0) }],
             children: vec![Node::Rule(further_in_rule)],
         };
 
         let outer_rule = SassRule {
-            selectors: vec![Lexeme { token: Token::String("div".into()), offset: Some(0) }],
+            selectors: vec![TokenOffset { token: Token::String("div".into()), offset: Some(0) }],
             children: vec![Node::Rule(middle_rule)],
         };
 
@@ -240,28 +246,36 @@ mod tests {
             vec![
                 SassRule {
                     selectors: vec![
-                        Lexeme { token: Token::String("div span img".into()), offset: Some(0) },
+                        TokenOffset { token: Token::String("div span img".into()), offset: Some(0) },
                     ],
                     children: vec![
                         Node::Property(
-                            Lexeme { token: Token::String("color".into()), offset: Some(12) },
-                            Expression::String(
-                                Lexeme { token: Token::String("blue".into()), offset: Some(19) }
-                            ),
+                            TokenOffset { token: Token::String("color".into()), offset: Some(12) },
+                            Expression::Value(OperatorOrToken::Token(
+                                TokenOffset {
+                                    token: Token::String("blue".into()),
+                                    offset: Some(19)
+                                }
+                            )),
                         ),
                         Node::Rule(
                             SassRule {
                                 selectors: vec![
-                                    Lexeme {
+                                    TokenOffset {
                                         token: Token::String("strong".into()),
                                         offset: Some(6)
                                     },
                                 ],
                                 children: vec![Node::Property(
-                                    Lexeme { token: Token::String("font-weight".into()), offset: Some(12) },
-                                    Expression::String(
-                                        Lexeme { token: Token::String("bold".into()), offset: Some(19) }
-                                    ),
+                                    TokenOffset { token: Token::String("font-weight".into()), offset: Some(12) },
+                                    Expression::Value(OperatorOrToken::Token(
+                                        TokenOffset {
+                                            token: Token::String(
+                                                "bold".into()
+                                            ),
+                                            offset: Some(19)
+                                        }
+                                    )),
                                 )],
                             }
                         ),
