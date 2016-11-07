@@ -1,3 +1,4 @@
+use std::ops::{Add, Sub, Mul, Div, Rem};
 use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -11,6 +12,126 @@ impl OperatorOrToken {
         match *self {
             OperatorOrToken::Operator(o) => o.offset,
             OperatorOrToken::Token(ref t) => t.offset,
+        }
+    }
+}
+
+impl Add for OperatorOrToken {
+    type Output = OperatorOrToken;
+
+    fn add(self, other: OperatorOrToken) -> OperatorOrToken {
+        match (self, other) {
+            (
+                OperatorOrToken::Token(TokenOffset {
+                    token: self_token,
+                    offset: off,
+                }),
+                OperatorOrToken::Token(TokenOffset {
+                    token: other_token, ..
+                })
+            ) => {
+                OperatorOrToken::Token(TokenOffset {
+                    token: self_token + other_token,
+                    offset: off,
+                })
+            },
+            (s, other) => panic!("Cannot add: {:?} + {:?}", s, other),
+        }
+    }
+}
+
+impl Sub for OperatorOrToken {
+    type Output = OperatorOrToken;
+
+    fn sub(self, other: OperatorOrToken) -> OperatorOrToken {
+        match (self, other) {
+            (
+                OperatorOrToken::Token(TokenOffset {
+                    token: self_token,
+                    offset: off,
+                }),
+                OperatorOrToken::Token(TokenOffset {
+                    token: other_token, ..
+                })
+            ) => {
+                OperatorOrToken::Token(TokenOffset {
+                    token: self_token - other_token,
+                    offset: off,
+                })
+            },
+            (s, other) => panic!("Cannot subtract: {:?} - {:?}", s, other),
+        }
+    }
+}
+
+impl Mul for OperatorOrToken {
+    type Output = OperatorOrToken;
+
+    fn mul(self, other: OperatorOrToken) -> OperatorOrToken {
+        match (self, other) {
+            (
+                OperatorOrToken::Token(TokenOffset {
+                    token: self_token,
+                    offset: off,
+                }),
+                OperatorOrToken::Token(TokenOffset {
+                    token: other_token, ..
+                })
+            ) => {
+                OperatorOrToken::Token(TokenOffset {
+                    token: self_token * other_token,
+                    offset: off,
+                })
+            },
+            (s, other) => panic!("Cannot multiply: {:?} * {:?}", s, other),
+        }
+    }
+}
+
+impl Div for OperatorOrToken {
+    type Output = OperatorOrToken;
+
+    fn div(self, other: OperatorOrToken) -> OperatorOrToken {
+        match (self, other) {
+            (
+                OperatorOrToken::Token(TokenOffset {
+                    token: self_token,
+                    offset: off,
+                }),
+                OperatorOrToken::Token(TokenOffset {
+                    token: other_token, ..
+                })
+            ) => {
+                OperatorOrToken::Token(TokenOffset {
+                    token: self_token / other_token,
+                    offset: off,
+                })
+            },
+            (s, other) => panic!("Cannot divide: {:?} / {:?}", s, other),
+        }
+    }
+}
+
+impl Rem for OperatorOrToken {
+    type Output = OperatorOrToken;
+
+    fn rem(self, other: OperatorOrToken) -> OperatorOrToken {
+        match (self, other) {
+            (
+                OperatorOrToken::Token(TokenOffset {
+                    token: self_token,
+                    offset: off,
+                }),
+                OperatorOrToken::Token(TokenOffset {
+                    token: other_token, ..
+                })
+            ) => {
+                OperatorOrToken::Token(TokenOffset {
+                    token: self_token % other_token,
+                    offset: off,
+                })
+            },
+            (s, other) => panic!("Cannot find the remainder: {:?} % {:?}", s, other),
         }
     }
 }
@@ -100,6 +221,107 @@ pub enum Token {
     Comment(String),
 }
 
+impl Add for Token {
+    type Output = Token;
+
+    fn add(self, other: Token) -> Token {
+        match mathy(self, other) {
+            Ok((self_value, other_value, units)) => {
+                Token::Number {
+                    value: self_value + other_value,
+                    units: units,
+                    computed: true,
+                }
+            },
+            Err(msg) => panic!("Cannot add: {}", msg),
+        }
+    }
+}
+
+impl Sub for Token {
+    type Output = Token;
+
+    fn sub(self, other: Token) -> Token {
+        match mathy(self, other) {
+            Ok((self_value, other_value, units)) => {
+                Token::Number {
+                    value: self_value - other_value,
+                    units: units,
+                    computed: true,
+                }
+            },
+            Err(msg) => panic!("Cannot subtract: {}", msg),
+        }
+    }
+}
+
+impl Mul for Token {
+    type Output = Token;
+
+    fn mul(self, other: Token) -> Token {
+        match mathy(self, other) {
+            Ok((self_value, other_value, units)) => {
+                Token::Number {
+                    value: self_value * other_value,
+                    units: units,
+                    computed: true,
+                }
+            },
+            Err(msg) => panic!("Cannot multiply: {}", msg),
+        }
+    }
+}
+
+impl Div for Token {
+    type Output = Token;
+
+    fn div(self, other: Token) -> Token {
+        match mathy(self, other) {
+            Ok((self_value, other_value, units)) => {
+                Token::Number {
+                    value: self_value / other_value,
+                    units: units,
+                    computed: true,
+                }
+            },
+            Err(msg) => panic!("Cannot divide: {}", msg),
+        }
+    }
+}
+
+impl Rem for Token {
+    type Output = Token;
+
+    fn rem(self, other: Token) -> Token {
+        match mathy(self, other) {
+            Ok((self_value, other_value, units)) => {
+                Token::Number {
+                    value: self_value % other_value,
+                    units: units,
+                    computed: true,
+                }
+            },
+            Err(msg) => panic!("Cannot find the remainder: {}", msg),
+        }
+    }
+}
+
+fn mathy(first: Token, second: Token) -> Result<(f32, f32, Option<String>), String> {
+    match (&first, &second) {
+        (
+            &Token::Number {
+                value: ref first_value, units: ref first_units, ..
+            },
+            &Token::Number {
+                value: ref second_value, units: ref _second_units, ..
+            },
+        ) => {
+            Ok((*first_value, *second_value, first_units.clone()))
+        },
+        _ => Err(format!("Cannot perform math operations on {:?} and {:?}", first, second)),
+    }
+}
+
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -143,7 +365,7 @@ impl fmt::Display for TokenOffset {
 impl TokenOffset {
     pub fn combine(&self, other: &OperatorOrToken) -> TokenOffset {
         let separator = match *other {
-            OperatorOrToken::Token(TokenOffset { token: ref token, .. }) => {
+            OperatorOrToken::Token(TokenOffset { ref token, .. }) => {
                 match token {
                     &Token::String(ref s) => {
                         if *s == String::from("=") ||

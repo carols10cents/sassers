@@ -120,7 +120,7 @@ impl<'a> Parser<'a> {
                         }))
                     },
                     Ok(OperatorOrToken::Token(TokenOffset {
-                        token: actual_token, offset: offset
+                        token: actual_token, offset
                     })) => {
                         Err(SassError {
                             offset: offset.unwrap_or(0),
@@ -133,7 +133,7 @@ impl<'a> Parser<'a> {
                         })
                     },
                     Ok(OperatorOrToken::Operator(OperatorOffset {
-                        operator: actual_operator, offset: offset
+                        operator: actual_operator, offset
                     })) => {
                         Err(SassError {
                             offset: offset.unwrap_or(0),

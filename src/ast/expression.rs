@@ -199,7 +199,9 @@ impl Expression {
             let second = value_stack.pop().expect("Expected a second argument on the value stack");
             let first = value_stack.pop().expect("Expected a first argument on the value stack");
 
-            let math_result = first.apply_math(op, second, context, force_slash);
+            let math_result = Expression::apply_math(
+                op, first, second, context
+            );
             debug!("Math result: {:#?}", math_result);
 
             value_stack.push(math_result);
@@ -225,85 +227,70 @@ impl Expression {
         }
     }
 
-    fn apply_math(self, operator: OperatorOffset, second: Expression, context: &Context, force_slash: bool) -> Expression {
-        debug!("Applying math to:\nfirst: {:#?}\nop: {:#?}\nsecond: {:#?}", self, operator, second);
-        unimplemented!()
-        // match (self.clone(), second.clone()) {
-        //     (Expression::Number(f), Expression::Number(s)) => {
-        //         match operator {
-        //             Expression::Operator(OperatorOffset {
-        //                 operator: Operator::Slash,
-        //                 offset: off,
-        //             }) => {
-        //                 if force_slash || (f.computed || s.computed) {
-        //                     let result = f.apply_math(
-        //                         &OperatorOffset {
-        //                             operator: Operator::Slash,
-        //                             offset: off
-        //                         },
-        //                         &s
-        //                     );
-        //                     Expression::Number(result)
-        //                 } else {
-        //                     Expression::List(vec![self, operator.clone(), second.clone()])
-        //                 }
-        //             },
-        //             Expression::Operator(o) => {
-        //                 let result = f.apply_math(&o, &s);
-        //                 Expression::Number(result)
-        //             },
-        //             _ => unreachable!(),
-        //         }
-        //     },
-        //     (Expression::List(f), Expression::List(s)) => {
-        //         let eval_first = Expression::evaluate_list(f, context, true);
-        //         let eval_second = Expression::evaluate_list(s, context, true);
-        //         eval_first.apply_math(operator, eval_second, context, true)
-        //     },
-        //     (Expression::List(f), Expression::Number(s)) => {
-        //         let eval_first = Expression::evaluate_list(f, context, true);
-        //         eval_first.apply_math(operator, Expression::Number(s), context, true)
-        //     },
-        //     (Expression::Number(f), Expression::List(s)) => {
-        //         if s.iter().any(|e| e.is_slash()) {
-        //             let evaled_list = Expression::evaluate_list(s, context, true);
-        //             Expression::Number(f).apply_math(
-        //                 operator,
-        //                 evaled_list,
-        //                 context,
-        //                 true
-        //             )
-        //         } else {
-        //             if let Some((ref first_in_list, rest_of_list)) =
-        //                     s.split_first() {
-        //                 let new_first = if operator.is_plus() {
-        //                     Expression::Value(
-        //                         TokenOffset {
-        //                             token: Token::String(
-        //                                 format!("{}{}", f, first_in_list.to_string(SassOutputStyle::Expanded))
-        //                             ),
-        //                             offset: f.offset,
-        //                         }
-        //                     )
-        //                 } else {
-        //                     Expression::Number(f).apply_math(
-        //                         operator,
-        //                         (*first_in_list).clone(),
-        //                         context,
-        //                         true
-        //                     )
-        //                 };
-        //
-        //                 let mut new_list = vec![new_first];
-        //                 new_list.extend_from_slice(rest_of_list);
-        //                 Expression::List(new_list)
-        //             } else {
-        //                 panic!("Trying to perform an operation on a number and a list; expected to get a list with something in it");
-        //             }
-        //         }
-        //     },
-        //     _ => unimplemented!(),
-        // }
+    fn apply_math(operator: OperatorOffset, first: Expression, second: Expression, context: &Context) -> Expression {
+        debug!("Applying math to:\nfirst: {:#?}\nop: {:#?}\nsecond: {:#?}", first, operator, second);
+
+        match (first, second) {
+            (Expression::Value(f), Expression::Value(s)) => {
+                let result = match operator.operator {
+                    Operator::Plus => f + s,
+                    Operator::Minus => f - s,
+                    Operator::Star => f * s,
+                    Operator::Slash => f / s,
+                    Operator::Percent => f % s,
+                    _ => unimplemented!(),
+                };
+                Expression::Value(result)
+            },
+            (Expression::List(f), Expression::List(s)) => {
+                let eval_first = Expression::evaluate_list(f, context, true);
+                let eval_second = Expression::evaluate_list(s, context, true);
+                Expression::apply_math(
+                    operator, eval_first, eval_second, context
+                )
+            },
+            (Expression::List(f), Expression::Value(s)) => {
+                let eval_first = Expression::evaluate_list(f, context, true);
+                Expression::apply_math(
+                    operator, eval_first, Expression::Value(s), context
+                )
+            },
+            (Expression::Value(f), Expression::List(s)) => {
+                if s.iter().any(|e|
+                    match *e {
+                        Expression::Value(
+                            OperatorOrToken::Operator(OperatorOffset {
+                                operator: Operator::Slash, ..
+                            })
+                        ) => true,
+                        _ => false,
+                    }) {
+                    let evaled_list = Expression::evaluate_list(
+                        s, context, true
+                    );
+                    Expression::apply_math(
+                        operator, Expression::Value(f), evaled_list, context
+                    )
+                } else {
+                    if let Some((ref first_in_list, rest_of_list)) =
+                            s.split_first() {
+
+                        let new_first = Expression::apply_math(
+                            operator,
+                            Expression::Value(f),
+                            (*first_in_list).clone(),
+                            context
+                        );
+
+                        let mut new_list = vec![new_first];
+                        new_list.extend_from_slice(rest_of_list);
+                        Expression::List(new_list)
+                    } else {
+                        panic!("Trying to perform an operation on a number and a list; expected to get a list with something in it");
+                    }
+                }
+            },
+        }
     }
 
     fn create_list(head: Option<Expression>, tail: Expression) -> Expression {
