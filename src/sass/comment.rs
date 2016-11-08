@@ -1,6 +1,6 @@
 use sass::output_style::SassOutputStyle;
 use error::Result;
-use token::TokenOffset;
+use token_offset::TokenOffset;
 
 use std::io::Write;
 

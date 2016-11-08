@@ -1,5 +1,6 @@
 use sass::output_style::SassOutputStyle;
-use token::{Token, TokenOffset};
+use token::Token;
+use token_offset::TokenOffset;
 use operator::Operator;
 use operator_offset::OperatorOffset;
 use operator_or_token::OperatorOrToken;
@@ -310,7 +311,8 @@ impl Expression {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use token::{TokenOffset, Token};
+    use token::Token;
+    use token_offset::TokenOffset;
     use operator_or_token::OperatorOrToken;
     use operator::Operator;
     use operator_offset::OperatorOffset;

@@ -1,4 +1,5 @@
-use token::{Token, TokenOffset};
+use token::Token;
+use token_offset::TokenOffset;
 use operator_or_token::OperatorOrToken;
 use operator::Operator;
 use operator_offset::OperatorOffset;
@@ -297,7 +298,8 @@ mod tests {
     use ast::expression::Expression;
     use ast::root::Root;
     use ast::node::Node;
-    use token::{Token, TokenOffset};
+    use token::Token;
+    use token_offset::TokenOffset;
     use operator_or_token::OperatorOrToken;
     use error::{SassError, ErrorKind};
 

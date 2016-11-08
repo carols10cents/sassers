@@ -18,6 +18,7 @@ mod operator_or_token;
 mod optimizer;
 mod parser;
 mod token;
+mod token_offset;
 mod tokenizer;
 
 use context::Context;

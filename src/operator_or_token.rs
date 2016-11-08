@@ -1,4 +1,5 @@
-use token::{Token, TokenOffset};
+use token::Token;
+use token_offset::TokenOffset;
 use operator::Operator;
 use operator_offset::OperatorOffset;
 

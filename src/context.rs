@@ -1,6 +1,6 @@
 use ast::expression::Expression;
 use sass::variable::SassVariable;
-use token::TokenOffset;
+use token_offset::TokenOffset;
 
 use std::collections::HashMap;
 

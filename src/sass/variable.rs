@@ -1,5 +1,5 @@
 use ast::expression::Expression;
-use token::TokenOffset;
+use token_offset::TokenOffset;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SassVariable {

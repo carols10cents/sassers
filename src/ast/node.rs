@@ -3,7 +3,7 @@ use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::comment::SassComment;
 use ast::expression::Expression;
-use token::TokenOffset;
+use token_offset::TokenOffset;
 use error::{Result};
 
 use std::io::Write;

@@ -1,7 +1,8 @@
 use sass::output_style::SassOutputStyle;
 use sass::variable::SassVariable;
 use ast::node::Node;
-use token::{Token, TokenOffset};
+use token::Token;
+use token_offset::TokenOffset;
 use error::Result;
 use context::Context;
 
@@ -190,7 +191,8 @@ mod tests {
     use super::*;
     use ast::node::Node;
     use ast::expression::Expression;
-    use token::{Token, TokenOffset};
+    use token::Token;
+    use token_offset::TokenOffset;
     use operator_or_token::OperatorOrToken;
 
     #[test]

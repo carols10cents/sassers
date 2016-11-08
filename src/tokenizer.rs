@@ -1,4 +1,5 @@
-use token::{Token, TokenOffset};
+use token::Token;
+use token_offset::TokenOffset;
 use operator_or_token::OperatorOrToken;
 use operator::Operator;
 use operator_offset::OperatorOffset;
@@ -233,7 +234,8 @@ fn is_single_char_token(ch: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use token::{TokenOffset, Token};
+    use token::Token;
+    use token_offset::TokenOffset;
     use operator_or_token::OperatorOrToken;
     use operator::Operator;
     use operator_offset::OperatorOffset;
