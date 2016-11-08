@@ -1,6 +1,7 @@
-use token::{Token, TokenOffset, OperatorOffset};
+use token::{Token, TokenOffset};
 use operator_or_token::OperatorOrToken;
 use operator::Operator;
+use operator_offset::OperatorOffset;
 use error::{Result, SassError, ErrorKind};
 
 use std::str::CharIndices;
@@ -232,9 +233,10 @@ fn is_single_char_token(ch: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use token::{TokenOffset, Token, OperatorOffset};
+    use token::{TokenOffset, Token};
     use operator_or_token::OperatorOrToken;
     use operator::Operator;
+    use operator_offset::OperatorOffset;
     use error::Result;
 
     fn expected_token(expected_token: Token, expected_offset: usize) -> Option<Result<OperatorOrToken>> {

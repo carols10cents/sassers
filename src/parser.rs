@@ -1,6 +1,7 @@
-use token::{Token, TokenOffset, OperatorOffset};
+use token::{Token, TokenOffset};
 use operator_or_token::OperatorOrToken;
 use operator::Operator;
+use operator_offset::OperatorOffset;
 use tokenizer::Tokenizer;
 use ast::expression::Expression;
 use ast::root::Root;

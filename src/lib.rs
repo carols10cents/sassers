@@ -13,6 +13,7 @@ mod context;
 mod error;
 mod sass;
 mod operator;
+mod operator_offset;
 mod operator_or_token;
 mod optimizer;
 mod parser;
