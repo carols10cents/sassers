@@ -190,7 +190,8 @@ mod tests {
     use super::*;
     use ast::node::Node;
     use ast::expression::Expression;
-    use token::{Token, TokenOffset, OperatorOrToken};
+    use token::{Token, TokenOffset};
+    use operator_or_token::OperatorOrToken;
 
     #[test]
     fn it_collapses_subrules_without_properties() {
