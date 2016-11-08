@@ -14,6 +14,22 @@ impl OperatorOrToken {
             OperatorOrToken::Token(ref t) => t.offset,
         }
     }
+
+    pub fn extract_token(&self) -> Option<Token> {
+        if let OperatorOrToken::Token(ref t) = *self {
+            Some(t.token.clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn extract_operator(&self) -> Option<Operator> {
+        if let OperatorOrToken::Operator(o) = *self {
+            Some(o.operator)
+        } else {
+            None
+        }
+    }
 }
 
 impl Add for OperatorOrToken {
@@ -364,24 +380,19 @@ impl fmt::Display for TokenOffset {
 
 impl TokenOffset {
     pub fn combine(&self, other: &OperatorOrToken) -> TokenOffset {
-        let separator = match *other {
-            OperatorOrToken::Token(TokenOffset { ref token, .. }) => {
-                match token {
-                    &Token::String(ref s) => {
-                        if *s == String::from("=") ||
-                           *s == String::from("]") ||
-                           (*s).ends_with("=") {
-                            ""
-                        } else {
-                            " "
-                        }
-                    },
-                    _ => " ",
-                }
-            },
-            OperatorOrToken::Operator(
-                OperatorOffset { operator: Operator::Star, ..}) => "",
-            _ => " ",
+        let self_string = self.token.to_string();
+        let other_token = other.extract_token();
+        let other_operator = other.extract_operator();
+
+        let separator = if
+            other_token == Some(Token::String(String::from("="))) ||
+            other_token == Some(Token::String(String::from("]"))) ||
+            self_string.ends_with("=") ||
+            other_operator == Some(Operator::Star)
+        {
+            ""
+        } else {
+            " "
         };
 
         TokenOffset {
