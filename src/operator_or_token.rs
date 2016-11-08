@@ -1,4 +1,5 @@
-use token::{Token, TokenOffset, Operator, OperatorOffset};
+use token::{Token, TokenOffset, OperatorOffset};
+use operator::Operator;
 
 use std::ops::{Add, Sub, Mul, Div, Rem};
 use std::fmt;

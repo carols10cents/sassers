@@ -1,5 +1,6 @@
 use sass::output_style::SassOutputStyle;
-use token::{Token, Operator, OperatorOffset, TokenOffset};
+use token::{Token, OperatorOffset, TokenOffset};
+use operator::Operator;
 use operator_or_token::OperatorOrToken;
 use context::Context;
 use error::{Result, SassError, ErrorKind};
@@ -308,8 +309,9 @@ impl Expression {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use token::{OperatorOffset, Operator, TokenOffset, Token};
+    use token::{OperatorOffset, TokenOffset, Token};
     use operator_or_token::OperatorOrToken;
+    use operator::Operator;
     use context::Context;
 
     fn semicolon() -> OperatorOrToken {
