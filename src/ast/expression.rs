@@ -1,4 +1,3 @@
-use sass::output_style::SassOutputStyle;
 use token::Token;
 use token_offset::TokenOffset;
 use operator::Operator;
@@ -7,25 +6,28 @@ use operator_or_token::OperatorOrToken;
 use context::Context;
 use error::{Result, SassError, ErrorKind};
 
+use std::fmt;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     List(Vec<Expression>),
     Value(OperatorOrToken),
 }
 
-impl Expression {
-    #[allow(unused_variables)]
-    pub fn to_string(&self, style: SassOutputStyle) -> String {
+impl fmt::Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Expression::List(ref elements) => {
                 elements.iter().map(|e|
-                    e.to_string(style)
-                ).collect::<Vec<_>>().join(" ")
+                    e.to_string()
+                ).collect::<Vec<_>>().join(" ").fmt(f)
             },
-            Expression::Value(ref v) => v.to_string(),
+            Expression::Value(ref v) => v.fmt(f),
         }
     }
+}
 
+impl Expression {
     fn parse_parenthetical<T>(tokenizer: &mut T) -> Result<Expression>
         where T: Iterator<Item = Result<OperatorOrToken>> {
 
@@ -279,16 +281,33 @@ impl Expression {
                     if let Some((ref first_in_list, rest_of_list)) =
                             s.split_first() {
 
-                        let new_first = Expression::apply_math(
-                            operator,
-                            Expression::Value(f),
-                            (*first_in_list).clone(),
-                            context
-                        );
+                        // Adding a number to a list means we should do
+                        // string concatenation.
+                        let new_first = if operator.operator == Operator::Plus {
+                            Expression::Value(
+                                OperatorOrToken::Token(
+                                    TokenOffset {
+                                        token: Token::String(
+                                            format!("{}{}", f, first_in_list)
+                                        ),
+                                        offset: f.offset(),
+                                    }
+                                )
+                            )
+
+                        } else {
+                            Expression::apply_math(
+                                operator,
+                                Expression::Value(f),
+                                (*first_in_list).clone(),
+                                context
+                            )
+                        };
 
                         let mut new_list = vec![new_first];
                         new_list.extend_from_slice(rest_of_list);
                         Expression::List(new_list)
+
                     } else {
                         panic!("Trying to perform an operation on a number and a list; expected to get a list with something in it");
                     }

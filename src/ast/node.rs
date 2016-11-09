@@ -23,7 +23,7 @@ impl Node {
             Node::Variable(..) => {}, // variable declarations never get output
             Node::Property(ref name, ref expression) => {
                 let ref n = name.token;
-                let ref v = expression.to_string(style);
+                let ref v = expression.to_string();
                 // grumble mumble format strings you know they're a string literal
                 let property = match style {
                     SassOutputStyle::Nested     => format!("  {}: {};", n, v),
