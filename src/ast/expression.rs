@@ -63,7 +63,7 @@ impl Expression {
         })
     }
 
-    fn evaluate_list(exprs: Vec<Expression>, context: &Context, force_slash: bool) -> Expression {
+    fn evaluate_list(exprs: Vec<Expression>, context: &Context) -> Expression {
 
         let mut last_was_an_operator = true;
         let mut paren_level = 0;
@@ -90,7 +90,8 @@ impl Expression {
                               op_stack.last().unwrap().operator !=
                                   Operator::LeftParen {
                             Expression::math_machine(
-                                &mut op_stack, &mut value_stack, context
+                                &mut op_stack, &mut value_stack,
+                                context, paren_level
                             );
                         }
                         let list = Expression::create_list(
@@ -111,7 +112,8 @@ impl Expression {
                               Operator::LeftParen {
                         op_stack.push(last_operator.unwrap());
                         Expression::math_machine(
-                            &mut op_stack, &mut value_stack, context
+                            &mut op_stack, &mut value_stack,
+                            context, paren_level
                         );
                         last_operator = op_stack.pop();
                     }
@@ -136,7 +138,8 @@ impl Expression {
                         if last_operator.operator
                                 .same_or_greater_precedence(oo.operator) {
                             Expression::math_machine(
-                                &mut op_stack, &mut value_stack, context
+                                &mut op_stack, &mut value_stack,
+                                context, paren_level
                             );
                         }
                     }
@@ -186,14 +189,14 @@ impl Expression {
         // Process the stacks
         while !op_stack.is_empty() {
             Expression::math_machine(
-                &mut op_stack, &mut value_stack, context
+                &mut op_stack, &mut value_stack, context, paren_level
             );
         }
 
         value_stack.pop().unwrap()
     }
 
-    fn math_machine(op_stack: &mut Vec<OperatorOffset>, value_stack: &mut Vec<Expression>, context: &Context) {
+    fn math_machine(op_stack: &mut Vec<OperatorOffset>, value_stack: &mut Vec<Expression>, context: &Context, paren_level: i32) {
         let op = op_stack.pop().unwrap();
         let second = value_stack.pop()
                        .expect("Expected a second argument on the value stack");
@@ -201,7 +204,7 @@ impl Expression {
                        .expect("Expected a first argument on the value stack");
 
         let math_result = Expression::apply_math(
-            op, first, second, context
+            op, first, second, context, paren_level,
         );
         debug!("Math result: {:#?}", math_result);
 
@@ -219,13 +222,17 @@ impl Expression {
                        ))
             },
             Expression::List(exprs) => {
-                Expression::evaluate_list(exprs, context, false)
+                Expression::evaluate_list(exprs, context)
             },
             other => other,
         }
     }
 
-    fn apply_math(operator: OperatorOffset, first: Expression, second: Expression, context: &Context) -> Expression {
+    fn apply_slash(first: OperatorOrToken, second: OperatorOrToken, paren_level: i32) -> OperatorOrToken {
+        first / second
+    }
+
+    fn apply_math(operator: OperatorOffset, first: Expression, second: Expression, context: &Context, paren_level: i32) -> Expression {
         debug!("Applying math to:\nfirst: {:#?}\nop: {:#?}\nsecond: {:#?}", first, operator, second);
 
         match (first, second) {
@@ -234,23 +241,27 @@ impl Expression {
                     Operator::Plus => f + s,
                     Operator::Minus => f - s,
                     Operator::Star => f * s,
-                    Operator::Slash => f / s,
                     Operator::Percent => f % s,
+                    Operator::Slash => Expression::apply_slash(
+                        f, s, paren_level
+                    ),
                     _ => unimplemented!(),
                 };
                 Expression::Value(result)
             },
             (Expression::List(f), Expression::List(s)) => {
-                let eval_first = Expression::evaluate_list(f, context, true);
-                let eval_second = Expression::evaluate_list(s, context, true);
+                let eval_first = Expression::evaluate_list(f, context);
+                let eval_second = Expression::evaluate_list(s, context);
                 Expression::apply_math(
-                    operator, eval_first, eval_second, context
+                    operator, eval_first, eval_second,
+                    context, paren_level
                 )
             },
             (Expression::List(f), Expression::Value(s)) => {
-                let eval_first = Expression::evaluate_list(f, context, true);
+                let eval_first = Expression::evaluate_list(f, context);
                 Expression::apply_math(
-                    operator, eval_first, Expression::Value(s), context
+                    operator, eval_first, Expression::Value(s),
+                    context, paren_level
                 )
             },
             (Expression::Value(f), Expression::List(s)) => {
@@ -264,10 +275,11 @@ impl Expression {
                         _ => false,
                     }) {
                     let evaled_list = Expression::evaluate_list(
-                        s, context, true
+                        s, context
                     );
                     Expression::apply_math(
-                        operator, Expression::Value(f), evaled_list, context
+                        operator, Expression::Value(f), evaled_list,
+                        context, paren_level
                     )
                 } else {
                     if let Some((ref first_in_list, rest_of_list)) =
@@ -292,7 +304,8 @@ impl Expression {
                                 operator,
                                 Expression::Value(f),
                                 (*first_in_list).clone(),
-                                context
+                                context,
+                                paren_level
                             )
                         };
 
