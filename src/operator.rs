@@ -35,6 +35,17 @@ impl Operator {
         };
         Some(r)
     }
+
+    pub fn same_or_greater_precedence(self, other: Operator) -> bool {
+        match (self, other) {
+            (Operator::Plus, Operator::Star) |
+            (Operator::Minus, Operator::Star) |
+            (Operator::Plus, Operator::Slash) |
+            (Operator::Minus, Operator::Slash) |
+            (Operator::LeftParen, _) => false,
+            (_, _) => true,
+        }
+    }
 }
 
 impl fmt::Display for Operator {

@@ -28,45 +28,6 @@ impl fmt::Display for Expression {
 }
 
 impl Expression {
-    fn parse_parenthetical<T>(tokenizer: &mut T) -> Result<Expression>
-        where T: Iterator<Item = Result<OperatorOrToken>> {
-
-        let mut list = vec![];
-        while let Some(Ok(t)) = tokenizer.next() {
-            match t {
-                OperatorOrToken::Operator(OperatorOffset {
-                    operator: Operator::RightParen, ..
-                }) => {
-                    return Ok(Expression::List(list))
-                },
-                OperatorOrToken::Operator(OperatorOffset {
-                    operator: Operator::LeftParen, ..
-                }) => {
-                    list.push(
-                        try!(Expression::parse_parenthetical(tokenizer))
-                    );
-                },
-                OperatorOrToken::Token(TokenOffset {
-                    token: Token::Comment(_), ..
-                }) => {},
-                _ => list.push(Expression::Value(t)),
-            }
-        }
-
-        let error_offset = match list.pop() {
-            Some(Expression::Value(v)) => v.offset().unwrap_or(0),
-            Some(Expression::List(_)) => unreachable!(), // for now until nested lists
-            None => 0,
-        };
-        Err(SassError {
-            offset: error_offset,
-            kind: ErrorKind::UnexpectedEof,
-            message: String::from(
-                "Expected right paren while parsing a value expression; reached EOF instead."
-            ),
-        })
-    }
-
     pub fn parse<T>(tokenizer: &mut T) -> Result<Expression>
         where T: Iterator<Item = Result<OperatorOrToken>> {
         let mut list = vec![];
@@ -80,13 +41,6 @@ impl Expression {
                     } else {
                         return Ok(Expression::List(list))
                     }
-                },
-                OperatorOrToken::Operator(OperatorOffset {
-                    operator: Operator::LeftParen, ..
-                }) => {
-                    list.push(
-                        try!(Expression::parse_parenthetical(tokenizer))
-                    );
                 },
                 OperatorOrToken::Token(TokenOffset {
                     token: Token::Comment(_), ..
@@ -112,6 +66,8 @@ impl Expression {
     fn evaluate_list(exprs: Vec<Expression>, context: &Context, force_slash: bool) -> Expression {
 
         let mut last_was_an_operator = true;
+        let mut paren_level = 0;
+
         // TODO: I'd love to have more types here, to ensure only values are
         // on the value stack and only operators are on the operator stack...
         let mut value_stack: Vec<Expression> = Vec::new();
@@ -130,6 +86,13 @@ impl Expression {
                         debug!("Push on value stack {:#?}", v);
                         value_stack.push(v);
                     } else {
+                        while !op_stack.is_empty() &&
+                              op_stack.last().unwrap().operator !=
+                                  Operator::LeftParen {
+                            Expression::math_machine(
+                                &mut op_stack, &mut value_stack, context
+                            );
+                        }
                         let list = Expression::create_list(
                             value_stack.pop(),
                             v,
@@ -140,22 +103,43 @@ impl Expression {
                     last_was_an_operator = false;
                 },
                 Expression::Value(OperatorOrToken::Operator(OperatorOffset {
-                    operator: Operator::Slash, offset: off,
-                })) if !force_slash => {
-                    let list = Expression::create_list(
-                        value_stack.pop(),
-                        Expression::Value(OperatorOrToken::Operator(
-                            OperatorOffset {
-                                operator: Operator::Slash, offset: off,
-                            }
-                        )),
-                    );
-                    debug!("Push on list on value stack {:#?}", list);
-                    value_stack.push(list);
+                    operator: Operator::RightParen, ..
+                })) => {
+                    let mut last_operator = op_stack.pop();
+                    while last_operator.is_some() &&
+                          last_operator.unwrap().operator !=
+                              Operator::LeftParen {
+                        op_stack.push(last_operator.unwrap());
+                        Expression::math_machine(
+                            &mut op_stack, &mut value_stack, context
+                        );
+                        last_operator = op_stack.pop();
+                    }
+
+                    op_stack.pop();
+                    last_was_an_operator = false;
+                    paren_level -= 1;
+                },
+                Expression::Value(OperatorOrToken::Operator(OperatorOffset {
+                    operator: Operator::LeftParen, offset
+                })) => {
+                    op_stack.push(OperatorOffset {
+                        operator: Operator::LeftParen, offset: offset
+                    });
+                    last_was_an_operator = true;
+                    paren_level += 1;
                 },
                 Expression::Value(OperatorOrToken::Operator(
                     oo @ OperatorOffset { .. }
                 )) => {
+                    if let Some(&last_operator) = op_stack.last() {
+                        if last_operator.operator
+                                .same_or_greater_precedence(oo.operator) {
+                            Expression::math_machine(
+                                &mut op_stack, &mut value_stack, context
+                            );
+                        }
+                    }
                     debug!("Push on op stack {:#?}", oo);
                     op_stack.push(oo);
                     last_was_an_operator = true;
@@ -201,19 +185,27 @@ impl Expression {
 
         // Process the stacks
         while !op_stack.is_empty() {
-            let op = op_stack.pop().unwrap();
-            let second = value_stack.pop().expect("Expected a second argument on the value stack");
-            let first = value_stack.pop().expect("Expected a first argument on the value stack");
-
-            let math_result = Expression::apply_math(
-                op, first, second, context
+            Expression::math_machine(
+                &mut op_stack, &mut value_stack, context
             );
-            debug!("Math result: {:#?}", math_result);
-
-            value_stack.push(math_result);
         }
 
         value_stack.pop().unwrap()
+    }
+
+    fn math_machine(op_stack: &mut Vec<OperatorOffset>, value_stack: &mut Vec<Expression>, context: &Context) {
+        let op = op_stack.pop().unwrap();
+        let second = value_stack.pop()
+                       .expect("Expected a second argument on the value stack");
+        let first = value_stack.pop()
+                       .expect("Expected a first argument on the value stack");
+
+        let math_result = Expression::apply_math(
+            op, first, second, context
+        );
+        debug!("Math result: {:#?}", math_result);
+
+        value_stack.push(math_result);
     }
 
     pub fn evaluate(self, context: &Context) -> Expression {
