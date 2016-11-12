@@ -34,6 +34,10 @@ MIT. See LICENSE.
 
 To get debugging statements and run a particular test:
 
+* Add `extern crate env_logger;` to the `test` module
+* Add `let _ = env_logger::init();` to the particular test function
+* Run:
+
 ```
 $ RUST_LOG=sassers=debug cargo test -- --nocapture evaluator::tests::it_subtitutes_variable_values
 ```
