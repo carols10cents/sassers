@@ -20,6 +20,15 @@ impl OperatorOrToken {
         }
     }
 
+    pub fn computed_number(&self) -> bool {
+        match *self {
+            OperatorOrToken::Token(TokenOffset {
+                token: Token::Number { computed: true, .. }, ..
+            }) => true,
+            _ => false,
+        }
+    }
+
     pub fn extract_token(&self) -> Option<Token> {
         if let OperatorOrToken::Token(ref t) = *self {
             Some(t.token.clone())

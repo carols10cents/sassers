@@ -63,10 +63,9 @@ impl Expression {
         })
     }
 
-    fn evaluate_list(exprs: Vec<Expression>, context: &Context) -> Expression {
+    fn evaluate_list(exprs: Vec<Expression>, context: &Context, mut paren_level: i32) -> Expression {
 
         let mut last_was_an_operator = true;
-        let mut paren_level = 0;
 
         // TODO: I'd love to have more types here, to ensure only values are
         // on the value stack and only operators are on the operator stack...
@@ -86,13 +85,17 @@ impl Expression {
                         debug!("Push on value stack {:#?}", v);
                         value_stack.push(v);
                     } else {
-                        while !op_stack.is_empty() &&
-                              op_stack.last().unwrap().operator !=
-                                  Operator::LeftParen {
-                            Expression::math_machine(
-                                &mut op_stack, &mut value_stack,
-                                context, paren_level
-                            );
+                        debug!("Number, last_was_an_operator=false, paren_level={}", paren_level);
+                        if paren_level > 0 {
+                            while !op_stack.is_empty() &&
+                                  op_stack.last().unwrap().operator !=
+                                      Operator::LeftParen {
+                                debug!("op stack last {:#?}", op_stack.last());
+                                Expression::math_machine(
+                                    &mut op_stack, &mut value_stack,
+                                    context, paren_level
+                                );
+                            }
                         }
                         let list = Expression::create_list(
                             value_stack.pop(),
@@ -106,10 +109,13 @@ impl Expression {
                 Expression::Value(OperatorOrToken::Operator(OperatorOffset {
                     operator: Operator::RightParen, ..
                 })) => {
+                    debug!("RIGHT PAREN");
+                    debug!("op stack = {:#?}", op_stack);
                     let mut last_operator = op_stack.pop();
                     while last_operator.is_some() &&
                           last_operator.unwrap().operator !=
                               Operator::LeftParen {
+                        debug!("last operator before right paren = {:#?}", last_operator);
                         op_stack.push(last_operator.unwrap());
                         Expression::math_machine(
                             &mut op_stack, &mut value_stack,
@@ -117,19 +123,34 @@ impl Expression {
                         );
                         last_operator = op_stack.pop();
                     }
-
-                    op_stack.pop();
                     last_was_an_operator = false;
                     paren_level -= 1;
                 },
                 Expression::Value(OperatorOrToken::Operator(OperatorOffset {
                     operator: Operator::LeftParen, offset
                 })) => {
+                    debug!("Push on op stack Leftparen");
                     op_stack.push(OperatorOffset {
                         operator: Operator::LeftParen, offset: offset
                     });
                     last_was_an_operator = true;
                     paren_level += 1;
+                },
+                Expression::Value(OperatorOrToken::Operator(OperatorOffset {
+                    operator: Operator::Slash, offset
+                })) if paren_level == 0 => {
+                    debug!("Push on list on value stack slash");
+                    let list = Expression::create_list(
+                        value_stack.pop(),
+                        Expression::Value(
+                            OperatorOrToken::Operator(
+                                OperatorOffset {
+                                    operator: Operator::Slash, offset: offset
+                                }
+                            )
+                        ),
+                    );
+                    value_stack.push(list);
                 },
                 Expression::Value(OperatorOrToken::Operator(
                     oo @ OperatorOffset { .. }
@@ -186,6 +207,10 @@ impl Expression {
             }
         }
 
+        debug!("PROCESS THE STACKS!");
+        debug!("Op stack = {:#?}", op_stack);
+        debug!("Value stack = {:#?}", value_stack);
+
         // Process the stacks
         while !op_stack.is_empty() {
             Expression::math_machine(
@@ -203,6 +228,9 @@ impl Expression {
         let first = value_stack.pop()
                        .expect("Expected a first argument on the value stack");
 
+        debug!("Math machine: first: {:#?}\nop: {:#?}\nsecond: {:#?}",
+            first, op, second
+        );
         let math_result = Expression::apply_math(
             op, first, second, context, paren_level,
         );
@@ -222,14 +250,46 @@ impl Expression {
                        ))
             },
             Expression::List(exprs) => {
-                Expression::evaluate_list(exprs, context)
+                Expression::evaluate_list(exprs, context, 0)
             },
             other => other,
         }
     }
 
-    fn apply_slash(first: OperatorOrToken, second: OperatorOrToken, paren_level: i32) -> OperatorOrToken {
-        first / second
+    fn apply_slash(first: OperatorOrToken, second: OperatorOrToken, paren_level: i32, offset: Option<usize>) -> Expression {
+        if paren_level == 0 {
+            debug!("Paren level 0. First computed: {}, second computed: {}", first.computed_number(), second.computed_number());
+            if first.computed_number() || second.computed_number() {
+                Expression::Value(first / second)
+            } else {
+                Expression::List(vec![
+                    Expression::Value(first),
+                    Expression::Value(OperatorOrToken::Operator(OperatorOffset {
+                        operator: Operator::Slash,
+                        offset: offset,
+                    })),
+                    Expression::Value(second),
+                ])
+            }
+        } else {
+            debug!("Paren level {}", paren_level);
+            Expression::Value(first / second)
+        }
+    }
+
+    fn force_list_collapse(list: Vec<Expression>, context: &Context) -> Expression {
+        if list.iter().any(|item| {
+            match *item {
+                Expression::Value(OperatorOrToken::Operator(OperatorOffset {
+                    operator: Operator::Slash, ..
+                })) => true,
+                _ => false,
+            }
+        }) {
+            Expression::evaluate_list(list, context, 1)
+        } else {
+            Expression::List(list)
+        }
     }
 
     fn apply_math(operator: OperatorOffset, first: Expression, second: Expression, context: &Context, paren_level: i32) -> Expression {
@@ -242,80 +302,87 @@ impl Expression {
                     Operator::Minus => f - s,
                     Operator::Star => f * s,
                     Operator::Percent => f % s,
-                    Operator::Slash => Expression::apply_slash(
-                        f, s, paren_level
+                    Operator::Slash => return Expression::apply_slash(
+                        f, s, paren_level, operator.offset
                     ),
                     _ => unimplemented!(),
                 };
                 Expression::Value(result)
             },
             (Expression::List(f), Expression::List(s)) => {
-                let eval_first = Expression::evaluate_list(f, context);
-                let eval_second = Expression::evaluate_list(s, context);
-                Expression::apply_math(
-                    operator, eval_first, eval_second,
-                    context, paren_level
-                )
+                let eval_first = Expression::force_list_collapse(f, context);
+                let eval_second = Expression::force_list_collapse(s, context);
+
+                match (eval_first, eval_second) {
+                    (Expression::List(mut fi), Expression::List(se)) => {
+                        match operator.operator {
+                            Operator::Plus => {
+                                fi.extend(se);
+                                Expression::List(fi)
+                            },
+                            _ => panic!("Can't use an operator other than \
+                                         plus on two lists"),
+                        }
+                    },
+                    (eval_first, eval_second) => {
+                        Expression::apply_math(
+                            operator, eval_first, eval_second,
+                            context, paren_level
+                        )
+                    }
+                }
             },
             (Expression::List(f), Expression::Value(s)) => {
-                let eval_first = Expression::evaluate_list(f, context);
-                Expression::apply_math(
-                    operator, eval_first, Expression::Value(s),
-                    context, paren_level
-                )
+                let eval_first = Expression::evaluate_list(
+                    f, context, paren_level
+                );
+                match eval_first {
+                    Expression::List(mut fi) => {
+                        match operator.operator {
+                            Operator::Plus => {
+                                fi.push(Expression::Value(s));
+                                Expression::List(fi)
+                            },
+                            _ => panic!("Can't use an operator other than \
+                                         plus on a list and a value"),
+                        }
+                    },
+                    _ => Expression::apply_math(
+                        operator, eval_first, Expression::Value(s),
+                        context, paren_level
+                    ),
+                }
             },
             (Expression::Value(f), Expression::List(s)) => {
-                if s.iter().any(|e|
-                    match *e {
-                        Expression::Value(
-                            OperatorOrToken::Operator(OperatorOffset {
-                                operator: Operator::Slash, ..
-                            })
-                        ) => true,
-                        _ => false,
-                    }) {
-                    let evaled_list = Expression::evaluate_list(
-                        s, context
-                    );
-                    Expression::apply_math(
-                        operator, Expression::Value(f), evaled_list,
+                debug!("Value Op List: {:#?}\n{:#?}\n{:#?}\n", f, operator, s);
+                let eval_second = Expression::force_list_collapse(s, context);
+                match eval_second {
+                    Expression::List(se) => {
+                        match operator.operator {
+                            Operator::Plus => {
+                                let (first_in_list, rest) = se.split_first()
+                                    .expect("Trying to get the first and rest \
+                                          of a list that isn't a value failed");
+                                let new_first = format!("{}{}", f, first_in_list);
+                                let mut new_list = vec![
+                                    Expression::Value(OperatorOrToken::Token(
+                                        TokenOffset {
+                                            offset: f.offset(),
+                                            token: Token::String(new_first),
+                                        }
+                                    ))
+                                ];
+                                new_list.extend_from_slice(rest);
+                                Expression::List(new_list)
+                            },
+                            _ => panic!("Can't use an operator other than \
+                                         plus on a value and a list"),
+                        }
+                    },
+                    _ => Expression::apply_math(
+                        operator, Expression::Value(f), eval_second,
                         context, paren_level
-                    )
-                } else {
-                    if let Some((ref first_in_list, rest_of_list)) =
-                            s.split_first() {
-
-                        // Adding a number to a list means we should do
-                        // string concatenation.
-                        let new_first = if operator.operator == Operator::Plus {
-                            Expression::Value(
-                                OperatorOrToken::Token(
-                                    TokenOffset {
-                                        token: Token::String(
-                                            format!("{}{}", f, first_in_list)
-                                        ),
-                                        offset: f.offset(),
-                                    }
-                                )
-                            )
-
-                        } else {
-                            Expression::apply_math(
-                                operator,
-                                Expression::Value(f),
-                                (*first_in_list).clone(),
-                                context,
-                                paren_level
-                            )
-                        };
-
-                        let mut new_list = vec![new_first];
-                        new_list.extend_from_slice(rest_of_list);
-                        Expression::List(new_list)
-
-                    } else {
-                        panic!("Trying to perform an operation on a number and a list; expected to get a list with something in it");
-                    }
+                    ),
                 }
             },
         }
@@ -342,6 +409,8 @@ mod tests {
     use operator_offset::OperatorOffset;
     use context::Context;
 
+    extern crate env_logger;
+
     fn semicolon() -> OperatorOrToken {
         OperatorOrToken::Operator(
             OperatorOffset { operator: Operator::Semicolon, offset: None }
@@ -363,6 +432,18 @@ mod tests {
     fn slash() -> OperatorOrToken {
         OperatorOrToken::Operator(
             OperatorOffset { operator: Operator::Slash, offset: None }
+        )
+    }
+
+    fn right_paren() -> OperatorOrToken {
+        OperatorOrToken::Operator(
+            OperatorOffset { operator: Operator::RightParen, offset: None }
+        )
+    }
+
+    fn left_paren() -> OperatorOrToken {
+        OperatorOrToken::Operator(
+            OperatorOffset { operator: Operator::LeftParen, offset: None }
         )
     }
 
@@ -451,7 +532,7 @@ mod tests {
     }
 
     #[test]
-    fn it_evaluates_a_list() {
+    fn it_evaluates_a_list_adding_fractions() {
         let ex = Expression::List(vec![
             Expression::Value(one()),
             Expression::Value(slash()),
@@ -474,6 +555,77 @@ mod tests {
                     offset: None,
                 }
             ))
+        );
+    }
+
+    #[test]
+    fn it_evaluates_a_list_with_division_and_string_concat() {
+        let _ = env_logger::init();
+
+        let ex = Expression::List(vec![
+            Expression::Value(one()),
+            Expression::Value(plus()),
+            Expression::Value(left_paren()),
+            Expression::Value(one()),
+            Expression::Value(slash()),
+            Expression::Value(two()),
+            Expression::Value(two()),
+            Expression::Value(two()),
+            Expression::Value(right_paren()),
+        ]);
+        let fake_context = Context::new();
+        assert_eq!(
+            ex.evaluate(&fake_context),
+            Expression::List(vec![
+                Expression::Value(OperatorOrToken::Token(
+                    TokenOffset {
+                        token: Token::String(String::from("10.5")),
+                        offset: None,
+                    }
+                )),
+                Expression::Value(OperatorOrToken::Token(
+                    TokenOffset {
+                        token: Token::Number {
+                            value: 2.0,
+                            units: None,
+                            computed: false,
+                        },
+                        offset: None,
+                    }
+                )),
+                Expression::Value(OperatorOrToken::Token(
+                    TokenOffset {
+                        token: Token::Number {
+                            value: 2.0,
+                            units: None,
+                            computed: false,
+                        },
+                        offset: None,
+                    }
+                ))
+            ])
+        );
+    }
+
+    #[test]
+    fn it_does_not_divide_list_with_only_slashes() {
+        let ex = Expression::List(vec![
+            Expression::Value(one()),
+            Expression::Value(slash()),
+            Expression::Value(one()),
+            Expression::Value(slash()),
+            Expression::Value(two()),
+        ]);
+        let fake_context = Context::new();
+        assert_eq!(
+            ex.evaluate(&fake_context),
+            Expression::List(vec![
+                Expression::Value(one()),
+                Expression::Value(slash()),
+                Expression::Value(one()),
+                Expression::Value(slash()),
+                Expression::Value(two()),
+            ])
         );
     }
 }
