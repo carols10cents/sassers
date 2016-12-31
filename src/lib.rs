@@ -25,7 +25,8 @@ use context::Context;
 use error::Result;
 use tokenizer::Tokenizer;
 use parser::Parser;
-use sass::output_style::SassOutputStyle;
+use sass::output_style::{Streamable, SassOutputStyle, Nested, Compressed, Expanded,
+                         Compact, Debug};
 
 fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
     let mut file = try!(File::open(&inputpath));
@@ -55,35 +56,44 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
     let input_path = PathBuf::from(input_filename);
     let imports_resolved = try!(resolve_imports(&input_path));
 
-    let style: SassOutputStyle = try!(style.parse());
-
     match style {
-        SassOutputStyle::Tokens => {
+        "tokens" => {
             let mut tokenizer = Tokenizer::new(&imports_resolved);
             while let Some(token) = tokenizer.next() {
-                try!(write!(output, "{:?}\n", token))
+                try!(writeln!(output, "{:?}", token));
             }
         },
-        SassOutputStyle::AST => {
+        "ast" => {
             let mut parser = Parser::new(&imports_resolved);
-            while let Some(ast_root) = parser.next() {
-                try!(write!(output, "{:#?}\n", ast_root));
+            while let Some(root) = parser.next() {
+                try!(writeln!(output, "{:#?}", root));
             }
         },
-        other_style => {
+        other => {
+            let style: Box<SassOutputStyle> = get_style(other);
             let mut parser  = Parser::new(&imports_resolved);
             let mut context = Context::new();
             while let Some(Ok(ast_root)) = parser.next() {
                 let evaluated = ast_root.evaluate(&mut context);
                 if let Some(root) = evaluated {
                     let optimized = optimizer::optimize(root);
-                    for r in optimized {
-                        try!(r.stream(output, other_style));
+                    for r in optimized.into_iter() {
+                        try!(r.stream(&mut output, style));
                     }
                 }
             }
         },
     }
-
     Ok(())
+}
+
+fn get_style(style: &str) -> Box<SassOutputStyle> {
+    match style {
+        "nested"     => Box::new(Nested {}),
+        "compressed" => Box::new(Compressed {}),
+        "expanded"   => Box::new(Expanded {}),
+        "compact"    => Box::new(Compact {}),
+        "debug"      => Box::new(Debug {}),
+        style        => panic!("Unknown output style {:?}. Please specify one of nested, compressed, expanded, or compact.", style),
+    }
 }

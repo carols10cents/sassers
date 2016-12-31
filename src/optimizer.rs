@@ -1,11 +1,18 @@
 use ast::root::Root;
+use sass::output_style::Streamable;
 
-pub fn optimize(root: Root) -> Vec<Root> {
+use std::io::Write;
+
+pub fn optimize(root: Root) -> Vec<Box<Streamable>> {
     match root {
         Root::Rule(rule) => {
-            rule.optimize().into_iter().map(|r| Root::Rule(r) ).collect()
+            let mut result: Vec<Box<Streamable>> = Vec::new();
+            for r in rule.optimize().into_iter() {
+                result.push(Box::new(Root::Rule(r)));
+            }
+            result
         },
-        Root::Comment(c) => vec![Root::Comment(c)],
+        Root::Comment(c) => vec![Box::new(Root::Comment(c))],
         Root::Variable(..) => unreachable!(), // variables get evaluated before optimization
     }
 }

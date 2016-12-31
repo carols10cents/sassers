@@ -1,4 +1,4 @@
-use sass::output_style::SassOutputStyle;
+use sass::output_style::{SassOutputStyle, Streamable};
 use sass::variable::SassVariable;
 use ast::node::Node;
 use token::Token;
@@ -14,6 +14,14 @@ pub struct SassRule {
     pub children: Vec<Node>,
 }
 
+impl Streamable for SassRule {
+    fn stream(&self, output: &mut Write, style: Box<SassOutputStyle>)
+              -> Result<()> {
+        try!(self.recursive_stream(output, style, "", ""));
+        Ok(try!(write!(output, "{}", style.rule_separator())))
+    }
+}
+
 impl SassRule {
     pub fn new() -> SassRule {
         SassRule {
@@ -22,43 +30,13 @@ impl SassRule {
         }
     }
 
-    fn selector_distribution(&self, parents: &str, separator: &str) -> String {
-        match parents.len() {
-            0 => self.selectors.iter().map(|s| s.token.to_string()).collect::<Vec<_>>().join(separator),
-            _ => parents.split(",").map(|p| {
-                self.selectors.iter().map(|s| {
-                    if s.token.to_string().contains("&") {
-                        s.token.to_string().replace("&", p.trim())
-                    } else {
-                        format!("{} {}", p.trim(), s.token)
-                    }
-                }).collect::<Vec<_>>().join(separator)
-            }).collect::<Vec<_>>().join(separator),
-        }
-    }
+    pub fn recursive_stream(&self, output: &mut Write, style: Box<SassOutputStyle>, parents: &str, nesting: &str) -> Result<()> {
 
-    pub fn stream<W: Write>(&self, output: &mut W, style: SassOutputStyle) -> Result<()> {
-        try!(self.recursive_stream(output, style, "", ""));
-        Ok(try!(write!(output, "{}", style.rule_separator())))
-    }
+        let selector_string = style.selector_string(self, parents);
 
-    pub fn recursive_stream<W: Write>(&self, output: &mut W, style: SassOutputStyle, parents: &str, nesting: &str) -> Result<()> {
-        let mut selector_string = self.selector_distribution(parents, &style.selector_separator());
-        if style == SassOutputStyle::Compressed {
-            selector_string = compress_selectors(selector_string);
-        }
-
-        let mut properties = self.child_properties().into_iter();
+        let mut properties = style.filter_child_properties(&self.children)
+                                  .iter();
         let mut has_properties = false;
-
-        if style == SassOutputStyle::Compressed {
-            properties = properties.filter(|p|
-                match **p {
-                    Node::Comment(..) => false,
-                    _ => true,
-                }
-            ).collect::<Vec<_>>().into_iter();
-        }
 
         // TODO: peek?
         if let Some(prop) = properties.next() {
@@ -102,18 +80,18 @@ impl SassRule {
         Ok(())
     }
 
-    // TODO: I don't like how child_properties and child_rules are so different, but
-    // i'm not sure what to do about it yet.
-    pub fn child_properties(&self) -> Vec<&Node> {
-        self.children.iter().filter(|c|
-            match **c {
-                Node::Rule(..)     => false,
-                Node::Comment(..)  => true,
-                Node::Property(..) => true,
-                Node::Variable(..) => true,
-            }
-        ).collect::<Vec<_>>()
-    }
+// TODO: I don't like how child_properties and child_rules are so different, but
+// i'm not sure what to do about it yet.
+   pub fn child_properties(&self) -> Vec<Node> {
+       self.children.iter().filter(|c|
+           match **c {
+               Node::Rule(..)     => false,
+               Node::Comment(..)  => true,
+               Node::Property(..) => true,
+               Node::Variable(..) => true,
+           }
+       ).cloned().collect()
+   }
 
     pub fn child_rules(&self) -> Vec<SassRule> {
         self.children.clone().into_iter().filter_map(|c|
@@ -180,10 +158,6 @@ impl SassRule {
             ).collect(),
         }
     }
-}
-
-fn compress_selectors(selector_string: String) -> String {
-    selector_string.replace(" > ", ">").replace(" + ", "+")
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use sass::output_style::SassOutputStyle;
+use sass::output_style::{SassOutputStyle, Streamable};
 use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::comment::SassComment;
@@ -14,21 +14,23 @@ pub enum Root {
     Comment(SassComment),
 }
 
-impl Root {
-    pub fn stream<W: Write>(&self, output: &mut W, style: SassOutputStyle) -> Result<()> {
+impl Streamable for Root {
+    fn stream(&self, output: &mut Write, style: Box<SassOutputStyle>)
+              -> Result<()> {
         match *self {
-            Root::Rule(ref sr) => sr.stream(output, style),
+            Root::Rule(ref sr) => try!(sr.stream(output, style)),
             Root::Comment(ref sc) => {
                 try!(sc.stream(output, style));
-                match style {
-                    SassOutputStyle::Compressed => Ok(()),
-                    _ => Ok(try!(write!(output, "\n"))),
-                }
+                try!(write!(output, "{}", style.after_comment()));
             },
-            Root::Variable(..) => Ok(()), // variable declarations never get output
+            Root::Variable(..) => {}, // variable declarations never get output
         }
-    }
 
+        Ok(())
+    }
+}
+
+impl Root {
     pub fn evaluate(self, context: &mut Context) -> Option<Root> {
         match self {
             Root::Rule(sr) => Some(Root::Rule(sr.evaluate(&context))),
