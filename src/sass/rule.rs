@@ -35,11 +35,9 @@ impl SassRule {
         let selector_string = style.selector_string(self, parents);
 
         let properties = style.filter_child_properties(&self.children);
-        let mut has_properties = false;
+        let has_properties = !properties.is_empty();
 
-        // TODO: peek?
-        if let Some(prop) = properties.iter().next() {
-            has_properties = true;
+        if has_properties {
             try!(write!(output, "{}{}{{{}{}",
               selector_string,
               style.selector_brace_separator(),
@@ -47,9 +45,13 @@ impl SassRule {
               style.before_property(nesting),
             ));
 
-            try!(prop.stream(output, style));
+            let mut properties = properties.iter();
 
-            for prop in properties.iter() {
+            // Must be at least one because it's not empty
+            let first_prop = properties.next().unwrap();
+            try!(first_prop.stream(output, style));
+
+            for prop in properties {
                 try!(write!(output, "{}{}",
                     style.after_property(),
                     style.before_property(nesting),
@@ -58,7 +60,6 @@ impl SassRule {
             }
             try!(write!(output, "{}}}", style.property_brace_separator()));
         }
-
 
         let mut child_rules = self.child_rules().into_iter();
         if let Some(cr) = child_rules.next() {

@@ -125,7 +125,7 @@ impl SassOutputStyle for Nested {
     }
 
     fn property_brace_separator(&self) -> String {
-        String::from("\n")
+        String::from(" ")
     }
 
     fn rule_and_child_rules_separator(&self, nesting: &str) -> String {
