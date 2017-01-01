@@ -10,7 +10,7 @@ pub struct SassComment {
 }
 
 impl Streamable for SassComment {
-    fn stream(&self, output: &mut Write, style: Box<SassOutputStyle>)
+    fn stream(&self, output: &mut Write, style: &SassOutputStyle)
                         -> Result<()> {
         let comment = self.content.token.to_string();
         // TODO: Shouldn't write! call into here, and not need the call to try?

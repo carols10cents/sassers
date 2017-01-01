@@ -17,7 +17,7 @@ pub enum Node {
 }
 
 impl Streamable for Node {
-    fn stream(&self, output: &mut Write, style: Box<SassOutputStyle>)
+    fn stream(&self, output: &mut Write, style: &SassOutputStyle)
               -> Result<()> {
         match *self {
             Node::Rule(ref sr) => try!(sr.stream(output, style)),

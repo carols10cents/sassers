@@ -52,7 +52,7 @@ fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
     Ok(imports_resolved)
 }
 
-pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> Result<()> {
+pub fn compile(input_filename: &str, output: &mut Write, style: &str) -> Result<()> {
     let input_path = PathBuf::from(input_filename);
     let imports_resolved = try!(resolve_imports(&input_path));
 
@@ -78,7 +78,7 @@ pub fn compile<W: Write>(input_filename: &str, output: &mut W, style: &str) -> R
                 if let Some(root) = evaluated {
                     let optimized = optimizer::optimize(root);
                     for r in optimized.into_iter() {
-                        try!(r.stream(&mut output, style));
+                        try!(r.stream(output, &*style));
                     }
                 }
             }

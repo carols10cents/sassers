@@ -15,7 +15,7 @@ pub enum Root {
 }
 
 impl Streamable for Root {
-    fn stream(&self, output: &mut Write, style: Box<SassOutputStyle>)
+    fn stream(&self, output: &mut Write, style: &SassOutputStyle)
               -> Result<()> {
         match *self {
             Root::Rule(ref sr) => try!(sr.stream(output, style)),

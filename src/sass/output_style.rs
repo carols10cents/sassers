@@ -26,7 +26,7 @@ use std::io::Write;
 // }
 
 pub trait Streamable {
-    fn stream(&self, output: &mut Write, style: Box<SassOutputStyle>)
+    fn stream(&self, output: &mut Write, style: &SassOutputStyle)
              -> Result<()>;
 }
 

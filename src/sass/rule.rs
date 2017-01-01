@@ -15,7 +15,7 @@ pub struct SassRule {
 }
 
 impl Streamable for SassRule {
-    fn stream(&self, output: &mut Write, style: Box<SassOutputStyle>)
+    fn stream(&self, output: &mut Write, style: &SassOutputStyle)
               -> Result<()> {
         try!(self.recursive_stream(output, style, "", ""));
         Ok(try!(write!(output, "{}", style.rule_separator())))
@@ -30,16 +30,15 @@ impl SassRule {
         }
     }
 
-    pub fn recursive_stream(&self, output: &mut Write, style: Box<SassOutputStyle>, parents: &str, nesting: &str) -> Result<()> {
+    pub fn recursive_stream(&self, output: &mut Write, style: &SassOutputStyle, parents: &str, nesting: &str) -> Result<()> {
 
         let selector_string = style.selector_string(self, parents);
 
-        let mut properties = style.filter_child_properties(&self.children)
-                                  .iter();
+        let mut properties = style.filter_child_properties(&self.children);
         let mut has_properties = false;
 
         // TODO: peek?
-        if let Some(prop) = properties.next() {
+        if let Some(prop) = properties.iter().next() {
             has_properties = true;
             try!(write!(output, "{}{}{{{}{}",
               selector_string,
@@ -50,7 +49,7 @@ impl SassRule {
 
             try!(prop.stream(output, style));
 
-            for prop in properties {
+            for prop in properties.iter() {
                 try!(write!(output, "{}{}",
                     style.after_property(),
                     style.before_property(nesting),
