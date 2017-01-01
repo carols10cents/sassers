@@ -251,11 +251,13 @@ impl SassOutputStyle for Compressed {
 
     fn filter_child_properties(&self, children: &[Node])
        -> Vec<Node> {
-        children.iter().filter(|p|
-            match **p {
-                Node::Comment(..) => false,
-                _ => true,
-            }
+        children.iter().filter(|c|
+           match **c {
+               Node::Rule(..)     => false,
+               Node::Comment(..)  => false,
+               Node::Property(..) => true,
+               Node::Variable(..) => true,
+           }
         ).cloned().collect()
     }
 }
