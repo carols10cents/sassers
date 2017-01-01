@@ -83,7 +83,14 @@ pub trait SassOutputStyle {
 
     fn filter_child_properties<'a>(&self, children: &[Node])
        -> Vec<Node> {
-        children.iter().cloned().collect()
+        children.iter().filter(|c|
+            match **c {
+                Node::Rule(..)     => false,
+                Node::Comment(..)  => true,
+                Node::Property(..) => true,
+                Node::Variable(..) => true,
+            }
+        ).cloned().collect()
     }
 }
 
