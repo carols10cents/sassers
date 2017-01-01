@@ -1,8 +1,6 @@
 use ast::root::Root;
 use sass::output_style::Streamable;
 
-use std::io::Write;
-
 pub fn optimize(root: Root) -> Vec<Box<Streamable>> {
     match root {
         Root::Rule(rule) => {

@@ -1,37 +1,13 @@
-use parser::Parser;
 use ast::node::Node;
-use ast::root::Root;
 use sass::rule::SassRule;
-use error::{Result, SassError, ErrorKind};
-use context::Context;
-use optimizer;
-use tokenizer::Tokenizer;
-use token::Token;
+use error::Result;
 
-use std::str::FromStr;
 use std::io::Write;
-
-// impl<'a, T: ?Sized> Streamable for &'a T where T: Streamable {
-//     fn stream<W: Write>(&self, output: &mut W, style: Box<SassOutputStyle>)
-//              -> Result<()> where Self: Sized {
-//         (*self).stream(output, style)
-//     }
-// }
-//
-// impl<T: ?Sized> Streamable for Box<T> where T: Streamable {
-//     fn stream<W: Write>(&self, output: &mut W, style: Box<SassOutputStyle>)
-//              -> Result<()> where Self: Sized {
-//         (*self).stream(output, style)
-//     }
-// }
 
 pub trait Streamable {
     fn stream(&self, output: &mut Write, style: &SassOutputStyle)
              -> Result<()>;
 }
-
-// impl<'a, T: ?Sized> SassOutputStyle for &'a T where T: SassOutputStyle {}
-// impl<T: ?Sized> SassOutputStyle for Box<T> where T: SassOutputStyle {}
 
 pub trait SassOutputStyle {
     fn rule_separator(&self) -> String {

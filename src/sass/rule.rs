@@ -34,7 +34,7 @@ impl SassRule {
 
         let selector_string = style.selector_string(self, parents);
 
-        let mut properties = style.filter_child_properties(&self.children);
+        let properties = style.filter_child_properties(&self.children);
         let mut has_properties = false;
 
         // TODO: peek?

@@ -25,7 +25,7 @@ use context::Context;
 use error::Result;
 use tokenizer::Tokenizer;
 use parser::Parser;
-use sass::output_style::{Streamable, SassOutputStyle, Nested, Compressed, Expanded,
+use sass::output_style::{SassOutputStyle, Nested, Compressed, Expanded,
                          Compact, Debug};
 
 fn resolve_imports(inputpath: &PathBuf) -> Result<String> {
