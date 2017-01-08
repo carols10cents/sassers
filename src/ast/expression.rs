@@ -20,7 +20,10 @@ impl fmt::Display for Expression {
             Expression::List(ref elements) => {
                 elements.iter().map(|e|
                     e.to_string()
-                ).collect::<Vec<_>>().join(" ").fmt(f)
+                ).collect::<Vec<_>>()
+                 .join(" ")
+                 .replace(" / ", "/")
+                 .fmt(f)
             },
             Expression::Value(ref v) => v.fmt(f),
         }
