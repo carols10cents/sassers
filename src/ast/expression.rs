@@ -142,18 +142,33 @@ impl Expression {
                 Expression::Value(OperatorOrToken::Operator(OperatorOffset {
                     operator: Operator::Slash, offset
                 })) if paren_level == 0 => {
-                    debug!("Push on list on value stack slash");
-                    let list = Expression::create_list(
-                        value_stack.pop(),
-                        Expression::Value(
-                            OperatorOrToken::Operator(
-                                OperatorOffset {
-                                    operator: Operator::Slash, offset: offset
-                                }
-                            )
-                        ),
-                    );
-                    value_stack.push(list);
+                    let val = value_stack.pop().expect("Saw a slash but no values o.O");
+                    match val {
+                        Expression::Value(OperatorOrToken::Token(TokenOffset {
+                            token: Token::Number { computed: true, .. }, ..
+                        })) => {
+                            value_stack.push(val);
+                            debug!("Push on op stack Slash");
+                            op_stack.push(OperatorOffset {
+                                operator: Operator::Slash, offset: offset
+                            });
+                            last_was_an_operator = true;
+                        }
+                        _ => {
+                            debug!("Push on list on value stack slash");
+                            let list = Expression::create_list(
+                                Some(val),
+                                Expression::Value(
+                                    OperatorOrToken::Operator(
+                                        OperatorOffset {
+                                            operator: Operator::Slash, offset: offset
+                                        }
+                                    )
+                                ),
+                            );
+                            value_stack.push(list);
+                        }
+                    }
                 },
                 Expression::Value(OperatorOrToken::Operator(
                     oo @ OperatorOffset { .. }
@@ -225,15 +240,19 @@ impl Expression {
     }
 
     fn math_machine(op_stack: &mut Vec<OperatorOffset>, value_stack: &mut Vec<Expression>, context: &Context, paren_level: i32) {
+        debug!("Math machine:");
+
         let op = op_stack.pop().unwrap();
+        debug!("op = {:#?}", op);
+
         let second = value_stack.pop()
                        .expect("Expected a second argument on the value stack");
+        debug!("second = {:#?}", second);
+
         let first = value_stack.pop()
                        .expect("Expected a first argument on the value stack");
 
-        debug!("Math machine: first: {:#?}\nop: {:#?}\nsecond: {:#?}",
-            first, op, second
-        );
+        debug!("first: {:#?}", first);
         let math_result = Expression::apply_math(
             op, first, second, context, paren_level,
         );
