@@ -316,12 +316,12 @@ impl Expression {
                 match (eval_first, eval_second) {
                     (Expression::List(mut fi), Expression::List(se)) => {
                         match operator.operator {
-                            Operator::Plus => {
+                            Operator::Plus | Operator::Comma => {
                                 fi.extend(se);
                                 Expression::List(fi)
                             },
                             _ => panic!("Can't use an operator other than \
-                                         plus on two lists"),
+                                         plus or comma on two lists"),
                         }
                     },
                     (eval_first, eval_second) => {
