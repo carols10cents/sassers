@@ -139,37 +139,6 @@ impl Expression {
                     last_was_an_operator = true;
                     paren_level += 1;
                 },
-                Expression::Value(OperatorOrToken::Operator(OperatorOffset {
-                    operator: Operator::Slash, offset
-                })) if paren_level == 0 => {
-                    let val = value_stack.pop().expect("Saw a slash but no values o.O");
-                    match val {
-                        Expression::Value(OperatorOrToken::Token(TokenOffset {
-                            token: Token::Number { computed: true, .. }, ..
-                        })) => {
-                            value_stack.push(val);
-                            debug!("Push on op stack Slash");
-                            op_stack.push(OperatorOffset {
-                                operator: Operator::Slash, offset: offset
-                            });
-                            last_was_an_operator = true;
-                        }
-                        _ => {
-                            debug!("Push on list on value stack slash");
-                            let list = Expression::create_list(
-                                Some(val),
-                                Expression::Value(
-                                    OperatorOrToken::Operator(
-                                        OperatorOffset {
-                                            operator: Operator::Slash, offset: offset
-                                        }
-                                    )
-                                ),
-                            );
-                            value_stack.push(list);
-                        }
-                    }
-                },
                 Expression::Value(OperatorOrToken::Operator(
                     oo @ OperatorOffset { .. }
                 )) => {
@@ -362,6 +331,15 @@ impl Expression {
                     Expression::List(mut fi) => {
                         match operator.operator {
                             Operator::Plus => {
+                                fi.push(Expression::Value(s));
+                                Expression::List(fi)
+                            },
+                            Operator::Slash => {
+                                fi.push(
+                                    Expression::Value(
+                                        OperatorOrToken::Operator(operator)
+                                    )
+                                );
                                 fi.push(Expression::Value(s));
                                 Expression::List(fi)
                             },
