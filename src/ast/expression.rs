@@ -335,13 +335,37 @@ impl Expression {
                                 Expression::List(fi)
                             },
                             Operator::Slash => {
-                                fi.push(
-                                    Expression::Value(
-                                        OperatorOrToken::Operator(operator)
-                                    )
-                                );
-                                fi.push(Expression::Value(s));
-                                Expression::List(fi)
+                                if s.computed_number() {
+                                    let forced = Expression::force_list_collapse(
+                                        fi,
+                                        context
+                                    );
+
+                                    match forced {
+                                        Expression::List(mut fi) => {
+                                            fi.push(
+                                                Expression::Value(
+                                                    OperatorOrToken::Operator(
+                                                        operator
+                                                    )
+                                                )
+                                            );
+                                            fi.push(Expression::Value(s));
+                                            Expression::List(fi)
+                                        },
+                                        Expression::Value(fo) => {
+                                            Expression::Value(fo / s)
+                                        }
+                                    }
+                                } else {
+                                    fi.push(
+                                        Expression::Value(
+                                            OperatorOrToken::Operator(operator)
+                                        )
+                                    );
+                                    fi.push(Expression::Value(s));
+                                    Expression::List(fi)
+                                }
                             },
                             _ => panic!("Can't use an operator other than \
                                          plus on a list and a value"),
