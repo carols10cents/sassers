@@ -11,6 +11,7 @@ use std::io::Write;
 mod ast;
 mod context;
 mod error;
+mod expression_evaluator;
 mod sass;
 mod operator;
 mod operator_offset;

@@ -1,4 +1,5 @@
 use sass::output_style::{SassOutputStyle, Streamable};
+use expression_evaluator::ExpressionEvaluator;
 use sass::variable::SassVariable;
 use ast::node::Node;
 use token::Token;
@@ -143,11 +144,17 @@ impl SassRule {
                 match c {
                     Node::Rule(sr) => Some(Node::Rule(sr.evaluate(&local_context))),
                     Node::Property(lex, ex) => {
-                        Some(Node::Property(lex, ex.evaluate(&local_context)))
+                        Some(Node::Property(
+                            lex,
+                            ExpressionEvaluator::evaluate(ex, &local_context)
+                        ))
                     },
                     Node::Comment(sc) => Some(Node::Comment(sc)),
                     Node::Variable(sv) => {
-                        let evaluated_var = sv.value.evaluate(&local_context);
+                        let evaluated_var = ExpressionEvaluator::evaluate(
+                            sv.value,
+                            &local_context
+                        );
                         local_context.add_variable(SassVariable {
                             name: sv.name,
                             value: evaluated_var,

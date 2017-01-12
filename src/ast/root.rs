@@ -3,6 +3,7 @@ use sass::rule::SassRule;
 use sass::variable::SassVariable;
 use sass::comment::SassComment;
 use context::Context;
+use expression_evaluator::ExpressionEvaluator;
 use error::{Result};
 
 use std::io::Write;
@@ -35,7 +36,10 @@ impl Root {
         match self {
             Root::Rule(sr) => Some(Root::Rule(sr.evaluate(&context))),
             Root::Variable(sv) => {
-                let evaluated_var = sv.value.evaluate(&context);
+                let evaluated_var = ExpressionEvaluator::evaluate(
+                    sv.value,
+                    &context
+                );
                 context.add_variable(SassVariable {
                     name: sv.name,
                     value: evaluated_var,
