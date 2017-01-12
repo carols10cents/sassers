@@ -180,16 +180,9 @@ impl<'a> ExpressionEvaluator<'a> {
     fn math_machine(&mut self) {
         debug!("Math machine:");
 
-        let op = self.op_stack.pop().unwrap();
-        debug!("op = {:#?}", op);
-
-        let second = self.value_stack.pop()
-                       .expect("Expected a second argument on the value stack");
-        debug!("second = {:#?}", second);
-
-        let first = self.value_stack.pop()
-                       .expect("Expected a first argument on the value stack");
-        debug!("first: {:#?}", first);
+        let op     = self.get_operator();
+        let second = self.get_value();
+        let first  = self.get_value();
 
         let math_result = Expression::apply_math(
             op, first, second, self.context, self.paren_level,
@@ -197,6 +190,22 @@ impl<'a> ExpressionEvaluator<'a> {
         debug!("Math result: {:#?}", math_result);
 
         self.value_stack.push(math_result);
+    }
+
+    fn get_operator(&mut self) -> OperatorOffset {
+        // Math machine only gets called while there are operators on
+        // the operator stack, so unwrap should be fine.
+        let op = self.op_stack.pop().unwrap();
+        debug!("op = {:#?}", op);
+        op
+    }
+
+    fn get_value(&mut self) -> Expression {
+        // TODO: Turn this into a SassError
+        let val = self.value_stack.pop()
+                      .expect("Expected an argument on the value stack");
+        debug!("val = {:#?}", val);
+        val
     }
 }
 
