@@ -244,6 +244,67 @@ impl Expression {
         list.push(tail);
         Expression::List(list)
     }
+
+    pub fn is_number(&self) -> bool {
+        match *self {
+            Expression::Value(OperatorOrToken::Token(TokenOffset {
+                token: Token::Number { .. }, ..
+            })) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_string(&self) -> bool {
+        match *self {
+            Expression::Value(OperatorOrToken::Token(TokenOffset {
+                token: Token::String(_), ..
+            })) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_right_paren(&self) -> bool {
+        match *self {
+            Expression::Value(OperatorOrToken::Operator(OperatorOffset {
+                operator: Operator::RightParen, ..
+            })) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_left_paren(&self) -> bool {
+        match *self {
+            Expression::Value(OperatorOrToken::Operator(OperatorOffset {
+                operator: Operator::LeftParen, ..
+            })) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_operator(&self) -> bool {
+        match *self {
+            Expression::Value(OperatorOrToken::Operator(_)) => true,
+            _ => false,
+        }
+    }
+
+    pub fn extract_operator_offset(self) -> OperatorOffset {
+        match self {
+            Expression::Value(OperatorOrToken::Operator(operator_offset)) => {
+                operator_offset
+            },
+            _ => panic!("Can't extract operator offset from {:?}", self),
+        }
+    }
+
+    pub fn extract_token_offset(self) -> TokenOffset {
+        match self {
+            Expression::Value(OperatorOrToken::Token(token_offset)) => {
+                token_offset
+            },
+            _ => panic!("Can't extract token offset from {:?}", self),
+        }
+    }
 }
 
 #[cfg(test)]

@@ -49,119 +49,102 @@ impl<'a> ExpressionEvaluator<'a> {
         let mut exprs = exprs.into_iter();
 
         while let Some(part) = exprs.next() {
-
             debug!("Processing list item {:#?}", part);
 
-            match part {
-                v @ Expression::Value(OperatorOrToken::Token(TokenOffset {
-                    token: Token::Number { .. }, ..
-                })) => {
-                    if self.last_was_an_operator {
-                        debug!("Push on value stack {:#?}", v);
-                        self.value_stack.push(v);
-                    } else {
-                        debug!("Number, last_was_an_operator=false, paren_level={}", self.paren_level);
+            if part.is_number() {
+                if self.last_was_an_operator {
+                    debug!("Push on value stack {:#?}", part);
+                    self.value_stack.push(part);
+                } else {
+                    debug!("Number, last_was_an_operator=false, paren_level={}", self.paren_level);
 
-                        if self.paren_level > 0 {
-                            while !self.op_stack.is_empty() &&
-                                  self.op_stack.last().unwrap().operator !=
-                                      Operator::LeftParen {
+                    if self.paren_level > 0 {
+                        while !self.op_stack.is_empty() &&
+                              self.op_stack.last().unwrap().operator !=
+                                  Operator::LeftParen {
 
-                                debug!("op stack last {:#?}", self.op_stack.last());
-                                self.math_machine();
-                            }
-                        }
-
-                        let list = Expression::create_list(
-                            self.value_stack.pop(),
-                            v,
-                        );
-
-                        debug!("Push on list on value stack {:#?}", list);
-
-                        self.value_stack.push(list);
-                    }
-
-                    self.last_was_an_operator = false;
-                },
-                Expression::Value(OperatorOrToken::Operator(OperatorOffset {
-                    operator: Operator::RightParen, ..
-                })) => {
-                    debug!("RIGHT PAREN");
-                    debug!("op stack = {:#?}", self.op_stack);
-
-                    let mut last_operator = self.op_stack.pop();
-                    while last_operator.is_some() &&
-                          last_operator.unwrap().operator !=
-                              Operator::LeftParen {
-
-                        debug!("last operator before right paren = {:#?}", last_operator);
-                        self.op_stack.push(last_operator.unwrap());
-                        self.math_machine();
-                        last_operator = self.op_stack.pop();
-                    }
-                    self.last_was_an_operator = false;
-                    self.paren_level -= 1;
-                },
-                Expression::Value(OperatorOrToken::Operator(OperatorOffset {
-                    operator: Operator::LeftParen, offset
-                })) => {
-                    debug!("Push on op stack Leftparen");
-                    self.op_stack.push(OperatorOffset {
-                        operator: Operator::LeftParen, offset: offset
-                    });
-                    self.last_was_an_operator = true;
-                    self.paren_level += 1;
-                },
-                Expression::Value(OperatorOrToken::Operator(
-                    oo @ OperatorOffset { .. }
-                )) => {
-                    if let Some(&last_operator) = self.op_stack.last() {
-                        if last_operator.operator
-                                .same_or_greater_precedence(oo.operator) {
+                            debug!("op stack last {:#?}", self.op_stack.last());
                             self.math_machine();
                         }
                     }
-                    debug!("Push on op stack {:#?}", oo);
-                    self.op_stack.push(oo);
-                    self.last_was_an_operator = true;
-                },
-                Expression::Value(OperatorOrToken::Token(t @ TokenOffset {
-                    token: Token::String(_), ..
-                })) => {
-                    let var_eval = self.context.get_variable(&t)
-                                    .unwrap_or(Expression::Value(
-                                        OperatorOrToken::Token(t)
-                                    ));
 
-                    if self.last_was_an_operator {
-                        self.value_stack.push(var_eval);
-                    } else {
-                        let list = Expression::create_list(
-                            self.value_stack.pop(),
-                            var_eval,
-                        );
-                        self.value_stack.push(list);
+                    let list = Expression::create_list(
+                        self.value_stack.pop(),
+                        part,
+                    );
+
+                    debug!("Push on list on value stack {:#?}", list);
+
+                    self.value_stack.push(list);
+                }
+
+                self.last_was_an_operator = false;
+            } else if part.is_right_paren() {
+                debug!("RIGHT PAREN");
+                debug!("op stack = {:#?}", self.op_stack);
+
+                let mut last_operator = self.op_stack.pop();
+                while last_operator.is_some() &&
+                      last_operator.unwrap().operator !=
+                          Operator::LeftParen {
+
+                    debug!("last operator before right paren = {:#?}", last_operator);
+                    self.op_stack.push(last_operator.unwrap());
+                    self.math_machine();
+                    last_operator = self.op_stack.pop();
+                }
+                self.last_was_an_operator = false;
+                self.paren_level -= 1;
+            } else if part.is_left_paren() {
+                let oo = part.extract_operator_offset();
+                debug!("Push on op stack Leftparen");
+                self.op_stack.push(oo);
+                self.last_was_an_operator = true;
+                self.paren_level += 1;
+            } else if part.is_operator() {
+                let oo = part.extract_operator_offset();
+                if let Some(&last_operator) = self.op_stack.last() {
+                    if last_operator
+                           .operator
+                           .same_or_greater_precedence(oo.operator) {
+                        self.math_machine();
                     }
-                    self.last_was_an_operator = false;
-                },
-                Expression::List(list) => {
-                    debug!("Push list on value stack {:#?}", list);
-                    self.value_stack.push(Expression::List(list));
-                    self.last_was_an_operator = false;
-                },
-                other => {
-                    if self.last_was_an_operator {
-                        self.value_stack.push(other);
-                    } else {
-                        let list = Expression::create_list(
-                            self.value_stack.pop(),
-                            other,
-                        );
-                        self.value_stack.push(list);
-                    }
-                    self.last_was_an_operator = false;
-                },
+                }
+                debug!("Push on op stack {:#?}", oo);
+                self.op_stack.push(oo);
+                self.last_was_an_operator = true;
+            } else if part.is_string() {
+                let t = part.extract_token_offset();
+                let var_eval = self.context.get_variable(&t)
+                                .unwrap_or(Expression::Value(
+                                    OperatorOrToken::Token(t)
+                                ));
+
+                if self.last_was_an_operator {
+                    self.value_stack.push(var_eval);
+                } else {
+                    let list = Expression::create_list(
+                        self.value_stack.pop(),
+                        var_eval,
+                    );
+                    self.value_stack.push(list);
+                }
+                self.last_was_an_operator = false;
+            } else if let Expression::List(list) = part {
+                debug!("Push list on value stack {:#?}", list);
+                self.value_stack.push(Expression::List(list));
+                self.last_was_an_operator = false;
+            } else {
+                if self.last_was_an_operator {
+                    self.value_stack.push(part);
+                } else {
+                    let list = Expression::create_list(
+                        self.value_stack.pop(),
+                        part,
+                    );
+                    self.value_stack.push(list);
+                }
+                self.last_was_an_operator = false;
             }
         }
 
