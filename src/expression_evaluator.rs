@@ -52,10 +52,7 @@ impl<'a> ExpressionEvaluator<'a> {
             debug!("Processing list item {:#?}", part);
 
             if part.is_number() {
-                if self.last_was_an_operator {
-                    debug!("Push on value stack {:#?}", part);
-                    self.value_stack.push(part);
-                } else {
+                if !self.last_was_an_operator {
                     debug!("Number, last_was_an_operator=false, paren_level={}", self.paren_level);
 
                     if self.paren_level > 0 {
@@ -67,7 +64,13 @@ impl<'a> ExpressionEvaluator<'a> {
                             self.math_machine();
                         }
                     }
+                }
 
+
+                if self.last_was_an_operator {
+                    debug!("Push on value stack {:#?}", part);
+                    self.value_stack.push(part);
+                } else {
                     let list = Expression::create_list(
                         self.value_stack.pop(),
                         part,
@@ -77,8 +80,8 @@ impl<'a> ExpressionEvaluator<'a> {
 
                     self.value_stack.push(list);
                 }
-
                 self.last_was_an_operator = false;
+
             } else if part.is_right_paren() {
                 debug!("RIGHT PAREN");
                 debug!("op stack = {:#?}", self.op_stack);
