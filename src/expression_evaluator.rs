@@ -71,16 +71,13 @@ impl<'a> ExpressionEvaluator<'a> {
                 debug!("RIGHT PAREN");
                 debug!("op stack = {:#?}", self.op_stack);
 
-                let mut last_operator = self.op_stack.pop();
-                while last_operator.is_some() &&
-                      last_operator.unwrap().operator !=
+                while !self.op_stack.is_empty() &&
+                      self.op_stack.last().unwrap().operator !=
                           Operator::LeftParen {
 
-                    debug!("last operator before right paren = {:#?}", last_operator);
-                    self.op_stack.push(last_operator.unwrap());
                     self.math_machine();
-                    last_operator = self.op_stack.pop();
                 }
+                self.op_stack.pop();
                 self.last_was_an_operator = false;
                 self.paren_level -= 1;
             } else if part.is_left_paren() {
