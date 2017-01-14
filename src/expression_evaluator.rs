@@ -56,13 +56,7 @@ impl<'a> ExpressionEvaluator<'a> {
                     debug!("Number, last_was_an_operator=false, paren_level={}", self.paren_level);
 
                     if self.paren_level > 0 {
-                        while !self.op_stack.is_empty() &&
-                              self.op_stack.last().unwrap().operator !=
-                                  Operator::LeftParen {
-
-                            debug!("op stack last {:#?}", self.op_stack.last());
-                            self.math_machine();
-                        }
+                        self.do_math_until_left_paren();
                     }
                 }
                 self.push_on_value_stack(part);
@@ -71,13 +65,9 @@ impl<'a> ExpressionEvaluator<'a> {
                 debug!("RIGHT PAREN");
                 debug!("op stack = {:#?}", self.op_stack);
 
-                while !self.op_stack.is_empty() &&
-                      self.op_stack.last().unwrap().operator !=
-                          Operator::LeftParen {
-
-                    self.math_machine();
-                }
+                self.do_math_until_left_paren();
                 self.op_stack.pop();
+
                 self.last_was_an_operator = false;
                 self.paren_level -= 1;
             } else if part.is_left_paren() {
@@ -136,6 +126,13 @@ impl<'a> ExpressionEvaluator<'a> {
             self.value_stack.push(list);
         }
         self.last_was_an_operator = false;
+    }
+
+    fn do_math_until_left_paren(&mut self) {
+        while !self.op_stack.is_empty() &&
+              self.op_stack.last().unwrap().operator != Operator::LeftParen {
+            self.math_machine();
+        }
     }
 
     fn math_machine(&mut self) {
