@@ -65,22 +65,7 @@ impl<'a> ExpressionEvaluator<'a> {
                         }
                     }
                 }
-
-
-                if self.last_was_an_operator {
-                    debug!("Push on value stack {:#?}", part);
-                    self.value_stack.push(part);
-                } else {
-                    let list = Expression::create_list(
-                        self.value_stack.pop(),
-                        part,
-                    );
-
-                    debug!("Push on list on value stack {:#?}", list);
-
-                    self.value_stack.push(list);
-                }
-                self.last_was_an_operator = false;
+                self.push_on_value_stack(part);
 
             } else if part.is_right_paren() {
                 debug!("RIGHT PAREN");
@@ -116,38 +101,18 @@ impl<'a> ExpressionEvaluator<'a> {
                 debug!("Push on op stack {:#?}", oo);
                 self.op_stack.push(oo);
                 self.last_was_an_operator = true;
+
             } else if part.is_string() {
+
                 let t = part.extract_token_offset();
                 let var_eval = self.context.get_variable(&t)
                                 .unwrap_or(Expression::Value(
                                     OperatorOrToken::Token(t)
                                 ));
+                self.push_on_value_stack(var_eval);
 
-                if self.last_was_an_operator {
-                    self.value_stack.push(var_eval);
-                } else {
-                    let list = Expression::create_list(
-                        self.value_stack.pop(),
-                        var_eval,
-                    );
-                    self.value_stack.push(list);
-                }
-                self.last_was_an_operator = false;
-            } else if let Expression::List(list) = part {
-                debug!("Push list on value stack {:#?}", list);
-                self.value_stack.push(Expression::List(list));
-                self.last_was_an_operator = false;
             } else {
-                if self.last_was_an_operator {
-                    self.value_stack.push(part);
-                } else {
-                    let list = Expression::create_list(
-                        self.value_stack.pop(),
-                        part,
-                    );
-                    self.value_stack.push(list);
-                }
-                self.last_was_an_operator = false;
+                self.push_on_value_stack(part);
             }
         }
 
@@ -161,6 +126,19 @@ impl<'a> ExpressionEvaluator<'a> {
         }
 
         self.value_stack.pop().unwrap()
+    }
+
+    fn push_on_value_stack(&mut self, expr: Expression) {
+        if self.last_was_an_operator {
+            self.value_stack.push(expr);
+        } else {
+            let list = Expression::create_list(
+                self.value_stack.pop(),
+                expr,
+            );
+            self.value_stack.push(list);
+        }
+        self.last_was_an_operator = false;
     }
 
     fn math_machine(&mut self) {
