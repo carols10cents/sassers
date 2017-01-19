@@ -7,6 +7,10 @@ repository = "https://github.com/carols10cents/sassers"
 readme = "README.md"
 license = "MIT"
 
+[badges]
+travis-ci = { repository = "carols10cents/sassers" }
+appveyor = { repository = "carols10cents/sassers" }
+
 [dependencies]
 docopt = "0.6.64"
 regex = "0.1.38"
