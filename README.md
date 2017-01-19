@@ -3,6 +3,7 @@
 A Sass compiler written natively in Rust.
 
 [![Build Status](https://travis-ci.org/carols10cents/sassers.svg?branch=master)](https://travis-ci.org/carols10cents/sassers)
+[![Build status](https://ci.appveyor.com/api/projects/status/kn37k6awveid8ni2/branch/master?svg=true)](https://ci.appveyor.com/project/carols10cents/sassers/branch/master)
 
 **Incomplete!!!!** To see current progress:
 
