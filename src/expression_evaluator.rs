@@ -85,10 +85,16 @@ impl<'a> ExpressionEvaluator<'a> {
                         self.math_machine();
                     }
                 }
-                debug!("Push on op stack {:#?}", oo);
-                self.op_stack.push(oo);
+                if oo.operator == Operator::Comma {
+                    debug!("Push on value stack Comma");
+                    self.value_stack.push(Expression::Value(
+                        OperatorOrToken::Operator(oo)
+                    ));
+                } else {
+                    debug!("Push on op stack {:#?}", oo);
+                    self.op_stack.push(oo);
+                }
                 self.last_was_an_operator = true;
-
             } else if part.is_string() {
 
                 let t = part.extract_token_offset();
@@ -96,6 +102,7 @@ impl<'a> ExpressionEvaluator<'a> {
                                 .unwrap_or(Expression::Value(
                                     OperatorOrToken::Token(t)
                                 ));
+                debug!("Push on value stack {:#?}", var_eval);
                 self.push_on_value_stack(var_eval);
 
             } else {
