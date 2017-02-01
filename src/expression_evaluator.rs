@@ -98,12 +98,16 @@ impl<'a> ExpressionEvaluator<'a> {
             } else if part.is_string() {
 
                 let t = part.extract_token_offset();
-                let var_eval = self.context.get_variable(&t)
-                                .unwrap_or(Expression::Value(
-                                    OperatorOrToken::Token(t)
-                                ));
-                debug!("Push on value stack {:#?}", var_eval);
-                self.push_on_value_stack(var_eval);
+                if t.token == "url" {
+
+                } else {
+                    let var_eval = self.context.get_variable(&t)
+                                    .unwrap_or(Expression::Value(
+                                        OperatorOrToken::Token(t)
+                                    ));
+                    debug!("Push on value stack {:#?}", var_eval);
+                    self.push_on_value_stack(var_eval);
+                }
 
             } else {
                 self.push_on_value_stack(part);
