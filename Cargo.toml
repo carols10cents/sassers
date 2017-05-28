@@ -16,3 +16,8 @@ docopt = "0.6.64"
 regex = "0.1.38"
 log = "0.3"
 env_logger = "0.3"
+
+[[bin]]
+doc = false
+name = "sassers"
+path = "src/main.rs"
