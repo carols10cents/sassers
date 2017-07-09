@@ -123,3 +123,14 @@ impl fmt::Display for Token {
         }
     }
 }
+
+impl Token {
+    pub fn as_str(&self) -> &str {
+        match *self {
+            Token::String(ref i) => i,
+            Token::StringLiteral(ref i) => i,
+            _ => "", // TODO: bad idea?
+        }
+
+    }
+}

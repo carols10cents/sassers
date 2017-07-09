@@ -98,7 +98,7 @@ impl<'a> ExpressionEvaluator<'a> {
             } else if part.is_string() {
 
                 let t = part.extract_token_offset();
-                if t.token == "url" {
+                if t.token.as_str() == "url" {
 
                 } else {
                     let var_eval = self.context.get_variable(&t)
