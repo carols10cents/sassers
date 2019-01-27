@@ -1,7 +1,7 @@
-use token::Token;
-use operator_or_token::OperatorOrToken;
-use operator_offset::OperatorOffset;
-use operator::Operator;
+use crate::operator::Operator;
+use crate::operator_offset::OperatorOffset;
+use crate::operator_or_token::OperatorOrToken;
+use crate::token::Token;
 
 use std::fmt;
 
@@ -16,11 +16,12 @@ impl From<OperatorOrToken> for TokenOffset {
         match op_or_token {
             OperatorOrToken::Token(t) => t,
             OperatorOrToken::Operator(OperatorOffset {
-                operator: o, offset: off
+                operator: o,
+                offset: off,
             }) => TokenOffset {
                 token: Token::String(o.to_string()),
                 offset: off,
-            }
+            },
         }
     }
 }
@@ -37,11 +38,10 @@ impl TokenOffset {
         let other_token = other.extract_token();
         let other_operator = other.extract_operator();
 
-        let separator = if
-            other_token == Some(Token::String(String::from("="))) ||
-            other_token == Some(Token::String(String::from("]"))) ||
-            self_string.ends_with("=") ||
-            other_operator == Some(Operator::Star)
+        let separator = if other_token == Some(Token::String(String::from("=")))
+            || other_token == Some(Token::String(String::from("]")))
+            || self_string.ends_with("=")
+            || other_operator == Some(Operator::Star)
         {
             ""
         } else {

@@ -1,12 +1,11 @@
-use ast::node::Node;
-use sass::rule::SassRule;
-use error::Result;
+use crate::ast::node::Node;
+use crate::error::Result;
+use crate::sass::rule::SassRule;
 
 use std::io::Write;
 
 pub trait Streamable {
-    fn stream(&self, output: &mut Write, style: &SassOutputStyle)
-             -> Result<()>;
+    fn stream(&self, output: &mut Write, style: &SassOutputStyle) -> Result<()>;
 }
 
 pub trait SassOutputStyle {
@@ -21,19 +20,29 @@ pub trait SassOutputStyle {
     fn selector_string(&self, rule: &SassRule, parents: &str) -> String {
         let separator = self.selector_separator();
         if parents.is_empty() {
-            rule.selectors.iter()
-                          .map(|s| s.token.to_string())
-                          .collect::<Vec<_>>().join(&separator)
+            rule.selectors
+                .iter()
+                .map(|s| s.token.to_string())
+                .collect::<Vec<_>>()
+                .join(&separator)
         } else {
-            parents.split(",").map(|p| {
-                rule.selectors.iter().map(|s| {
-                    if s.token.to_string().contains("&") {
-                        s.token.to_string().replace("&", p.trim())
-                    } else {
-                        format!("{} {}", p.trim(), s.token)
-                    }
-                }).collect::<Vec<_>>().join(&separator)
-            }).collect::<Vec<_>>().join(&separator)
+            parents
+                .split(",")
+                .map(|p| {
+                    rule.selectors
+                        .iter()
+                        .map(|s| {
+                            if s.token.to_string().contains("&") {
+                                s.token.to_string().replace("&", p.trim())
+                            } else {
+                                format!("{} {}", p.trim(), s.token)
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .join(&separator)
+                })
+                .collect::<Vec<_>>()
+                .join(&separator)
         }
     }
 
@@ -81,16 +90,17 @@ pub trait SassOutputStyle {
         String::from("\n")
     }
 
-    fn filter_child_properties<'a>(&self, children: &[Node])
-       -> Vec<Node> {
-        children.iter().filter(|c|
-            match **c {
-                Node::Rule(..)     => false,
-                Node::Comment(..)  => true,
+    fn filter_child_properties<'a>(&self, children: &[Node]) -> Vec<Node> {
+        children
+            .iter()
+            .filter(|c| match **c {
+                Node::Rule(..) => false,
+                Node::Comment(..) => true,
                 Node::Property(..) => true,
                 Node::Variable(..) => true,
-            }
-        ).cloned().collect()
+            })
+            .cloned()
+            .collect()
     }
 }
 
@@ -181,12 +191,14 @@ impl SassOutputStyle for Compact {
     }
 
     fn comment(&self, content: &str) -> String {
-        String::from(content.lines()
-                            .map(|s| s.trim())
-                            .collect::<Vec<_>>()
-                            .join(" "))
+        String::from(
+            content
+                .lines()
+                .map(|s| s.trim())
+                .collect::<Vec<_>>()
+                .join(" "),
+        )
     }
-
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -232,33 +244,44 @@ impl SassOutputStyle for Compressed {
     fn selector_string(&self, rule: &SassRule, parents: &str) -> String {
         let separator: String = self.selector_separator();
         let s = if parents.is_empty() {
-            rule.selectors.iter()
-                          .map(|s| s.token.to_string())
-                          .collect::<Vec<_>>().join(&separator)
+            rule.selectors
+                .iter()
+                .map(|s| s.token.to_string())
+                .collect::<Vec<_>>()
+                .join(&separator)
         } else {
-            parents.split(",").map(|p| {
-                rule.selectors.iter().map(|s| {
-                    if s.token.to_string().contains("&") {
-                        s.token.to_string().replace("&", p.trim())
-                    } else {
-                        format!("{} {}", p.trim(), s.token)
-                    }
-                }).collect::<Vec<_>>().join(&separator)
-            }).collect::<Vec<_>>().join(&separator)
+            parents
+                .split(",")
+                .map(|p| {
+                    rule.selectors
+                        .iter()
+                        .map(|s| {
+                            if s.token.to_string().contains("&") {
+                                s.token.to_string().replace("&", p.trim())
+                            } else {
+                                format!("{} {}", p.trim(), s.token)
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .join(&separator)
+                })
+                .collect::<Vec<_>>()
+                .join(&separator)
         };
         self.compress_selectors(s)
     }
 
-    fn filter_child_properties(&self, children: &[Node])
-       -> Vec<Node> {
-        children.iter().filter(|c|
-           match **c {
-               Node::Rule(..)     => false,
-               Node::Comment(..)  => false,
-               Node::Property(..) => true,
-               Node::Variable(..) => true,
-           }
-        ).cloned().collect()
+    fn filter_child_properties(&self, children: &[Node]) -> Vec<Node> {
+        children
+            .iter()
+            .filter(|c| match **c {
+                Node::Rule(..) => false,
+                Node::Comment(..) => false,
+                Node::Property(..) => true,
+                Node::Variable(..) => true,
+            })
+            .cloned()
+            .collect()
     }
 }
 

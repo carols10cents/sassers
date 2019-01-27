@@ -31,18 +31,18 @@ impl Operator {
             ';' => Operator::Semicolon,
             '{' => Operator::LeftCurlyBrace,
             '}' => Operator::RightCurlyBrace,
-            _   => return None,
+            _ => return None,
         };
         Some(r)
     }
 
     pub fn same_or_greater_precedence(self, other: Operator) -> bool {
         match (self, other) {
-            (Operator::Plus, Operator::Star) |
-            (Operator::Minus, Operator::Star) |
-            (Operator::Plus, Operator::Slash) |
-            (Operator::Minus, Operator::Slash) |
-            (Operator::LeftParen, _) => false,
+            (Operator::Plus, Operator::Star)
+            | (Operator::Minus, Operator::Star)
+            | (Operator::Plus, Operator::Slash)
+            | (Operator::Minus, Operator::Slash)
+            | (Operator::LeftParen, _) => false,
             (_, _) => true,
         }
     }

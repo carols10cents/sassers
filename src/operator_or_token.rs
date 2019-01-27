@@ -1,10 +1,10 @@
-use token::Token;
-use token_offset::TokenOffset;
-use operator::Operator;
-use operator_offset::OperatorOffset;
+use crate::operator::Operator;
+use crate::operator_offset::OperatorOffset;
+use crate::token::Token;
+use crate::token_offset::TokenOffset;
 
-use std::ops::{Add, Sub, Mul, Div, Rem};
 use std::fmt;
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OperatorOrToken {
@@ -23,7 +23,8 @@ impl OperatorOrToken {
     pub fn computed_number(&self) -> bool {
         match *self {
             OperatorOrToken::Token(TokenOffset {
-                token: Token::Number { computed: true, .. }, ..
+                token: Token::Number { computed: true, .. },
+                ..
             }) => true,
             _ => false,
         }
@@ -58,13 +59,11 @@ impl Add for OperatorOrToken {
                 }),
                 OperatorOrToken::Token(TokenOffset {
                     token: other_token, ..
-                })
-            ) => {
-                OperatorOrToken::Token(TokenOffset {
-                    token: self_token + other_token,
-                    offset: off,
-                })
-            },
+                }),
+            ) => OperatorOrToken::Token(TokenOffset {
+                token: self_token + other_token,
+                offset: off,
+            }),
             (s, other) => panic!("Cannot add: {:?} + {:?}", s, other),
         }
     }
@@ -82,13 +81,11 @@ impl Sub for OperatorOrToken {
                 }),
                 OperatorOrToken::Token(TokenOffset {
                     token: other_token, ..
-                })
-            ) => {
-                OperatorOrToken::Token(TokenOffset {
-                    token: self_token - other_token,
-                    offset: off,
-                })
-            },
+                }),
+            ) => OperatorOrToken::Token(TokenOffset {
+                token: self_token - other_token,
+                offset: off,
+            }),
             (s, other) => panic!("Cannot subtract: {:?} - {:?}", s, other),
         }
     }
@@ -106,13 +103,11 @@ impl Mul for OperatorOrToken {
                 }),
                 OperatorOrToken::Token(TokenOffset {
                     token: other_token, ..
-                })
-            ) => {
-                OperatorOrToken::Token(TokenOffset {
-                    token: self_token * other_token,
-                    offset: off,
-                })
-            },
+                }),
+            ) => OperatorOrToken::Token(TokenOffset {
+                token: self_token * other_token,
+                offset: off,
+            }),
             (s, other) => panic!("Cannot multiply: {:?} * {:?}", s, other),
         }
     }
@@ -130,13 +125,11 @@ impl Div for OperatorOrToken {
                 }),
                 OperatorOrToken::Token(TokenOffset {
                     token: other_token, ..
-                })
-            ) => {
-                OperatorOrToken::Token(TokenOffset {
-                    token: self_token / other_token,
-                    offset: off,
-                })
-            },
+                }),
+            ) => OperatorOrToken::Token(TokenOffset {
+                token: self_token / other_token,
+                offset: off,
+            }),
             (s, other) => panic!("Cannot divide: {:?} / {:?}", s, other),
         }
     }
@@ -154,13 +147,11 @@ impl Rem for OperatorOrToken {
                 }),
                 OperatorOrToken::Token(TokenOffset {
                     token: other_token, ..
-                })
-            ) => {
-                OperatorOrToken::Token(TokenOffset {
-                    token: self_token % other_token,
-                    offset: off,
-                })
-            },
+                }),
+            ) => OperatorOrToken::Token(TokenOffset {
+                token: self_token % other_token,
+                offset: off,
+            }),
             (s, other) => panic!("Cannot find the remainder: {:?} % {:?}", s, other),
         }
     }

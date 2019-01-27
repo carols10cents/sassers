@@ -1,11 +1,11 @@
-use std::result;
-use std::io;
 use std::error::{self, Error};
 use std::fmt;
+use std::io;
+use std::result;
 
 pub type Result<T> = result::Result<T, SassError>;
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct SassError {
     pub message: String,
     pub kind: ErrorKind,
@@ -33,7 +33,7 @@ impl From<io::Error> for SassError {
         SassError {
             offset: 0,
             message: String::from(err.description()),
-            kind: ErrorKind::IoError
+            kind: ErrorKind::IoError,
         }
     }
 }

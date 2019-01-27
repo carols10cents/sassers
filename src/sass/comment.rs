@@ -1,6 +1,6 @@
-use sass::output_style::{SassOutputStyle, Streamable};
-use error::Result;
-use token_offset::TokenOffset;
+use crate::error::Result;
+use crate::sass::output_style::{SassOutputStyle, Streamable};
+use crate::token_offset::TokenOffset;
 
 use std::io::Write;
 
@@ -10,11 +10,10 @@ pub struct SassComment {
 }
 
 impl Streamable for SassComment {
-    fn stream(&self, output: &mut Write, style: &SassOutputStyle)
-                        -> Result<()> {
+    fn stream(&self, output: &mut Write, style: &SassOutputStyle) -> Result<()> {
         let comment = self.content.token.to_string();
         // TODO: Shouldn't write! call into here, and not need the call to try?
-        try!(write!(output, "{}", style.comment(&comment)));
+        write!(output, "{}", style.comment(&comment))?;
         Ok(())
     }
 }
