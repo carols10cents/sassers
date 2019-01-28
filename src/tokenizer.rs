@@ -1,12 +1,12 @@
-use token::Token;
-use token_offset::TokenOffset;
-use operator_or_token::OperatorOrToken;
-use operator::Operator;
-use operator_offset::OperatorOffset;
-use error::{Result, SassError, ErrorKind};
+use crate::error::{ErrorKind, Result, SassError};
+use crate::operator::Operator;
+use crate::operator_offset::OperatorOffset;
+use crate::operator_or_token::OperatorOrToken;
+use crate::token::Token;
+use crate::token_offset::TokenOffset;
 
-use std::str::CharIndices;
 use std::iter::Peekable;
+use std::str::CharIndices;
 
 pub struct Tokenizer<'a> {
     chars: Peekable<CharIndices<'a>>,
@@ -41,31 +41,32 @@ impl<'a> Tokenizer<'a> {
             } else {
                 let single_char_op = Operator::from_char(curr_char);
                 if single_char_op.is_some()
-                   && !self.hyphen_starting_shit(curr_char)
-                   && !self.multiline_comment_starting(curr_char)
-                   && !self.singleline_comment_starting(curr_char) {
+                    && !self.hyphen_starting_shit(curr_char)
+                    && !self.multiline_comment_starting(curr_char)
+                    && !self.singleline_comment_starting(curr_char)
+                {
                     // We already tested that single_char_token was Some.
                     return Ok(Some(OperatorOrToken::Operator(OperatorOffset {
                         operator: single_char_op.unwrap(),
                         offset: Some(char_offset),
-                    })))
+                    })));
                 } else {
                     if self.multiline_comment_starting(curr_char) {
-                        return self.multiline_comment(curr_char, char_offset)
+                        return self.multiline_comment(curr_char, char_offset);
                     } else if self.singleline_comment_starting(curr_char) {
                         self.discard_singleline_comment();
-                        return self.parse()
+                        return self.parse();
                     } else if curr_char == '"' {
-                        return self.string_literal(curr_char, char_offset)
+                        return self.string_literal(curr_char, char_offset);
                     } else if curr_char.is_numeric() || self.hyphen_starting_number(curr_char) {
-                        return self.number(curr_char, char_offset)
+                        return self.number(curr_char, char_offset);
                     } else {
-                        return self.ident(curr_char, char_offset)
+                        return self.ident(curr_char, char_offset);
                     }
                 }
             }
         }
-        return Ok(None)
+        return Ok(None);
     }
 
     fn hyphen_starting_shit(&mut self, curr_char: char) -> bool {
@@ -75,16 +76,12 @@ impl<'a> Tokenizer<'a> {
 
     fn multiline_comment_starting(&mut self, curr_char: char) -> bool {
         let peek_char = self.peek_char();
-        curr_char == '/'
-          && peek_char.is_some()
-          && peek_char.unwrap() == '*'
+        curr_char == '/' && peek_char.is_some() && peek_char.unwrap() == '*'
     }
 
     fn singleline_comment_starting(&mut self, curr_char: char) -> bool {
         let peek_char = self.peek_char();
-        curr_char == '/'
-          && peek_char.is_some()
-          && peek_char.unwrap() == '/'
+        curr_char == '/' && peek_char.is_some() && peek_char.unwrap() == '/'
     }
 
     fn hyphen_starting_number(&mut self, curr_char: char) -> bool {
@@ -105,18 +102,17 @@ impl<'a> Tokenizer<'a> {
 
         while let Some(peek_char) = self.peek_char() {
             // Stop when we reach a non-ident char (hyphens are special)
-            if peek_char.is_whitespace() || (
-                is_single_char_token(peek_char) && peek_char != '-'
-            ) {
+            if peek_char.is_whitespace() || (is_single_char_token(peek_char) && peek_char != '-') {
                 break;
             } else {
                 value.push(peek_char);
                 self.chars.next();
             }
         }
-        Ok(Some(OperatorOrToken::Token(
-            TokenOffset { token: Token::String(value), offset: Some(start) }
-        )))
+        Ok(Some(OperatorOrToken::Token(TokenOffset {
+            token: Token::String(value),
+            offset: Some(start),
+        })))
     }
 
     fn number(&mut self, curr_char: char, start: usize) -> Result<Option<OperatorOrToken>> {
@@ -136,22 +132,20 @@ impl<'a> Tokenizer<'a> {
 
         let value = match value.parse() {
             Ok(v) => v,
-            Err(_) => return Err(SassError {
-                offset: start,
-                kind: ErrorKind::TokenizerError,
-                message: format!(
-                    "Tried to parse `{}` into a f32 but failed.",
-                    value,
-                ),
-            })
+            Err(_) => {
+                return Err(SassError {
+                    offset: start,
+                    kind: ErrorKind::TokenizerError,
+                    message: format!("Tried to parse `{}` into a f32 but failed.", value,),
+                });
+            }
         };
 
         let mut unit = String::new();
         while let Some(peek_char) = self.peek_char() {
             // Get units; stop when we reach a space or non-percent operator
-            if peek_char == '%' || (
-                !peek_char.is_whitespace() && !is_single_char_token(peek_char)
-            ) {
+            if peek_char == '%' || (!peek_char.is_whitespace() && !is_single_char_token(peek_char))
+            {
                 unit.push(peek_char);
                 self.chars.next();
             } else {
@@ -160,14 +154,23 @@ impl<'a> Tokenizer<'a> {
         }
 
         let token = if unit.len() > 0 {
-            Token::Number { value: value, units: Some(unit), computed: false }
+            Token::Number {
+                value: value,
+                units: Some(unit),
+                computed: false,
+            }
         } else {
-            Token::Number { value: value, units: None, computed: false }
+            Token::Number {
+                value: value,
+                units: None,
+                computed: false,
+            }
         };
 
-        Ok(Some(OperatorOrToken::Token(
-            TokenOffset { token: token, offset: Some(start) }
-        )))
+        Ok(Some(OperatorOrToken::Token(TokenOffset {
+            token: token,
+            offset: Some(start),
+        })))
     }
 
     fn string_literal(&mut self, curr_char: char, start: usize) -> Result<Option<OperatorOrToken>> {
@@ -187,12 +190,17 @@ impl<'a> Tokenizer<'a> {
 
         let token = Token::StringLiteral(value);
 
-        Ok(Some(OperatorOrToken::Token(
-            TokenOffset { token: token, offset: Some(start) }
-        )))
+        Ok(Some(OperatorOrToken::Token(TokenOffset {
+            token: token,
+            offset: Some(start),
+        })))
     }
 
-    fn multiline_comment(&mut self, curr_char: char, start: usize) -> Result<Option<OperatorOrToken>> {
+    fn multiline_comment(
+        &mut self,
+        curr_char: char,
+        start: usize,
+    ) -> Result<Option<OperatorOrToken>> {
         let mut value = String::new();
         value.push(curr_char);
         // We already tested that this was asterisk
@@ -212,9 +220,10 @@ impl<'a> Tokenizer<'a> {
 
         let token = Token::Comment(value);
 
-        Ok(Some(OperatorOrToken::Token(
-            TokenOffset { token: token, offset: Some(start) }
-        )))
+        Ok(Some(OperatorOrToken::Token(TokenOffset {
+            token: token,
+            offset: Some(start),
+        })))
     }
 
     fn discard_singleline_comment(&mut self) {
@@ -234,28 +243,37 @@ fn is_single_char_token(ch: char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use token::Token;
-    use token_offset::TokenOffset;
-    use operator_or_token::OperatorOrToken;
-    use operator::Operator;
-    use operator_offset::OperatorOffset;
-    use error::Result;
+    use crate::error::Result;
+    use crate::operator::Operator;
+    use crate::operator_offset::OperatorOffset;
+    use crate::operator_or_token::OperatorOrToken;
+    use crate::token::Token;
+    use crate::token_offset::TokenOffset;
 
-    fn expected_token(expected_token: Token, expected_offset: usize) -> Option<Result<OperatorOrToken>> {
+    fn expected_token(
+        expected_token: Token,
+        expected_offset: usize,
+    ) -> Option<Result<OperatorOrToken>> {
         Some(Ok(OperatorOrToken::Token(TokenOffset {
             token: expected_token,
             offset: Some(expected_offset),
         })))
     }
 
-    fn expected_operator(expected_operator: Operator, expected_offset: usize) -> Option<Result<OperatorOrToken>> {
+    fn expected_operator(
+        expected_operator: Operator,
+        expected_offset: usize,
+    ) -> Option<Result<OperatorOrToken>> {
         Some(Ok(OperatorOrToken::Operator(OperatorOffset {
             operator: expected_operator,
             offset: Some(expected_offset),
         })))
     }
 
-    fn expected_ident(expected_value: &str, expected_offset: usize) -> Option<Result<OperatorOrToken>> {
+    fn expected_ident(
+        expected_value: &str,
+        expected_offset: usize,
+    ) -> Option<Result<OperatorOrToken>> {
         expected_token(Token::String(expected_value.into()), expected_offset)
     }
 
@@ -284,23 +302,28 @@ mod tests {
     fn it_separates_curly_braces() {
         // Without regard to matching
         let mut tokenizer = Tokenizer::new("{}}a{ blah}");
-        assert_eq!(tokenizer.next(), expected_operator(
-            Operator::LeftCurlyBrace, 0
-        ));
-        assert_eq!(tokenizer.next(), expected_operator(
-            Operator::RightCurlyBrace, 1
-        ));
-        assert_eq!(tokenizer.next(), expected_operator(
-            Operator::RightCurlyBrace, 2
-        ));
+        assert_eq!(
+            tokenizer.next(),
+            expected_operator(Operator::LeftCurlyBrace, 0)
+        );
+        assert_eq!(
+            tokenizer.next(),
+            expected_operator(Operator::RightCurlyBrace, 1)
+        );
+        assert_eq!(
+            tokenizer.next(),
+            expected_operator(Operator::RightCurlyBrace, 2)
+        );
         assert_eq!(tokenizer.next(), expected_ident("a", 3));
-        assert_eq!(tokenizer.next(), expected_operator(
-            Operator::LeftCurlyBrace, 4
-        ));
+        assert_eq!(
+            tokenizer.next(),
+            expected_operator(Operator::LeftCurlyBrace, 4)
+        );
         assert_eq!(tokenizer.next(), expected_ident("blah", 6));
-        assert_eq!(tokenizer.next(), expected_operator(
-            Operator::RightCurlyBrace, 10
-        ));
+        assert_eq!(
+            tokenizer.next(),
+            expected_operator(Operator::RightCurlyBrace, 10)
+        );
         assert_eq!(tokenizer.next(), None);
     }
 
@@ -334,27 +357,39 @@ mod tests {
         let mut tokenizer = Tokenizer::new("border: 0px 1.5 11em;");
         assert_eq!(tokenizer.next(), expected_ident("border", 0));
         assert_eq!(tokenizer.next(), expected_operator(Operator::Colon, 6));
-        assert_eq!(tokenizer.next(), expected_token(
-            Token::Number {
-                value: 0.0,
-                units: Some("px".into()),
-                computed: false,
-            }, 8
-        ));
-        assert_eq!(tokenizer.next(), expected_token(
-            Token::Number {
-                value: 1.5,
-                units: None,
-                computed: false
-            }, 12
-        ));
-        assert_eq!(tokenizer.next(), expected_token(
-            Token::Number {
-                value: 11.0,
-                units: Some("em".into()),
-                computed: false
-            }, 16
-        ));
+        assert_eq!(
+            tokenizer.next(),
+            expected_token(
+                Token::Number {
+                    value: 0.0,
+                    units: Some("px".into()),
+                    computed: false,
+                },
+                8
+            )
+        );
+        assert_eq!(
+            tokenizer.next(),
+            expected_token(
+                Token::Number {
+                    value: 1.5,
+                    units: None,
+                    computed: false
+                },
+                12
+            )
+        );
+        assert_eq!(
+            tokenizer.next(),
+            expected_token(
+                Token::Number {
+                    value: 11.0,
+                    units: Some("em".into()),
+                    computed: false
+                },
+                16
+            )
+        );
         assert_eq!(tokenizer.next(), expected_operator(Operator::Semicolon, 20));
         assert_eq!(tokenizer.next(), None);
     }
@@ -364,16 +399,40 @@ mod tests {
         let mut tokenizer = Tokenizer::new("font-weight -webkit -3 - 4-5 a-1 -");
         assert_eq!(tokenizer.next(), expected_ident("font-weight", 0));
         assert_eq!(tokenizer.next(), expected_ident("-webkit", 12));
-        assert_eq!(tokenizer.next(), expected_token(
-            Token::Number { value: -3.0, units: None, computed: false }, 20
-        ));
+        assert_eq!(
+            tokenizer.next(),
+            expected_token(
+                Token::Number {
+                    value: -3.0,
+                    units: None,
+                    computed: false
+                },
+                20
+            )
+        );
         assert_eq!(tokenizer.next(), expected_operator(Operator::Minus, 23));
-        assert_eq!(tokenizer.next(), expected_token(
-            Token::Number { value: 4.0, units: None, computed: false }, 25
-        ));
-        assert_eq!(tokenizer.next(), expected_token(
-            Token::Number { value: -5.0, units: None, computed: false }, 26
-        ));
+        assert_eq!(
+            tokenizer.next(),
+            expected_token(
+                Token::Number {
+                    value: 4.0,
+                    units: None,
+                    computed: false
+                },
+                25
+            )
+        );
+        assert_eq!(
+            tokenizer.next(),
+            expected_token(
+                Token::Number {
+                    value: -5.0,
+                    units: None,
+                    computed: false
+                },
+                26
+            )
+        );
         assert_eq!(tokenizer.next(), expected_ident("a-1", 29));
         assert_eq!(tokenizer.next(), expected_operator(Operator::Minus, 33));
         assert_eq!(tokenizer.next(), None);
@@ -397,17 +456,41 @@ mod tests {
         let mut tokenizer = Tokenizer::new("/ / 3/4 / 8");
         assert_eq!(tokenizer.next(), expected_operator(Operator::Slash, 0));
         assert_eq!(tokenizer.next(), expected_operator(Operator::Slash, 2));
-        assert_eq!(tokenizer.next(), expected_token(
-            Token::Number { value: 3.0, units: None, computed: false }, 4
-        ));
+        assert_eq!(
+            tokenizer.next(),
+            expected_token(
+                Token::Number {
+                    value: 3.0,
+                    units: None,
+                    computed: false
+                },
+                4
+            )
+        );
         assert_eq!(tokenizer.next(), expected_operator(Operator::Slash, 5));
-        assert_eq!(tokenizer.next(), expected_token(
-            Token::Number { value: 4.0, units: None, computed: false }, 6
-        ));
+        assert_eq!(
+            tokenizer.next(),
+            expected_token(
+                Token::Number {
+                    value: 4.0,
+                    units: None,
+                    computed: false
+                },
+                6
+            )
+        );
         assert_eq!(tokenizer.next(), expected_operator(Operator::Slash, 8));
-        assert_eq!(tokenizer.next(), expected_token(
-            Token::Number { value: 8.0, units: None, computed: false }, 10
-        ));
+        assert_eq!(
+            tokenizer.next(),
+            expected_token(
+                Token::Number {
+                    value: 8.0,
+                    units: None,
+                    computed: false
+                },
+                10
+            )
+        );
         assert_eq!(tokenizer.next(), None);
     }
 
@@ -417,7 +500,10 @@ mod tests {
         assert_eq!(tokenizer.next(), expected_ident("a", 0));
         assert_eq!(tokenizer.next(), expected_operator(Operator::Comma, 1));
         assert_eq!(tokenizer.next(), expected_ident("b", 3));
-        assert_eq!(tokenizer.next(), expected_operator(Operator::LeftCurlyBrace, 5));
+        assert_eq!(
+            tokenizer.next(),
+            expected_operator(Operator::LeftCurlyBrace, 5)
+        );
         assert_eq!(tokenizer.next(), None);
     }
 
@@ -438,7 +524,10 @@ mod tests {
     fn it_separates_multiline_comments() {
         let mut tokenizer = Tokenizer::new("a /* foo\nbar */ no");
         assert_eq!(tokenizer.next(), expected_ident("a", 0));
-        assert_eq!(tokenizer.next(), expected_token(Token::Comment("/* foo\nbar */".into()), 2));
+        assert_eq!(
+            tokenizer.next(),
+            expected_token(Token::Comment("/* foo\nbar */".into()), 2)
+        );
         assert_eq!(tokenizer.next(), expected_ident("no", 16));
         assert_eq!(tokenizer.next(), None);
     }

@@ -6,13 +6,14 @@ authors = ["Carol Nichols <carol.nichols@gmail.com>"]
 repository = "https://github.com/carols10cents/sassers"
 readme = "README.md"
 license = "MIT"
+edition = "2018"
 
 [badges]
 travis-ci = { repository = "carols10cents/sassers" }
 appveyor = { repository = "carols10cents/sassers" }
 
 [dependencies]
-docopt = "0.6.64"
-regex = "0.1.38"
-log = "0.3"
-env_logger = "0.3"
+docopt = "^1.0.2"
+regex = "^1.1.0"
+log = "^0.4.6"
+env_logger = "^0.6.0"

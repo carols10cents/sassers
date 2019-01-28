@@ -1,10 +1,10 @@
-use token::Token;
-use context::Context;
-use operator::Operator;
-use operator_offset::OperatorOffset;
-use operator_or_token::OperatorOrToken;
-use token_offset::TokenOffset;
-use ast::expression::Expression;
+use crate::ast::expression::Expression;
+use crate::context::Context;
+use crate::operator::Operator;
+use crate::operator_offset::OperatorOffset;
+use crate::operator_or_token::OperatorOrToken;
+use crate::token::Token;
+use crate::token_offset::TokenOffset;
 
 pub struct ExpressionEvaluator<'a> {
     context: &'a Context,
@@ -17,18 +17,18 @@ pub struct ExpressionEvaluator<'a> {
 impl<'a> ExpressionEvaluator<'a> {
     pub fn evaluate(expr: Expression, context: &Context) -> Expression {
         match expr {
-            Expression::Value(OperatorOrToken::Token(t @ TokenOffset {
-                token: Token::String(_), ..
-            })) => {
-                context.get_variable(&t)
-                       .unwrap_or(Expression::Value(
-                            OperatorOrToken::Token(t)
-                       ))
-            },
+            Expression::Value(OperatorOrToken::Token(
+                t @ TokenOffset {
+                    token: Token::String(_),
+                    ..
+                },
+            )) => context
+                .get_variable(&t)
+                .unwrap_or(Expression::Value(OperatorOrToken::Token(t))),
             Expression::List(exprs) => {
                 let evaluator = ExpressionEvaluator::new(context);
                 evaluator.evaluate_list(exprs)
-            },
+            }
             other => other,
         }
     }
@@ -44,7 +44,6 @@ impl<'a> ExpressionEvaluator<'a> {
     }
 
     pub fn evaluate_list(mut self, exprs: Vec<Expression>) -> Expression {
-
         // Split into value stacks and operator stacks
         let mut exprs = exprs.into_iter();
 
@@ -53,14 +52,16 @@ impl<'a> ExpressionEvaluator<'a> {
 
             if part.is_number() {
                 if !self.last_was_an_operator {
-                    debug!("Number, last_was_an_operator=false, paren_level={}", self.paren_level);
+                    debug!(
+                        "Number, last_was_an_operator=false, paren_level={}",
+                        self.paren_level
+                    );
 
                     if self.paren_level > 0 {
                         self.do_math_until_left_paren();
                     }
                 }
                 self.push_on_value_stack(part);
-
             } else if part.is_right_paren() {
                 debug!("RIGHT PAREN");
                 debug!("op stack = {:#?}", self.op_stack);
@@ -80,24 +81,22 @@ impl<'a> ExpressionEvaluator<'a> {
                 let oo = part.extract_operator_offset();
                 if let Some(&last_operator) = self.op_stack.last() {
                     if last_operator
-                           .operator
-                           .same_or_greater_precedence(oo.operator) {
+                        .operator
+                        .same_or_greater_precedence(oo.operator)
+                    {
                         self.math_machine();
                     }
                 }
                 debug!("Push on op stack {:#?}", oo);
                 self.op_stack.push(oo);
                 self.last_was_an_operator = true;
-
             } else if part.is_string() {
-
                 let t = part.extract_token_offset();
-                let var_eval = self.context.get_variable(&t)
-                                .unwrap_or(Expression::Value(
-                                    OperatorOrToken::Token(t)
-                                ));
+                let var_eval = self
+                    .context
+                    .get_variable(&t)
+                    .unwrap_or(Expression::Value(OperatorOrToken::Token(t)));
                 self.push_on_value_stack(var_eval);
-
             } else {
                 self.push_on_value_stack(part);
             }
@@ -119,18 +118,16 @@ impl<'a> ExpressionEvaluator<'a> {
         if self.last_was_an_operator {
             self.value_stack.push(expr);
         } else {
-            let list = Expression::create_list(
-                self.value_stack.pop(),
-                expr,
-            );
+            let list = Expression::create_list(self.value_stack.pop(), expr);
             self.value_stack.push(list);
         }
         self.last_was_an_operator = false;
     }
 
     fn do_math_until_left_paren(&mut self) {
-        while !self.op_stack.is_empty() &&
-              self.op_stack.last().unwrap().operator != Operator::LeftParen {
+        while !self.op_stack.is_empty()
+            && self.op_stack.last().unwrap().operator != Operator::LeftParen
+        {
             self.math_machine();
         }
     }
@@ -138,13 +135,11 @@ impl<'a> ExpressionEvaluator<'a> {
     fn math_machine(&mut self) {
         debug!("Math machine:");
 
-        let op     = self.get_operator();
+        let op = self.get_operator();
         let second = self.get_value();
-        let first  = self.get_value();
+        let first = self.get_value();
 
-        let math_result = Expression::apply_math(
-            op, first, second, self.context, self.paren_level,
-        );
+        let math_result = Expression::apply_math(op, first, second, self.context, self.paren_level);
         debug!("Math result: {:#?}", math_result);
 
         self.value_stack.push(math_result);
@@ -160,8 +155,10 @@ impl<'a> ExpressionEvaluator<'a> {
 
     fn get_value(&mut self) -> Expression {
         // TODO: Turn this into a SassError
-        let val = self.value_stack.pop()
-                      .expect("Expected an argument on the value stack");
+        let val = self
+            .value_stack
+            .pop()
+            .expect("Expected an argument on the value stack");
         debug!("val = {:#?}", val);
         val
     }
@@ -170,58 +167,62 @@ impl<'a> ExpressionEvaluator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use token::Token;
-    use token_offset::TokenOffset;
-    use operator_or_token::OperatorOrToken;
-    use operator::Operator;
-    use operator_offset::OperatorOffset;
-    use context::Context;
-    use ast::expression::Expression;
+    use crate::ast::expression::Expression;
+    use crate::context::Context;
+    use crate::operator::Operator;
+    use crate::operator_offset::OperatorOffset;
+    use crate::operator_or_token::OperatorOrToken;
+    use crate::token::Token;
+    use crate::token_offset::TokenOffset;
 
     fn one() -> OperatorOrToken {
-        OperatorOrToken::Token(
-            TokenOffset {
-                token: Token::Number {
-                    value: 1.0, units: None, computed: false
-                },
-                offset: None
-            }
-        )
+        OperatorOrToken::Token(TokenOffset {
+            token: Token::Number {
+                value: 1.0,
+                units: None,
+                computed: false,
+            },
+            offset: None,
+        })
     }
 
     fn two() -> OperatorOrToken {
-        OperatorOrToken::Token(
-            TokenOffset {
-                token: Token::Number {
-                    value: 2.0, units: None, computed: false
-                },
-                offset: None
-            }
-        )
+        OperatorOrToken::Token(TokenOffset {
+            token: Token::Number {
+                value: 2.0,
+                units: None,
+                computed: false,
+            },
+            offset: None,
+        })
     }
 
     fn plus() -> OperatorOrToken {
-        OperatorOrToken::Operator(
-            OperatorOffset { operator: Operator::Plus, offset: None }
-        )
+        OperatorOrToken::Operator(OperatorOffset {
+            operator: Operator::Plus,
+            offset: None,
+        })
     }
 
     fn slash() -> OperatorOrToken {
-        OperatorOrToken::Operator(
-            OperatorOffset { operator: Operator::Slash, offset: None }
-        )
+        OperatorOrToken::Operator(OperatorOffset {
+            operator: Operator::Slash,
+            offset: None,
+        })
     }
 
     fn right_paren() -> OperatorOrToken {
-        OperatorOrToken::Operator(
-            OperatorOffset { operator: Operator::RightParen, offset: None }
-        )
+        OperatorOrToken::Operator(OperatorOffset {
+            operator: Operator::RightParen,
+            offset: None,
+        })
     }
 
     fn left_paren() -> OperatorOrToken {
-        OperatorOrToken::Operator(
-            OperatorOffset { operator: Operator::LeftParen, offset: None }
-        )
+        OperatorOrToken::Operator(OperatorOffset {
+            operator: Operator::LeftParen,
+            offset: None,
+        })
     }
 
     #[test]
@@ -238,16 +239,14 @@ mod tests {
         let fake_context = Context::new();
         assert_eq!(
             ExpressionEvaluator::evaluate(ex, &fake_context),
-            Expression::Value(OperatorOrToken::Token(
-                TokenOffset {
-                    token: Token::Number {
-                        value: 1.0,
-                        units: None,
-                        computed: true,
-                    },
-                    offset: None,
-                }
-            ))
+            Expression::Value(OperatorOrToken::Token(TokenOffset {
+                token: Token::Number {
+                    value: 1.0,
+                    units: None,
+                    computed: true,
+                },
+                offset: None,
+            }))
         );
     }
 
@@ -268,32 +267,26 @@ mod tests {
         assert_eq!(
             ExpressionEvaluator::evaluate(ex, &fake_context),
             Expression::List(vec![
-                Expression::Value(OperatorOrToken::Token(
-                    TokenOffset {
-                        token: Token::String(String::from("10.5")),
-                        offset: None,
-                    }
-                )),
-                Expression::Value(OperatorOrToken::Token(
-                    TokenOffset {
-                        token: Token::Number {
-                            value: 2.0,
-                            units: None,
-                            computed: false,
-                        },
-                        offset: None,
-                    }
-                )),
-                Expression::Value(OperatorOrToken::Token(
-                    TokenOffset {
-                        token: Token::Number {
-                            value: 2.0,
-                            units: None,
-                            computed: false,
-                        },
-                        offset: None,
-                    }
-                ))
+                Expression::Value(OperatorOrToken::Token(TokenOffset {
+                    token: Token::String(String::from("10.5")),
+                    offset: None,
+                })),
+                Expression::Value(OperatorOrToken::Token(TokenOffset {
+                    token: Token::Number {
+                        value: 2.0,
+                        units: None,
+                        computed: false,
+                    },
+                    offset: None,
+                })),
+                Expression::Value(OperatorOrToken::Token(TokenOffset {
+                    token: Token::Number {
+                        value: 2.0,
+                        units: None,
+                        computed: false,
+                    },
+                    offset: None,
+                }))
             ])
         );
     }

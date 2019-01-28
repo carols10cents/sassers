@@ -1,5 +1,5 @@
-use ast::root::Root;
-use sass::output_style::Streamable;
+use crate::ast::root::Root;
+use crate::sass::output_style::Streamable;
 
 pub fn optimize(root: Root) -> Vec<Box<Streamable>> {
     match root {
@@ -9,7 +9,7 @@ pub fn optimize(root: Root) -> Vec<Box<Streamable>> {
                 result.push(Box::new(Root::Rule(r)));
             }
             result
-        },
+        }
         Root::Comment(c) => vec![Box::new(Root::Comment(c))],
         Root::Variable(..) => unreachable!(), // variables get evaluated before optimization
     }
